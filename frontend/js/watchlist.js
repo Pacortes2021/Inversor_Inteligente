@@ -56,8 +56,8 @@ function renderWatchlist(items) {
       : '—';
 
     return `<tr>
-      <td class="sym" onclick="go('${it.symbol}')">${it.symbol}</td>
-      <td onclick="go('${it.symbol}')">${it.name || "—"}</td>
+      <td class="sym" onclick="go('${escHtml(it.symbol)}')">${escHtml(it.symbol)}</td>
+      <td onclick="go('${escHtml(it.symbol)}')">${escHtml(it.name || "—")}</td>
       <td class="num">${fmtPrice(px, cur)}</td>
       <td class="num">${it.fairValue != null ? fmtPrice(it.fairValue, cur) : "—"}</td>
       <td class="num ${(it.mos ?? 0) >= 0 ? 'up' : 'down'}"><b>${fmtPct(it.mos, 0, true)}</b></td>

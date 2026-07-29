@@ -30,21 +30,25 @@ Con filtros por sector y texto, y exportación a CSV.
 
 **Glosario interactivo**: clic en cualquier indicador (PER, ROE, FCF yield, margen de seguridad, EPV…) abre una explicación en español simple con ejemplo — cualquiera puede leer la app sin saber finanzas.
 
-**Confianza y madurez** (ronda 4):
-- Suite de **tests** (`pytest tests/` — 24 tests de valoración, métricas, EDGAR y calidad).
+**Confianza, Seguridad y Madurez**:
+- Suite de **tests** (`pytest` — 36 tests de valoración, métricas, EDGAR, calidad, validaciones de API y escrituras atómicas).
 - **Avisos de calidad de datos** en cada análisis: FCF deprimido/inflado vs su historia, saltos de utilidad, patrimonio negativo, historial de PE corto, discrepancias Yahoo vs SEC.
 - **Historial de margen de seguridad**: cada análisis y escaneo profundo guarda una foto diaria (`data/mos_history.jsonl`) y el análisis muestra cómo evoluciona el MoS en el tiempo.
 - **Notas cualitativas por acción**: checklist de moat (marca, costos, red, switching, patentes, escala) + tesis y riesgos, con autoguardado (`data/notes.json`).
 - **EPV de Greenwald** como cuarto modelo (valor a cero crecimiento).
 - **Seguridad del dividendo**: rachas pagando/subiendo y payout sobre FCF con semáforo.
-- Descargas de Yahoo en paralelo (análisis fresco ~3s vs ~15s) y servidor accesible desde el teléfono en la red local (`./run.sh` muestra la URL).
+- **Seguridad y Persistencia Atómica**:
+  - Servidor seguro por defecto en `127.0.0.1` (`./run.sh --lan` para habilitar acceso local en red WiFi).
+  - Sanitización HTML contra XSS en interfaz web.
+  - Validación de modelos Pydantic (precios/acciones > 0, fechas válidas, símbolos sanitizados).
+  - Escrituras de datos atómicas (`atomic_write_json`) a prueba de corrupción y condiciones de carrera.
 - **Respaldo**: exportar/importar watchlist + portafolio + notas en un JSON (pestaña Portafolio).
 
 ## Cómo usarla
 
 ```bash
-./run.sh
-# abre http://127.0.0.1:8756
+./run.sh          # Modo seguro local (http://127.0.0.1:8756)
+./run.sh --lan    # Modo red local (permite abrir desde iPhone en la misma WiFi)
 ```
 
 (La primera vez: `python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt`)

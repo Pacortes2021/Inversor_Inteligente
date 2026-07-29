@@ -1,14 +1,17 @@
 """El Inversor Inteligente — servidor FastAPI (API + frontend estático)."""
 
+import re
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from . import notes as NT
 from . import portfolio as PF
 from . import watchlist as WL
+from .data import atomic_write_json
 from .screener import run_deep_screener, run_screener
 from .stock import build_payload
 
@@ -99,6 +102,21 @@ class WatchItem(BaseModel):
     symbol: str
     targetMos: float = 25.0
 
+    @field_validator("symbol")
+    @classmethod
+    def check_symbol(cls, v: str) -> str:
+        s = v.strip().upper()
+        if not s or len(s) > 15 or not re.match(r"^[A-Z0-9\.\-\/]+$", s):
+            raise ValueError("Símbolo inválido")
+        return s
+
+    @field_validator("targetMos")
+    @classmethod
+    def check_target_mos(cls, v: float) -> float:
+        if v < 0 or v > 95:
+            raise ValueError("El margen de seguridad objetivo debe estar entre 0% y 95%")
+        return round(v, 2)
+
 
 @app.get("/api/watchlist")
 def api_watchlist():
@@ -130,6 +148,47 @@ class Position(BaseModel):
     shares: float
     note: str = ""
 
+    @field_validator("symbol")
+    @classmethod
+    def check_symbol(cls, v: str) -> str:
+        s = v.strip().upper()
+        if not s or len(s) > 15 or not re.match(r"^[A-Z0-9\.\-\/]+$", s):
+            raise ValueError("Símbolo inválido")
+        return s
+
+    @field_validator("date")
+    @classmethod
+    def check_date(cls, v: str) -> str:
+        s = v.strip()
+        try:
+            d = datetime.strptime(s, "%Y-%m-%d")
+            if d > datetime.now() + timedelta(days=1):
+                raise ValueError("La fecha no puede ser en el futuro")
+            if d.year < 1970:
+                raise ValueError("La fecha es demasiado antigua")
+        except ValueError as e:
+            raise ValueError(f"Fecha inválida (usar AAAA-MM-DD): {e}")
+        return s
+
+    @field_validator("price")
+    @classmethod
+    def check_price(cls, v: float) -> float:
+        if v <= 0 or v > 1_000_000_000:
+            raise ValueError("El precio debe ser un número positivo mayor a 0")
+        return round(v, 4)
+
+    @field_validator("shares")
+    @classmethod
+    def check_shares(cls, v: float) -> float:
+        if v <= 0 or v > 1_000_000_000:
+            raise ValueError("La cantidad de acciones debe ser un número positivo mayor a 0")
+        return round(v, 4)
+
+    @field_validator("note")
+    @classmethod
+    def check_note(cls, v: str) -> str:
+        return (v or "").strip()[:500]
+
 
 @app.get("/api/portfolio")
 def api_portfolio():
@@ -152,6 +211,17 @@ class Note(BaseModel):
     thesis: str = ""
     risks: str = ""
     moats: list[str] = []
+
+    @field_validator("thesis", "risks")
+    @classmethod
+    def check_text(cls, v: str) -> str:
+        return (v or "").strip()[:2000]
+
+    @field_validator("moats")
+    @classmethod
+    def check_moats(cls, v: list[str]) -> list[str]:
+        valid = {"marca", "costos", "red", "switching", "intangibles", "escala"}
+        return [m for m in (v or []) if m in valid]
 
 
 @app.get("/api/notes/{symbol}")
@@ -181,13 +251,41 @@ class Backup(BaseModel):
     portfolio: list = []
     notes: dict = {}
 
+    @field_validator("watchlist")
+    @classmethod
+    def check_watchlist(cls, v: list) -> list:
+        out = []
+        for item in v:
+            if isinstance(item, dict) and "symbol" in item:
+                out.append({
+                    "symbol": str(item["symbol"]).strip().upper()[:15],
+                    "targetMos": max(0.0, min(95.0, float(item.get("targetMos", 25.0)))),
+                    "addedAt": int(item.get("addedAt", 0)),
+                })
+        return out
+
+    @field_validator("portfolio")
+    @classmethod
+    def check_portfolio(cls, v: list) -> list:
+        out = []
+        for item in v:
+            if isinstance(item, dict) and "symbol" in item and "price" in item and "shares" in item:
+                out.append({
+                    "id": int(item.get("id", 0)),
+                    "symbol": str(item["symbol"]).strip().upper()[:15],
+                    "date": str(item.get("date", "2024-01-01")),
+                    "price": max(0.0001, float(item["price"])),
+                    "shares": max(0.0001, float(item["shares"])),
+                    "note": str(item.get("note", ""))[:300],
+                })
+        return out
+
 
 @app.post("/api/restore")
 def api_restore(b: Backup):
     WL._save(b.watchlist)
     PF._save(b.portfolio)
-    import json
-    NT.NOTES_FILE.write_text(json.dumps(b.notes, indent=2, ensure_ascii=False))
+    atomic_write_json(NT.NOTES_FILE, b.notes)
     return {"ok": True}
 
 

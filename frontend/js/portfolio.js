@@ -75,8 +75,8 @@ function renderPortfolio({ positions, totals }) {
       : `<td class="num">—</td>`;
 
     return `<tr${p.overConcentrated ? ' style="background:rgba(239,68,68,0.03)"' : ''}>
-      <td class="sym" onclick="go('${p.symbol}')">${p.symbol}</td>
-      <td>${p.date}</td>
+      <td class="sym" onclick="go('${escHtml(p.symbol)}')">${escHtml(p.symbol)}</td>
+      <td>${escHtml(p.date)}</td>
       <td class="num">${fmtNum(p.price, 2)}</td>
       <td class="num">${p.priceNow != null ? fmtNum(p.priceNow, 2) : "—"}</td>
       <td class="num">${fmtNum(p.shares, p.shares % 1 ? 2 : 0)}</td>
@@ -85,7 +85,7 @@ function renderPortfolio({ positions, totals }) {
       <td class="num ${pctClass(p.return)}"><b>${fmtPct(p.return, 1, true)}</b></td>
       <td class="num ${pctClass(p.spyReturn)}">${fmtPct(p.spyReturn, 1, true)}</td>
       <td class="num"><span class="alpha-chip ${p.alpha == null ? "" : p.alpha >= 0 ? "hi" : "lo"}">${fmtPct(p.alpha, 1, true)}</span></td>
-      <td class="pf-note-cell" title="${(p.note || "").replace(/"/g, "&quot;")}">${p.note || "—"}</td>
+      <td class="pf-note-cell" title="${escHtml(p.note || "")}">${escHtml(p.note || "—")}</td>
       <td><button class="btn-x" onclick="pfRemove(${p.id})" title="Eliminar">✕</button></td>
     </tr>`;
   }).join("");
@@ -127,7 +127,7 @@ function renderPortfolioSectorChart(positions, totals) {
   if (alertDiv) {
     if (overConc.length > 0) {
       alertDiv.innerHTML = `⚠️ <b>Concentración alta:</b> ${overConc.map(p =>
-        `<span style="font-weight:700; color:var(--gold)">${p.symbol} (${p.pctOfPortfolio?.toFixed(1)}%)</span>`
+        `<span style="font-weight:700; color:var(--gold)">${escHtml(p.symbol)} (${p.pctOfPortfolio?.toFixed(1)}%)</span>`
       ).join(", ")} supera el 25% del portafolio. Considera diversificar.`;
       alertDiv.classList.remove("hidden");
     } else {

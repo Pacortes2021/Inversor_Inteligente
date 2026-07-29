@@ -15,12 +15,38 @@ TTL_STOCK = 6 * 3600      # fundamentales: 6 horas
 TTL_SCREENER = 24 * 3600  # screener: 24 horas
 
 
+import os
+import tempfile
+import threading
+
+_file_lock = threading.Lock()
+
+
+def atomic_write_json(file_path: Path, data):
+    """Escribe data a file_path de forma atómica y thread-safe mediante un archivo temporal y os.replace."""
+    file_path = Path(file_path).resolve()
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    with _file_lock:
+        temp_fd, temp_name = tempfile.mkstemp(dir=file_path.parent, prefix=".tmp_", suffix=".json")
+        try:
+            with os.fdopen(temp_fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            os.replace(temp_name, file_path)
+        except Exception:
+            if os.path.exists(temp_name):
+                try:
+                    os.remove(temp_name)
+                except Exception:
+                    pass
+            raise
+
+
 def cache_get(key: str):
     f = CACHE_DIR / f"{key}.json"
     if not f.exists():
         return None
     try:
-        data = json.loads(f.read_text())
+        data = json.loads(f.read_text(encoding="utf-8"))
         if time.time() - data["_ts"] < data["_ttl"]:
             return data["payload"]
     except Exception:
@@ -30,7 +56,7 @@ def cache_get(key: str):
 
 def cache_set(key: str, payload, ttl: int = TTL_STOCK):
     f = CACHE_DIR / f"{key}.json"
-    f.write_text(json.dumps({"_ts": time.time(), "_ttl": ttl, "payload": payload}))
+    atomic_write_json(f, {"_ts": time.time(), "_ttl": ttl, "payload": payload})
 
 
 def clean_expired_cache() -> int:

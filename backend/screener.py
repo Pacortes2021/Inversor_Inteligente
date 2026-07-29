@@ -247,7 +247,7 @@ def run_screener(universe: str = "us", refresh: bool = False):
 # ------------------------------------------------------------ modo profundo
 
 _deep_lock = threading.Lock()
-_deep_state = {"status": "idle", "done": 0, "total": 0, "universe": None}
+_deep_states = {}
 
 
 def _pe_stats_from_edgar(symbol, edgar_hist):
@@ -327,7 +327,6 @@ def scan_one_deep(symbol, bond10y):
 
 
 def _deep_worker(universe):
-    global _deep_state
     symbols = UNIVERSES[universe]
     bond10y = bond_yield_10y()
     results = []
@@ -339,26 +338,29 @@ def _deep_worker(universe):
                 if r:
                     results.append(r)
                 with _deep_lock:
-                    _deep_state["done"] += 1
+                    if universe in _deep_states:
+                        _deep_states[universe]["done"] += 1
         results.sort(key=lambda r: (r["mos"] is None, -(r["mos"] or -999)))
         payload = jclean({"count": len(results), "universe": universe,
                           "updatedAt": int(time.time() * 1000), "results": results})
         cache_set(f"deep_screener_{universe}", payload, ttl=TTL_SCREENER)
         with _deep_lock:
-            _deep_state["status"] = "done"
+            if universe in _deep_states:
+                _deep_states[universe]["status"] = "done"
     except Exception:
         with _deep_lock:
-            _deep_state["status"] = "error"
+            if universe in _deep_states:
+                _deep_states[universe]["status"] = "error"
 
 
 def run_deep_screener(universe: str = "us", refresh: bool = False):
-    """Devuelve resultados cacheados, o el progreso del escaneo en curso."""
-    global _deep_state
+    """Devuelve resultados cacheados, o el progreso del escaneo en curso para el universo dado."""
     universe = universe if universe in UNIVERSES else "us"
 
     with _deep_lock:
-        if _deep_state["status"] == "running":
-            return {"status": "running", **{k: _deep_state[k] for k in ("done", "total", "universe")}}
+        state = _deep_states.get(universe)
+        if state and state.get("status") == "running":
+            return {"status": "running", "done": state["done"], "total": state["total"], "universe": universe}
 
     if not refresh:
         cached = cache_get(f"deep_screener_{universe}")
@@ -371,7 +373,11 @@ def run_deep_screener(universe: str = "us", refresh: bool = False):
             cache_set(f"deep_{s.replace('/', '_').replace('.', '_')}", None, ttl=0)
 
     with _deep_lock:
-        _deep_state = {"status": "running", "done": 0,
-                       "total": len(UNIVERSES[universe]), "universe": universe}
+        _deep_states[universe] = {
+            "status": "running",
+            "done": 0,
+            "total": len(UNIVERSES[universe]),
+            "universe": universe,
+        }
     threading.Thread(target=_deep_worker, args=(universe,), daemon=True).start()
     return {"status": "running", "done": 0, "total": len(UNIVERSES[universe]), "universe": universe}

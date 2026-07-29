@@ -35,8 +35,17 @@ def test_patrimonio_negativo():
 
 
 def test_pe_corto():
-    w = Q.build_warnings({}, [], _val(None), _pares_años(3), None)
+    w = Q.build_warnings({}, [], _val(None), _pares_años(1), None)
     assert any("historial de pe" in x.lower() for x in w)
+    w_long = Q.build_warnings({}, [], _val(None), _pares_años(3), None)
+    assert not any("historial de pe" in x.lower() for x in w_long)
+
+
+def test_pe_is_reliable():
+    assert Q.pe_is_reliable({"trailingPE": 25.0}, []) is True
+    assert Q.pe_is_reliable({"trailingPE": 200.0}, []) is False
+    assert Q.pe_is_reliable({"trailingPE": -5.0}, []) is False
+    assert Q.pe_is_reliable({}, []) is False
 
 
 def test_discrepancia_edgar():

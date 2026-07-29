@@ -4,6 +4,8 @@ import json
 import time
 from pathlib import Path
 
+from .data import atomic_write_json
+
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
 NOTES_FILE = DATA_DIR / "notes.json"
@@ -14,7 +16,7 @@ MOAT_TYPES = ["marca", "costos", "red", "switching", "intangibles", "escala"]
 def _load():
     if NOTES_FILE.exists():
         try:
-            return json.loads(NOTES_FILE.read_text())
+            return json.loads(NOTES_FILE.read_text(encoding="utf-8"))
         except Exception:
             pass
     return {}
@@ -32,5 +34,5 @@ def set_note(symbol: str, thesis: str = "", risks: str = "", moats=None):
         "moats": [m for m in (moats or []) if m in MOAT_TYPES],
         "updatedAt": int(time.time() * 1000),
     }
-    NOTES_FILE.write_text(json.dumps(notes, indent=2, ensure_ascii=False))
+    atomic_write_json(NOTES_FILE, notes)
     return notes[symbol.upper()]

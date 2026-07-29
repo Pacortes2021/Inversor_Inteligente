@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 import yfinance as yf
 
-from .data import cache_get, cache_set
+from .data import atomic_write_json, cache_get, cache_set
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
@@ -19,14 +19,14 @@ BENCHMARK = "SPY"
 def _load():
     if PF_FILE.exists():
         try:
-            return json.loads(PF_FILE.read_text())
+            return json.loads(PF_FILE.read_text(encoding="utf-8"))
         except Exception:
             pass
     return []
 
 
 def _save(items):
-    PF_FILE.write_text(json.dumps(items, indent=2, ensure_ascii=False))
+    atomic_write_json(PF_FILE, items)
 
 
 def _history(symbol, key, ttl=6 * 3600):

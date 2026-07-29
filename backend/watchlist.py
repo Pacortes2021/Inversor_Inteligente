@@ -5,7 +5,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from .data import bond_yield_10y
+from .data import atomic_write_json, bond_yield_10y
 from .screener import scan_one_deep
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
@@ -16,14 +16,14 @@ WL_FILE = DATA_DIR / "watchlist.json"
 def _load():
     if WL_FILE.exists():
         try:
-            return json.loads(WL_FILE.read_text())
+            return json.loads(WL_FILE.read_text(encoding="utf-8"))
         except Exception:
             pass
     return []
 
 
 def _save(items):
-    WL_FILE.write_text(json.dumps(items, indent=2, ensure_ascii=False))
+    atomic_write_json(WL_FILE, items)
 
 
 def get_watchlist():
