@@ -1,0 +1,377 @@
+"""Screener de valor con dos modos:
+
+- rápido: métricas actuales de Yahoo (1 llamada por acción)
+- profundo: valoración completa (DCF + reversión al PE mediano de 15 años vía
+  EDGAR + Graham) → margen de seguridad por acción. Corre en un hilo de fondo
+  con progreso consultable.
+"""
+
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+import yfinance as yf
+
+from . import edgar as E
+from . import metrics as M
+from . import valuation as V
+from .data import TTL_SCREENER, bond_yield_10y, cache_get, cache_set, jclean
+
+# ------------------------------------------------------------------ universos
+
+UNIVERSE_US = [
+    # mega caps / tecnología
+    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "AVGO", "ORCL",
+    "ADBE", "CRM", "CSCO", "ACN", "INTU", "IBM", "QCOM", "TXN", "AMD", "INTC",
+    "AMAT", "MU", "LRCX", "KLAC", "ADI", "NXPI", "MRVL", "MCHP", "ANET", "NOW",
+    "PANW", "CRWD", "FTNT", "SNPS", "CDNS", "ADSK", "WDAY", "SNOW", "DDOG",
+    "TEAM", "SHOP", "UBER", "ABNB", "DASH", "PYPL", "COIN", "EBAY", "TTD",
+    "EA", "TTWO", "RBLX", "MTCH", "PINS", "SPOT", "NFLX", "DIS", "CMCSA",
+    "TMUS", "VZ", "T", "HPQ", "DELL",
+    # financieras
+    "BRK-B", "JPM", "V", "MA", "BAC", "WFC", "C", "GS", "MS", "SCHW", "BLK",
+    "AXP", "USB", "PNC", "COF", "BK", "CB", "PGR", "MET", "AIG", "TRV", "ALL",
+    "KKR", "BX", "CME", "ICE", "SPGI", "MCO", "MSCI", "NDAQ",
+    # salud
+    "LLY", "UNH", "JNJ", "ABBV", "MRK", "PFE", "TMO", "ABT", "DHR", "AMGN",
+    "GILD", "ISRG", "SYK", "BSX", "MDT", "EW", "BDX", "REGN", "VRTX", "BIIB",
+    "ZTS", "MCK", "CI", "ELV", "HUM", "HCA", "CVS",
+    # consumo
+    "WMT", "PG", "KO", "PEP", "COST", "HD", "LOW", "MCD", "SBUX", "NKE",
+    "TGT", "TJX", "ROST", "DG", "DLTR", "KR", "EL", "CL", "KMB", "GIS", "K",
+    "HSY", "SYY", "MO", "PM", "KHC", "MDLZ", "STZ", "YUM", "CMG", "DPZ",
+    "MAR", "HLT", "RCL", "BKNG", "F", "GM",
+    # industriales
+    "CAT", "DE", "HON", "GE", "MMM", "EMR", "ETN", "ITW", "PH", "CMI", "PCAR",
+    "BA", "LMT", "RTX", "GD", "NOC", "LHX", "TDG", "UNP", "CSX", "NSC", "FDX",
+    "UPS", "DAL", "UAL", "LUV", "ADP", "WM", "RSG",
+    # energía y materiales
+    "XOM", "CVX", "COP", "EOG", "SLB", "HAL", "OXY", "PSX", "VLO", "MPC",
+    "KMI", "WMB", "FCX", "NEM", "NUE", "DOW", "DD", "APD", "SHW", "ECL", "LIN",
+    # utilities y REITs
+    "NEE", "DUK", "SO", "D", "AEP", "EXC", "SRE", "PLD", "AMT", "CCI", "EQIX",
+    "SPG", "O", "PSA",
+]
+
+UNIVERSE_CL = [
+    "SQM-B.SN", "COPEC.SN", "CENCOSUD.SN", "FALABELLA.SN", "BSANTANDER.SN",
+    "CHILE.SN", "BCI.SN", "ENELCHILE.SN", "ENELAM.SN", "COLBUN.SN", "CCU.SN",
+    "ANDINA-B.SN", "CMPC.SN", "VAPORES.SN", "LTM.SN", "PARAUCO.SN",
+    "RIPLEY.SN", "SMU.SN", "AGUAS-A.SN", "CAP.SN", "ENTEL.SN", "SONDA.SN",
+    "QUINENCO.SN", "CONCHATORO.SN", "IAM.SN", "ECL.SN", "SECURITY.SN",
+    "MALLPLAZA.SN", "CENCOSHOPP.SN", "ITAUCL.SN",
+]
+
+UNIVERSES = {"us": UNIVERSE_US, "cl": UNIVERSE_CL}
+
+
+def _retry(fn, tries=3, wait=1.5):
+    """Reintenta ante errores transitorios (rate limit de Yahoo, red)."""
+    last = None
+    for i in range(tries):
+        try:
+            return fn()
+        except Exception as e:
+            last = e
+            time.sleep(wait * (i + 1))
+    raise last
+
+
+def _clip(x, lo, hi):
+    return max(lo, min(hi, x))
+
+
+def _scale(x, x0, x1):
+    if x is None:
+        return None
+    if x1 == x0:
+        return 50.0
+    return _clip((x - x0) / (x1 - x0) * 100.0, 0.0, 100.0)
+
+
+# ------------------------------------------------------------- modo rápido
+
+def score_stock(info):
+    price = info.get("currentPrice")
+    pe = info.get("trailingPE")
+    fpe = info.get("forwardPE")
+    mc = info.get("marketCap")
+    fcf = info.get("freeCashflow")
+    roe = info.get("returnOnEquity")
+    nm = info.get("profitMargins")
+    de = info.get("debtToEquity")
+    hi52 = info.get("fiftyTwoWeekHigh")
+
+    ey = (1 / pe * 100) if pe and pe > 0 else None
+    fey = (1 / fpe * 100) if fpe and fpe > 0 else None
+    fcfy = (fcf / mc * 100) if (fcf and mc and fcf > 0) else None
+    drawdown = (price / hi52 - 1) * 100 if (price and hi52) else None
+
+    val_parts = [s for s in (_scale(ey, 1, 10), _scale(fey, 1, 10), _scale(fcfy, 0, 8)) if s is not None]
+    quality_parts = [s for s in (_scale((roe or 0) * 100 if roe is not None else None, 0, 30),
+                                 _scale((nm or 0) * 100 if nm is not None else None, 0, 25)) if s is not None]
+    health = _scale(2 - (de / 100 if de is not None else 1.0), 0, 2)
+    contrarian = _scale(abs(drawdown) if drawdown is not None else None, 0, 40)
+
+    if not val_parts:
+        return None
+    score, weights = 0.0, 0.0
+    score += (sum(val_parts) / len(val_parts)) * 0.45; weights += 0.45
+    if quality_parts:
+        score += (sum(quality_parts) / len(quality_parts)) * 0.30; weights += 0.30
+    if health is not None:
+        score += health * 0.15; weights += 0.15
+    if contrarian is not None:
+        score += contrarian * 0.10; weights += 0.10
+
+    return {
+        "score": round(score / weights, 1),
+        "earningsYield": round(ey, 2) if ey else None,
+        "fcfYield": round(fcfy, 2) if fcfy else None,
+        "drawdown": round(drawdown, 1) if drawdown is not None else None,
+    }
+
+
+def _calc_target_scenarios(price, pe, fpe, pe_median, info):
+    if not price or price <= 0:
+        return {}
+    
+    clean_pe = pe if (pe and 0 < pe <= 80 and (not fpe or pe <= 3 * fpe)) else None
+    clean_fpe = fpe if (fpe and 0 < fpe <= 80) else None
+    clean_med = pe_median if (pe_median and 0 < pe_median <= 80) else None
+    
+    base_pe = clean_med or clean_fpe or clean_pe or 20.0
+    if base_pe <= 0: base_pe = 20.0
+    
+    cons_pe = max(5.0, base_pe * 0.80)
+    opt_pe = base_pe * 1.20
+    
+    growth_est = info.get("earningsGrowth") or info.get("revenueGrowth") or 0.10
+    if growth_est > 0.40: growth_est = 0.20
+    if growth_est < -0.05: growth_est = 0.03
+    
+    eps_current = (price / clean_pe) if clean_pe else None
+    eps_fwd = (price / clean_fpe) if clean_fpe else None
+    
+    eps_base = eps_fwd if eps_fwd else (eps_current * (1 + growth_est) if eps_current else None)
+    if not eps_base or eps_base <= 0:
+        return {}
+        
+    eps_2030 = round(eps_base * ((1 + growth_est) ** 4), 2)
+    
+    def _target_metrics(target_pe):
+        target_p = round(eps_2030 * target_pe, 2)
+        tot_ret = round(((target_p - price) / price) * 100.0, 1)
+        cagr = round(((target_p / price) ** (1.0 / 5.0) - 1.0) * 100.0, 1) if (price > 0 and target_p > 0) else 0.0
+        return target_p, tot_ret, cagr
+
+    cons_p, cons_tot, cons_cagr = _target_metrics(cons_pe)
+    base_p, base_tot, base_cagr = _target_metrics(base_pe)
+    opt_p, opt_tot, opt_cagr = _target_metrics(opt_pe)
+    
+    return {
+        "eps2030": eps_2030,
+        "consPe": round(cons_pe, 1),
+        "targetCons": cons_p,
+        "retCons": cons_tot,
+        "cagrCons": cons_cagr,
+        "basePe": round(base_pe, 1),
+        "targetBase": base_p,
+        "retBase": base_tot,
+        "cagrBase": base_cagr,
+        "optPe": round(opt_pe, 1),
+        "targetOpt": opt_p,
+        "retOpt": opt_tot,
+        "cagrOpt": opt_cagr,
+    }
+
+
+def _base_row(symbol, info):
+    de = info.get("debtToEquity")
+    price = info.get("currentPrice")
+    pe = round(info["trailingPE"], 1) if info.get("trailingPE") else None
+    fpe = round(info["forwardPE"], 1) if info.get("forwardPE") else None
+    scenarios = _calc_target_scenarios(price, pe, fpe, None, info)
+
+    return {
+        "symbol": symbol,
+        "name": info.get("shortName") or symbol,
+        "sector": info.get("sector"),
+        "price": price,
+        "currency": info.get("currency") or "USD",
+        "marketCap": info.get("marketCap"),
+        "pe": pe,
+        "forwardPe": fpe,
+        "pb": round(info["priceToBook"], 2) if info.get("priceToBook") else None,
+        "roe": round(info["returnOnEquity"] * 100, 1) if info.get("returnOnEquity") is not None else None,
+        "netMargin": round(info["profitMargins"] * 100, 1) if info.get("profitMargins") is not None else None,
+        "debtToEquity": round(de / 100, 2) if de is not None else None,
+        **scenarios,
+    }
+
+
+def scan_one(symbol):
+    try:
+        info = _retry(lambda: yf.Ticker(symbol).info or {})
+        s = score_stock(info)
+        if not s:
+            return None
+        return {**_base_row(symbol, info), **s}
+    except Exception:
+        return None
+
+
+def run_screener(universe: str = "us", refresh: bool = False):
+    universe = universe if universe in UNIVERSES else "us"
+    key = f"screener_{universe}"
+    if not refresh:
+        cached = cache_get(key)
+        if cached:
+            return cached
+
+    results = []
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        futures = {ex.submit(scan_one, s): s for s in UNIVERSES[universe]}
+        for fut in as_completed(futures):
+            r = fut.result()
+            if r:
+                results.append(r)
+
+    results.sort(key=lambda r: r["score"], reverse=True)
+    payload = jclean({"count": len(results), "universe": universe,
+                      "updatedAt": int(time.time() * 1000), "results": results})
+    cache_set(key, payload, ttl=TTL_SCREENER)
+    return payload
+
+
+# ------------------------------------------------------------ modo profundo
+
+_deep_lock = threading.Lock()
+_deep_state = {"status": "idle", "done": 0, "total": 0, "universe": None}
+
+
+def _pe_stats_from_edgar(symbol, edgar_hist):
+    """Mediana histórica del PE con EPS anual de EDGAR (ajustado por splits)
+    y precios mensuales ajustados de Yahoo."""
+    eps = E.to_series(edgar_hist, "eps")
+    if eps is None or len(eps) < 4:
+        return None
+    h = yf.Ticker(symbol).history(period="15y", interval="1mo")
+    if h is None or h.empty:
+        return None
+    h.index = h.index.tz_localize(None)
+    eps = M.split_adjust(eps, M.splits_from_prices(h), "per_share")
+    monthly = h["Close"].dropna()
+    pe = M.ratio_history(monthly, eps, "per_share")
+    if pe is None:
+        return None
+    pe = pe[pe <= 200]  # PE de utilidad casi nula no es señal de valoración
+    return M.series_stats(M._pairs(pe, 2))
+
+
+def scan_one_deep(symbol, bond10y):
+    cached = cache_get(f"deep_{symbol.replace('/', '_').replace('.', '_')}")
+    if cached:
+        return cached
+    try:
+        info = _retry(lambda: yf.Ticker(symbol).info or {})
+        price = info.get("currentPrice")
+        if not price:
+            return None
+
+        edgar_hist = E.get_annual_history(symbol)
+        pe_stats = _pe_stats_from_edgar(symbol, edgar_hist) if edgar_hist else None
+        annuals = E.to_annual_rows(edgar_hist) if edgar_hist else []
+
+        val = V.build_valuation(price, info, annuals, pe_stats, bond10y)
+        quick = score_stock(info) or {}
+
+        # guardas de calidad: MoS extremos suelen ser datos malos, no gangas;
+        # con un solo modelo el consenso no es confiable
+        mos, fair, verdict = val["marginOfSafety"], val["consensus"], val["verdict"]
+        if mos is not None and mos > 300:
+            mos, fair = None, None
+            verdict = {"label": "Datos poco confiables", "level": "na"}
+        elif len(val["models"]) < 2:
+            verdict = {"label": "Modelos insuficientes", "level": "na"}
+
+        roc = V.greenblatt_roc(info, annuals)
+        f_score = V.piotroski_f_score(annuals)
+        deep_scenarios = _calc_target_scenarios(price, info.get("trailingPE"), info.get("forwardPE"), pe_stats["median"] if pe_stats else None, info)
+
+        row = {
+            **_base_row(symbol, info),
+            **deep_scenarios,
+            "fcfYield": quick.get("fcfYield"),
+            "earningsYield": quick.get("earningsYield"),
+            "drawdown": quick.get("drawdown"),
+            "score": quick.get("score"),
+            "peMedian": pe_stats["median"] if pe_stats else None,
+            "vsMedian": pe_stats["vsMedian"] if pe_stats else None,
+            "mos": mos,
+            "verdict": verdict,
+            "fairValue": fair,
+            "nModels": len(val["models"]),
+            "roc": round(roc, 1) if roc else None,
+            "fScore": f_score,
+        }
+        row = jclean(row)
+        cache_set(f"deep_{symbol.replace('/', '_').replace('.', '_')}", row, ttl=TTL_SCREENER)
+
+        # alimenta el historial de margen de seguridad (cálculo fresco del día)
+        from . import snapshots as S
+        S.append(symbol, row.get("price"), row.get("mos"), row.get("fairValue"))
+        return row
+    except Exception:
+        return None
+
+
+def _deep_worker(universe):
+    global _deep_state
+    symbols = UNIVERSES[universe]
+    bond10y = bond_yield_10y()
+    results = []
+    try:
+        with ThreadPoolExecutor(max_workers=5) as ex:
+            futures = {ex.submit(scan_one_deep, s, bond10y): s for s in symbols}
+            for fut in as_completed(futures):
+                r = fut.result()
+                if r:
+                    results.append(r)
+                with _deep_lock:
+                    _deep_state["done"] += 1
+        results.sort(key=lambda r: (r["mos"] is None, -(r["mos"] or -999)))
+        payload = jclean({"count": len(results), "universe": universe,
+                          "updatedAt": int(time.time() * 1000), "results": results})
+        cache_set(f"deep_screener_{universe}", payload, ttl=TTL_SCREENER)
+        with _deep_lock:
+            _deep_state["status"] = "done"
+    except Exception:
+        with _deep_lock:
+            _deep_state["status"] = "error"
+
+
+def run_deep_screener(universe: str = "us", refresh: bool = False):
+    """Devuelve resultados cacheados, o el progreso del escaneo en curso."""
+    global _deep_state
+    universe = universe if universe in UNIVERSES else "us"
+
+    with _deep_lock:
+        if _deep_state["status"] == "running":
+            return {"status": "running", **{k: _deep_state[k] for k in ("done", "total", "universe")}}
+
+    if not refresh:
+        cached = cache_get(f"deep_screener_{universe}")
+        if cached:
+            return {"status": "done", **cached}
+
+    if refresh:
+        # invalida el caché por acción para recalcular de verdad
+        for s in UNIVERSES[universe]:
+            cache_set(f"deep_{s.replace('/', '_').replace('.', '_')}", None, ttl=0)
+
+    with _deep_lock:
+        _deep_state = {"status": "running", "done": 0,
+                       "total": len(UNIVERSES[universe]), "universe": universe}
+    threading.Thread(target=_deep_worker, args=(universe,), daemon=True).start()
+    return {"status": "running", "done": 0, "total": len(UNIVERSES[universe]), "universe": universe}

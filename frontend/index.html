@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>El Inversor Inteligente · Dashboard de Valoración</title>
+  
+  <!-- Fuentes Premium -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&family=Fraunces:ital,opsz,wght@1,9..144,700&display=swap" rel="stylesheet">
+  
+  <!-- CSS Principal -->
+  <link rel="stylesheet" href="css/style.css?v=10.0">
+  
+  <!-- ECharts CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+</head>
+<body>
+
+<!-- ============================ TOP BAR / NAV GLOBAL ============================ -->
+<header class="topbar">
+  <div class="brand" onclick="location.hash='#/analisis'">
+    <span class="brand-icon">◆</span>
+    <span class="brand-name">El Inversor <em>Inteligente</em></span>
+  </div>
+  <nav class="tabs">
+    <a href="#/analisis" id="tab-analisis" class="tab active">Análisis</a>
+    <a href="#/screener" id="tab-screener" class="tab">Screener</a>
+    <a href="#/comparar" id="tab-comparar" class="tab">Comparar</a>
+    <a href="#/watchlist" id="tab-watchlist" class="tab">Watchlist</a>
+    <a href="#/portafolio" id="tab-portafolio" class="tab">Portafolio</a>
+  </nav>
+  <div class="search-box">
+    <input id="search-input" type="text" placeholder="Buscar acción… (ej: NVDA, NFLX, AAPL)" autocomplete="off" spellcheck="false">
+    <div id="search-results" class="search-results hidden"></div>
+  </div>
+  <button id="theme-toggle" class="theme-toggle-btn" title="Cambiar Tema (Claro / Oscuro)">🌙</button>
+</header>
+
+<!-- ============================ VISTA ANÁLISIS ============================ -->
+<main id="view-analisis" class="view">
+
+  <!-- Spinner de Carga -->
+  <div id="loading" class="loading hidden">
+    <div class="spinner"></div>
+    <p id="loading-msg">Descargando fundamentales…</p>
+  </div>
+
+  <!-- Caja de Error -->
+  <div id="error-box" class="error-box hidden"></div>
+
+  <!-- Contenido de Análisis Organizado en SPA -->
+  <div id="analysis-content" class="hidden">
+    
+    <!-- ENCABEZADO CORPORATIVO (ESTILO SMART INVESTOR) -->
+    <div class="analysis-header">
+      <div class="header-left">
+        <div class="company-title-row">
+          <h1 id="co-name">—</h1>
+        </div>
+        <div class="price-row">
+          <span class="currency-label" id="co-currency">USD</span>
+          <span id="co-price" class="price-value">—</span>
+          <span id="co-change" class="price-change-value">—</span>
+          <span id="ah-wrapper" class="hidden">
+            <span class="after-hours-lbl">After hours</span>
+            <span class="after-hours-val" id="ah-price">—</span>
+            <span class="after-hours-chg" id="ah-change">—</span>
+          </span>
+        </div>
+        <div class="header-actions">
+          <button id="btn-watch" class="btn-hdr-action">☆ Seguir</button>
+          <button id="btn-alerts" class="btn-hdr-action">🔔 Alertas</button>
+          <button id="btn-compare" class="btn-hdr-action">⇄ Comparar</button>
+          <button id="btn-cagr-nav" class="btn-hdr-action">🧮 Calculadora CAGR</button>
+          <button id="btn-export-pdf" class="btn-hdr-action">📥 Exportar Reporte</button>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="co-logo-circle" id="co-logo-circle">—</div>
+      </div>
+    </div>
+
+    <nav class="action-tabs" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:8px;">
+      <button class="a-tab active" data-pane="summary" style="font-size:13px; font-weight:700; text-align:center; padding:10px 14px;">📊 Resumen Ejecutivo</button>
+      <button class="a-tab" data-pane="valuation" style="font-size:13px; font-weight:700; text-align:center; padding:10px 14px;">💎 Centro de Valoración & Proyecciones</button>
+      <button class="a-tab" data-pane="financials-hub" style="font-size:13px; font-weight:700; text-align:center; padding:10px 14px;">📈 Financieros & Métricas</button>
+      <button class="a-tab" data-pane="ownership" style="font-size:13px; font-weight:700; text-align:center; padding:10px 14px;">👔 Propietarios & Datos Corporativos</button>
+    </nav>
+
+    <!-- AVISOS DE CALIDAD DE DATOS (colapsable) -->
+    <div id="data-warnings" class="warnings hidden">
+      <details id="warnings-details">
+        <summary id="warnings-summary" style="cursor:pointer; list-style:none; display:flex; align-items:center; gap:6px; font-weight:700;"></summary>
+        <ul id="warnings-list" style="margin:6px 0 0 0; padding-left:18px;"></ul>
+      </details>
+    </div>
+
+    <!-- 1. PESTAÑA: SUMMARY -->
+    <div id="pane-summary" class="tab-pane active">
+      
+      <!-- GRID DE 5 TARJETAS SUPERIORES -->
+      <div class="summary-cards-grid">
+        <!-- Tarjeta 1: Fair Value -->
+        <div class="summary-card-item">
+          <div class="card-header">
+            <span class="card-title-symbol" id="fv-symbol-title">Fair Value</span>
+            <span id="verdict-badge" class="verdict-badge-new">—</span>
+          </div>
+          <div class="card-value" id="fv-consensus-val">—</div>
+          <div class="card-subtext" id="fv-mos-pct">—</div>
+          <div class="card-subtext" id="fv-analyst-target" style="font-size:10px; border-top:1px dashed #cbd5e1; margin-top:4px; padding-top:4px; font-weight:600">—</div>
+        </div>
+
+        <!-- Tarjeta 2: Graham Model -->
+        <div class="summary-card-item">
+          <div class="card-header">
+            <span>Graham Model (rev.)</span>
+          </div>
+          <div class="card-value" id="graham-val">—</div>
+          <div class="card-subtext" id="graham-upside">—</div>
+        </div>
+
+        <!-- Tarjeta 3: DCF Model -->
+        <div class="summary-card-item">
+          <div class="card-header">
+            <span>DCF Model</span>
+          </div>
+          <div class="card-value" id="dcf-val">—</div>
+          <div class="card-subtext" id="dcf-upside">—</div>
+          <div id="dcf-price-bar-wrap" style="margin-top:10px; display:none;">
+            <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:3px;">
+              <span>Precio</span><span id="dcf-bar-pct">—</span><span>DCF FV</span>
+            </div>
+            <div style="background:var(--border); border-radius:4px; height:6px; position:relative; overflow:hidden;">
+              <div id="dcf-price-bar" style="height:100%; background:var(--primary); border-radius:4px; transition:width 0.6s ease;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tarjeta 4: Financial Indicators -->
+        <div class="summary-card-item text-list-card">
+          <div class="card-header">
+            <span>Financial Indicators</span>
+          </div>
+          <div class="metrics-list-small">
+            <div class="metric-list-row" title="Z > 2.9 (Zona Segura), Z < 1.1 (Zona de Quiebra). Mide solvencia financiera.">
+              <span class="k" style="border-bottom:1px dashed #cbd5e1; cursor:help">Altman Z-Score:</span>
+              <span class="v" id="ind-altman">—</span>
+            </div>
+            <div class="metric-list-row" title="Score (0-9): 7-9 es excelente, 0-3 es débil. Evalúa rentabilidad y liquidez histórica.">
+              <span class="k" style="border-bottom:1px dashed #cbd5e1; cursor:help">Piotroski Score:</span>
+              <span class="v" id="ind-piotroski">—</span>
+            </div>
+            <div class="metric-list-row" title="Activos Corrientes - Pasivos Corrientes. Capacidad de pagar obligaciones a corto plazo.">
+              <span class="k" style="border-bottom:1px dashed #cbd5e1; cursor:help">Working Capital:</span>
+              <span class="v" id="ind-wc">—</span>
+            </div>
+            <div class="metric-list-row" title="Porcentaje de la empresa que está en manos de directivos y ejecutivos.">
+              <span class="k" style="border-bottom:1px dashed #cbd5e1; cursor:help">Insiders Own:</span>
+              <span class="v" id="ind-insider" style="font-weight:700; color:#0f172a">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tarjeta 5: Technical Indicators -->
+        <div class="summary-card-item text-list-card">
+          <div class="card-header">
+            <span>Technical Indicators</span>
+          </div>
+          <div class="metrics-list-small">
+            <div class="metric-list-row" title="RSI < 30 (Sobrevendido, potencial compra), RSI > 70 (Sobrecomprado, potencial venta).">
+              <span class="k" style="border-bottom:1px dashed #cbd5e1; cursor:help">RSI (14d):</span>
+              <span class="v" id="ind-rsi">—</span>
+            </div>
+            <div class="metric-list-row" title="Precio actual respecto a la media móvil simple de 50 días. Verde indica tendencia alcista.">
+              <span class="k" style="border-bottom:1px dashed #cbd5e1; cursor:help">vs MA50:</span>
+              <span class="v" id="ind-ma50">—</span>
+            </div>
+            <div class="metric-list-row" title="Precio actual respecto a la media móvil de 200 días. Soporte o tendencia de largo plazo.">
+              <span class="k" style="border-bottom:1px dashed #cbd5e1; cursor:help">vs MA200:</span>
+              <span class="v" id="ind-ma200">—</span>
+            </div>
+            <div class="metric-list-row" title="Porcentaje de flotación vendido en corto (Short float). Sentimiento bajista del mercado.">
+              <span class="k" style="border-bottom:1px dashed #cbd5e1; cursor:help">Short Float:</span>
+              <span class="v" id="ind-short" style="font-weight:700; color:#0f172a">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN INFERIOR: GRÁFICO + TABLA DETALLE -->
+      <div class="summary-bottom-layout">
+        
+        <!-- Bloque Izquierdo: Gráfico de Precio -->
+        <div class="summary-chart-card card">
+          <div class="chart-header-row">
+            <div class="title-perf">
+              <h3>Stock price</h3>
+              <span class="perf-badge" id="stock-perf-val">—</span>
+            </div>
+            <div class="chart-controls">
+              <div class="chart-toggles-style">
+                <button id="tg-area" class="tg-btn active">Area</button>
+                <button id="tg-line" class="tg-btn">Line</button>
+                <button id="tg-sma-summary" class="tg-btn">SMA</button>
+                <button id="tg-log-summary" class="tg-btn">Log</button>
+              </div>
+              <div class="chart-periods-style">
+                <button class="period-btn active" data-years="1">1 Year</button>
+                <button class="period-btn" data-years="10">10 Years</button>
+                <button class="period-btn" data-years="20">20 Years</button>
+                <button class="period-btn" data-years="30">30 Years</button>
+              </div>
+            </div>
+          </div>
+          <div class="chart-container-new" id="summary-price-chart"></div>
+        </div>
+
+        <!-- Bloque Derecho: Summary Ratios -->
+        <div class="summary-sidebar-card card">
+          <div class="sidebar-header-row">
+            <h3>Summary</h3>
+            <button id="btn-add-note" class="btn-add-note">✏️ Nota de Tesis</button>
+          </div>
+          
+          <div class="summary-metrics-list">
+            <div class="metrics-row-item">
+              <span class="label">Market Cap</span>
+              <span class="val" id="sum-mcap">—</span>
+            </div>
+            <div class="metrics-row-item vertical-range-row">
+              <div class="range-labels">
+                <span class="label">52 Week Range</span>
+                <span class="val" id="sum-52w-range">—</span>
+              </div>
+              <div class="visual-range-bar">
+                <span class="range-low-val" id="range-52w-low">—</span>
+                <div class="range-progress-track">
+                  <div class="range-progress-fill" id="range-52w-fill" style="width: 0%;"></div>
+                  <div class="range-progress-pin" id="range-52w-pin" style="left: 0%;"></div>
+                </div>
+                <span class="range-high-val" id="range-52w-high">—</span>
+              </div>
+            </div>
+            <div class="metrics-row-item">
+              <span class="label">Beta</span>
+              <span class="val" id="sum-beta">—</span>
+            </div>
+            <div class="metrics-row-item">
+              <span class="label">PE Ratio (TTM) (FWD)</span>
+              <span class="val-spark-wrapper">
+                <span class="sparkline-inline" id="pe-sparkline"></span>
+                <span class="val" id="sum-pe">—</span>
+              </span>
+            </div>
+            <div class="metrics-row-item" id="sum-pe-median-row" style="display:none;">
+              <span class="label" style="font-size:10.5px; color:var(--muted);">vs. Mediana 15a
+                <span id="sum-pe-vs-median-badge" style="display:inline-block; margin-left:4px; padding:1px 5px; border-radius:4px; font-size:9px; font-weight:700;"></span>
+              </span>
+              <span class="val" id="sum-pe-median" style="font-size:11px; font-weight:600;"></span>
+            </div>
+            <div class="metrics-row-item">
+              <span class="label">EPS (TTM)</span>
+              <span class="val-spark-wrapper">
+                <span class="sparkline-inline" id="eps-sparkline"></span>
+                <span class="val" id="sum-eps">—</span>
+              </span>
+            </div>
+            <div class="metrics-row-item">
+              <span class="label">Dividends (TTM)</span>
+              <span class="val-spark-wrapper">
+                <span class="sparkline-inline" id="div-sparkline"></span>
+                <span class="val" id="sum-div">—</span>
+              </span>
+            </div>
+            <div class="metrics-row-item">
+              <span class="label">Volume</span>
+              <span class="val" id="sum-vol">—</span>
+            </div>
+            <div class="metrics-row-item">
+              <span class="label">Avg. Volume</span>
+              <span class="val" id="sum-avg-vol">—</span>
+            </div>
+            <div class="metrics-row-item" title="Flujo de Caja Libre dividido por la capitalización bursátil. FCF Yield > 4% es generalmente atractivo para inversores value." style="border-top:1px dashed var(--border); padding-top:8px; margin-top:4px;">
+              <span class="label" style="cursor:help; border-bottom:1px dashed var(--border);">FCF Yield <span style="font-size:10px; opacity:0.6;">ⓘ</span></span>
+              <span class="val" id="sum-fcf-yield">—</span>
+            </div>
+            <div class="metrics-row-item" title="Fecha estimada de publicación de los próximos resultados trimestrales.">
+              <span class="label" style="cursor:help;">📅 Next Earnings</span>
+              <span class="val" id="sum-next-earnings" style="font-size:11px; font-weight:700;">—</span>
+            </div>
+          </div>
+
+          <div class="summary-perf-footer">
+            <div class="perf-tag-col" id="perf-col-1m">
+              <span class="dir" id="perf-dir-1m">▼ Down</span>
+              <span class="lbl">Last Month <b id="perf-val-1m">—</b></span>
+            </div>
+            <div class="perf-tag-col" id="perf-col-1y">
+              <span class="dir" id="perf-dir-1y">▲ Up</span>
+              <span class="lbl">Last Year <b id="perf-val-1y">—</b></span>
+            </div>
+            <div class="perf-tag-col" id="perf-col-ytd">
+              <span class="dir" id="perf-dir-ytd">▲ Up</span>
+              <span class="lbl">YTD <b id="perf-val-ytd">—</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EVALUADOR DE CALIDAD (BUFFETT SCORECARD) -->
+      <section class="card" style="margin-top:20px;">
+        <h2 style="font-family:'Outfit',sans-serif; font-size:18px; font-weight:700; color:var(--text); margin-bottom:8px;">🏆 Evaluador de Calidad & Solidez Financiera</h2>
+        <p class="card-sub" style="font-size:12.5px; color:var(--muted); margin-bottom:20px;">
+          Evaluación de 9 puntos cuantitativos inspirados en la filosofía de Warren Buffett y Piotroski F-Score.
+        </p>
+        
+        <div id="scorecard-total-box" class="scorecard-donut-card">
+          <div class="donut-wrapper">
+            <svg class="donut-svg" viewBox="0 0 100 100" style="width:76px; height:76px;">
+              <circle class="donut-bg" cx="50" cy="50" r="42" fill="none"></circle>
+              <circle id="donut-fill" class="donut-fill" cx="50" cy="50" r="42" fill="none" stroke-dasharray="263.89" stroke-dashoffset="263.89"></circle>
+            </svg>
+            <div id="scorecard-donut" class="donut-text">—</div>
+          </div>
+          <div class="scorecard-info-box">
+            <h4 class="scorecard-title">Puntaje de Solidez de Inversión</h4>
+            <p id="scorecard-desc" class="scorecard-desc-text">Criterios aprobados basados en la historia financiera disponible.</p>
+          </div>
+        </div>
+
+        <div id="scorecard-list" class="scorecard-list-container">
+          <!-- Criterios evaluados dinámicamente -->
+        </div>
+      </section>
+
+      <!-- TESIS DE INVERSIÓN & ANÁLISIS CUALITATIVO -->
+      <section class="card" id="notes-card" style="margin-top:20px;">
+        <h2>📝 Tesis de Inversión, Ventajas Competitivas (Moats) & Notas <span id="note-status" class="chart-tag">se guarda automáticamente</span></h2>
+        <p class="card-sub">La mitad que los números no capturan. Selecciona los fosos competitivos y registra tu tesis personal.</p>
+        <div id="moat-checks" class="moats" style="margin-top:12px; margin-bottom:16px;"></div>
+        <div class="notes-grid">
+          <label style="font-size:13px; font-weight:700; color:var(--text);">Tu tesis (¿por qué esta empresa, a este precio?)
+            <textarea id="note-thesis" rows="5" maxlength="2000" placeholder="Ej: marca dominante, ventaja de escala, PE bajo su mediana histórica; espero crecimiento sostenido a 5 años…"></textarea>
+          </label>
+          <label style="font-size:13.5px; font-weight:700; color:var(--text);">Riesgos que podrían romper la tesis
+            <textarea id="note-risks" rows="5" maxlength="2000" placeholder="Ej: regulación, pérdida de cuota frente a competidores, dependencia de proveedores…"></textarea>
+          </label>
+        </div>
+      </section>
+    </div>
+
+
+    <!-- 2. MASTER PANE: CENTRO DE VALORACIÓN & PROYECCIONES se mueve arriba -->
+
+    <!-- 3. MASTER PANE: FINANCIEROS & MÉTRICAS -->
+    <div id="pane-financials-hub" class="tab-pane hidden">
+
+      <!-- RATIOS CHECKS & COMPARISON TABLES (migrado desde pane-ratios) -->
+      <section class="card" style="margin-bottom:20px;">
+        <h2 style="font-family:'Outfit',sans-serif; font-size:18px; font-weight:700; color:var(--text); margin-bottom:4px;">🧮 Chequeos de Solvencia, Valoración y Retorno</h2>
+        <p class="card-sub" style="font-size:12.5px; color:var(--muted); margin-bottom:16px;">Reglas cuantitativas de inversión valor basadas en la filosofía Graham–Buffett.</p>
+
+        <!-- GRID DE CHECKS DE RATIOS (SUPERIOR) -->
+        <div class="ratios-checks-grid">
+        <!-- Panel Izquierdo: Reglas de Solvencia y Valoración -->
+        <div class="card check-panel">
+          <div class="check-row" id="chk-pe-row">
+            <span class="lbl" id="chk-pe-lbl">P/E Ratio &lt; —</span>
+            <span class="val" id="chk-pe-val">—</span>
+            <span class="icon" id="chk-pe-icon">—</span>
+          </div>
+          <div class="check-row" id="chk-curr-row">
+            <span class="lbl">Current Ratio 1-3</span>
+            <span class="val" id="chk-curr-val">—</span>
+            <span class="icon" id="chk-curr-icon">—</span>
+          </div>
+          <div class="check-row" id="chk-debt-row">
+            <span class="lbl">Debt Ratio &lt; 0.6</span>
+            <span class="val" id="chk-debt-val">—</span>
+            <span class="icon" id="chk-debt-icon">—</span>
+          </div>
+          <div class="check-row" id="chk-payout-row">
+            <span class="lbl">Payout Ratio &lt; 50%</span>
+            <span class="val" id="chk-payout-val">—</span>
+            <span class="icon" id="chk-payout-icon">—</span>
+          </div>
+        </div>
+
+        <!-- Panel Derecho: Reglas de Retorno y Crecimiento -->
+        <div class="card check-panel">
+          <div class="check-row" id="chk-roic-row">
+            <span class="lbl">ROIC Avg 5 Yrs &gt; 10%</span>
+            <span class="val" id="chk-roic-val">—</span>
+            <span class="icon" id="chk-roic-icon">—</span>
+          </div>
+          <div class="check-row" id="chk-revg-row">
+            <span class="lbl" id="chk-revg-lbl">Revenue Growth 5 Yrs</span>
+            <span class="val" id="chk-revg-val">—</span>
+            <span class="icon" id="chk-revg-icon">—</span>
+          </div>
+          <div class="check-row" id="chk-netg-row">
+            <span class="lbl" id="chk-netg-lbl">Net Income Growth 5 Yrs</span>
+            <span class="val" id="chk-netg-val">—</span>
+            <span class="icon" id="chk-netg-icon">—</span>
+          </div>
+          <div class="check-row" id="chk-fcfg-row">
+            <span class="lbl" id="chk-fcfg-lbl">Free Cash Flow Growth 5 Yrs</span>
+            <span class="val" id="chk-fcfg-val">—</span>
+            <span class="icon" id="chk-fcfg-icon">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- GRID DE TABLAS DE COMPARACIÓN (INFERIOR) -->
+      <div class="ratios-tables-grid" style="margin-top:20px;">
+        <!-- Tabla Izquierda: Multiplos de Valoración y Margen -->
+        <div class="card table-card-ratio">
+          <table class="ratio-compare-table">
+            <thead>
+              <tr>
+                <th style="text-align:left">Metric</th>
+                <th id="th-sym-left" class="text-right">—</th>
+                <th class="text-right">Sector</th>
+                <th class="text-right">Diff</th>
+                <th id="th-sym-5y-left" class="text-right">— 5Y Avg.</th>
+                <th class="text-right">Diff</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr id="row-tbl-pe">
+                <td style="text-align:left">P/E GAAP (TTM)</td>
+                <td class="text-right val-company">—</td>
+                <td class="text-right val-sector">—</td>
+                <td class="text-right val-diff-sector">—</td>
+                <td class="text-right val-5y">—</td>
+                <td class="text-right val-diff-5y">—</td>
+              </tr>
+              <tr id="row-tbl-pb">
+                <td style="text-align:left">Price / Book (TTM)</td>
+                <td class="text-right val-company">—</td>
+                <td class="text-right val-sector">—</td>
+                <td class="text-right val-diff-sector">—</td>
+                <td class="text-right val-5y">—</td>
+                <td class="text-right val-diff-5y">—</td>
+              </tr>
+              <tr id="row-tbl-ps">
+                <td style="text-align:left">Price / Sales (TTM)</td>
+                <td class="text-right val-company">—</td>
+                <td class="text-right val-sector">—</td>
+                <td class="text-right val-diff-sector">—</td>
+                <td class="text-right val-5y">—</td>
+                <td class="text-right val-diff-5y">—</td>
+              </tr>
+              <tr id="row-tbl-pcf">
+                <td style="text-align:left">Price / Cash Flow (TTM)</td>
+                <td class="text-right val-company">—</td>
+                <td class="text-right val-sector">—</td>
+                <td class="text-right val-diff-sector">—</td>
+                <td class="text-right val-5y">—</td>
+                <td class="text-right val-diff-5y">—</td>
+              </tr>
+              <tr id="row-tbl-margin">
+                <td style="text-align:left">Net Profit Margin (TTM)</td>
+                <td class="text-right val-company">—</td>
+                <td class="text-right val-sector">—</td>
+                <td class="text-right val-diff-sector">—</td>
+                <td class="text-right val-5y">—</td>
+                <td class="text-right val-diff-5y">—</td>
+              </tr>
+              <tr id="row-tbl-yield">
+                <td style="text-align:left">Dividend Yield (TTM)</td>
+                <td class="text-right val-company">—</td>
+                <td class="text-right val-sector">—</td>
+                <td class="text-right val-diff-sector">—</td>
+                <td class="text-right val-5y">—</td>
+                <td class="text-right val-diff-5y">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Tabla Derecha: Liquidez, Deuda y Rentabilidad -->
+        <div class="card table-card-ratio">
+          <table class="ratio-compare-table">
+            <thead>
+              <tr>
+                <th style="text-align:left">Metric</th>
+                <th id="th-sym-right" class="text-right">—</th>
+                <th id="th-sym-5y-right" class="text-right">— 5Y Avg.</th>
+                <th class="text-right">Diff</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr id="row-tbl-peg">
+                <td style="text-align:left">PEG GAAP (TTM) &lt; 1</td>
+                <td class="text-right val-company">—</td>
+                <td class="text-right val-5y">—</td>
+                <td class="text-right val-diff">—</td>
+              </tr>
+              <tr id="row-tbl-quick">
+                <td style="text-align:left">Quick Ratio (TTM) &gt; 1</td>
+                <td class="text-right val-company">—</td>
+                <td class="text-right val-5y">—</td>
+                <td class="text-right val-diff">—</td>
+              </tr>
+              <tr id="row-tbl-cash">
+                <td style="text-align:left">Cash Ratio (TTM) &gt; 0.5</td>
+                <td class="text-right val-company">—</td>
+                <td class="text-right val-5y">—</td>
+                <td class="text-right val-diff">—</td>
+              </tr>
+              <tr id="row-tbl-de">
+                <td style="text-align:left">Debt to Equity (TTM) &lt; 2</td>
+                <td class="text-right val-company">—</td>
+                <td class="text-right val-5y">—</td>
+                <td class="text-right val-diff">—</td>
+              </tr>
+              <tr id="row-tbl-roe">
+                <td style="text-align:left">Return on Equity (TTM) &gt; 0.1</td>
+                <td class="text-right val-company">—</td>
+                <td class="text-right val-5y">—</td>
+                <td class="text-right val-diff">—</td>
+              </tr>
+              <tr id="row-tbl-fcfps">
+                <td style="text-align:left">Free Cash Flow Per Share (TTM)</td>
+                <td class="text-right val-company">—</td>
+                <td class="text-right val-5y">—</td>
+                <td class="text-right val-diff">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Third Table: Calidad y Eficiencia -->
+        <div class="table-card-ratio">
+          <table class="ratio-compare-table">
+            <thead>
+              <tr>
+                <th style="text-align:left">Calidad y Eficiencia</th>
+                <th id="th-sym-right3" class="text-right">—</th>
+                <th id="th-sym-5y-right3" class="text-right">— 5Y Avg.</th>
+                <th class="text-right">Diff</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr id="row-tbl-roc">
+                <td style="text-align:left">ROC (Greenblatt)</td>
+                <td class="text-right val-company">—</td>
+                <td class="text-right val-5y">—</td>
+                <td class="text-right val-diff">—</td>
+              </tr>
+              <tr id="row-tbl-evebitda">
+                <td style="text-align:left">EV / EBITDA</td>
+                <td class="text-right val-company">—</td>
+                <td class="text-right val-5y">—</td>
+                <td class="text-right val-diff">—</td>
+              </tr>
+              <tr id="row-tbl-grossm">
+                <td style="text-align:left">Margen Bruto</td>
+                <td class="text-right val-company">—</td>
+                <td class="text-right val-5y">—</td>
+                <td class="text-right val-diff">—</td>
+              </tr>
+              <tr id="row-tbl-opm">
+                <td style="text-align:left">Margen Operativo</td>
+                <td class="text-right val-company">—</td>
+                <td class="text-right val-5y">—</td>
+                <td class="text-right val-diff">—</td>
+              </tr>
+              <tr id="row-tbl-roa">
+                <td style="text-align:left">ROA (Return on Assets)</td>
+                <td class="text-right val-company">—</td>
+                <td class="text-right val-5y">—</td>
+                <td class="text-right val-diff">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        </div>
+      </section>
+
+      <!-- Fin de sección ratios checks — el contenido de estados financieros sigue abajo -->
+
+    <!-- 2. MASTER PANE: CENTRO DE VALORACIÓN & PROYECCIONES (hermano, fuera del hub) -->
+    </div>
+    <div id="pane-valuation" class="tab-pane hidden">
+      <!-- MATRIZ COMPARATIVA DE MODELOS DE VALORACIÓN -->
+      <section class="card" style="margin-bottom:20px;">
+        <h2 style="font-family:'Outfit',sans-serif; font-size:20px; font-weight:800; color:var(--text); margin-bottom:6px;">
+          💎 Consenso & Matriz Comparativa de Valor Intrínseco
+        </h2>
+        <p class="card-sub" style="font-size:12.5px; color:var(--muted); margin-bottom:16px;">
+          Comparación directa del precio actual vs los modelos DCF, PER Mediano Histórico, Dividendos (DDM) y Graham.
+        </p>
+        <div id="models-table"></div>
+      </section>
+
+      <!-- GROWTH ESTIMATES GRID -->
+      <section class="card" style="margin-bottom:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+          <h2 style="font-family:'Outfit',sans-serif; font-size:20px; font-weight:800; color:var(--text); margin:0;">
+            📊 Matriz de Crecimiento & Estimaciones (Growth Estimates Grid)
+          </h2>
+          <span id="est-growth-subtext" style="font-size:13px; color:var(--muted); font-weight:500;">Currency in USD. All numbers in millions.</span>
+        </div>
+        <div class="table-wrap" style="overflow-x:auto;">
+          <table class="data-table growth-estimates-table" id="est-growth-table" style="width:100%; border-collapse:collapse;">
+            <thead id="est-growth-thead"></thead>
+            <tbody id="est-growth-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- CALCULADORA AUTOMÁTICA EPS x PER 2030E -->
+      <section class="card" style="margin-bottom:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+          <div>
+            <h2 style="font-family:'Outfit',sans-serif; font-size:20px; font-weight:800; color:var(--text); margin:0;">
+              🧮 Calculadora de Precio Objetivo 2030E (EPS × PER)
+            </h2>
+            <p class="card-sub" style="font-size:12.5px; color:var(--muted); margin-top:4px; margin-bottom:0;">
+              Proyección de precio futuro multiplicando el EPS 2030E por múltiplos PER históricos.
+            </p>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:20px;">
+          <div style="padding:16px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); text-align:center;">
+            <span class="badge" id="est-pe-cons-label" style="background:#4b5563; color:#fff; padding:4px 10px; border-radius:4px; font-size:11px; font-weight:700;">Conservador (-20% Mediana)</span>
+            <div id="est-pe-cons-price" style="font-size:22px; font-weight:800; color:var(--text); margin-top:10px;">—</div>
+            <div id="est-pe-cons-ret" style="font-size:13px; font-weight:700; color:var(--muted); margin-top:4px;">—</div>
+          </div>
+
+          <div style="padding:16px; background:rgba(16, 185, 129, 0.08); border:2px solid #10b981; border-radius:var(--radius); text-align:center; position:relative;">
+            <span class="badge" id="est-pe-base-label" style="background:#10b981; color:#fff; padding:4px 10px; border-radius:4px; font-size:11px; font-weight:700;">★ Base (Mediana Histórica)</span>
+            <div id="est-pe-base-price" style="font-size:24px; font-weight:800; color:var(--green); margin-top:10px;">—</div>
+            <div id="est-pe-base-ret" style="font-size:13.5px; font-weight:700; color:var(--green); margin-top:4px;">—</div>
+          </div>
+
+          <div style="padding:16px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); text-align:center;">
+            <span class="badge" id="est-pe-opt-label" style="background:#3b82f6; color:#fff; padding:4px 10px; border-radius:4px; font-size:11px; font-weight:700;">Optimista (+20% Mediana)</span>
+            <div id="est-pe-opt-price" style="font-size:22px; font-weight:800; color:var(--text); margin-top:10px;">—</div>
+            <div id="est-pe-opt-ret" style="font-size:13px; font-weight:700; color:var(--muted); margin-top:4px;">—</div>
+          </div>
+        </div>
+
+        <div style="padding:16px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <label style="font-size:13.5px; font-weight:700; color:var(--text);">Ajustar Múltiplo PER Objetivo:</label>
+            <span id="est-pe-val" style="font-size:16px; font-weight:800; color:var(--primary);">20.0x</span>
+          </div>
+          <input type="range" id="est-pe-slider" min="5" max="60" step="0.5" value="20" style="width:100%; cursor:pointer; accent-color:var(--primary);">
+          
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding-top:12px; border-top:1px solid var(--border);">
+            <div>
+              <span style="font-size:12px; color:var(--muted);">Precio Proyectado 2030E</span>
+              <div id="est-pe-custom-price" style="font-size:20px; font-weight:800; color:var(--text);">—</div>
+            </div>
+            <div style="text-align:center;">
+              <span style="font-size:12px; color:var(--muted);">Retorno Total</span>
+              <div id="est-pe-custom-tot" style="font-size:18px; font-weight:800;">—</div>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-size:12px; color:var(--muted);">Ganancia Anualizada (CAGR)</span>
+              <div id="est-pe-custom-cagr" style="font-size:18px; font-weight:800;">—</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CONSENSO DE ANALISTAS Y ESTIMACIONES WALL ST -->
+      <section class="card" style="margin-bottom:20px;">
+        <h2 style="font-family:'Outfit',sans-serif; font-size:18px; font-weight:700; color:var(--text); margin-bottom:8px;">Consenso de Analistas de Wall Street</h2>
+        <p class="card-sub" style="font-size:12.5px; color:var(--muted); margin-bottom:20px;">Recomendaciones de compra/venta y precios objetivo otorgados por firmas institucionales.</p>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;" class="ratios-checks-grid">
+          <div style="padding:16px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow);">
+            <h4 style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:12px;">Desglose de Recomendaciones</h4>
+            <div id="est-recs-box" style="display:flex; gap:8px; flex-wrap:wrap;">—</div>
+          </div>
+          <div style="padding:16px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow);">
+            <h4 style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:12px;">Precios Objetivo (Price Targets)</h4>
+            <div id="est-targets-box" style="display:flex; justify-content:space-between; align-items:center;">—</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" style="margin-bottom:20px;">
+        <h2>Proyección de EPS vs Año Anterior</h2>
+        <p class="card-sub" style="font-size:12px; color:var(--muted); margin-bottom:12px;">Comparación visual del EPS estimado (consenso) vs el EPS real del año anterior.</p>
+        <div id="est-eps-chart" style="height:220px; width:100%;"></div>
+      </section>
+
+      <section class="card" style="margin-bottom:20px;">
+        <h2>Proyección de Beneficio por Acción (EPS)</h2>
+        <div class="table-wrap">
+          <table class="data-table" id="est-eps-table">
+            <thead>
+              <tr>
+                <th>Periodo</th>
+                <th class="num">Est. Promedio</th>
+                <th class="num">Mínimo</th>
+                <th class="num">Máximo</th>
+                <th class="num">Año Anterior</th>
+                <th class="num">Analistas</th>
+                <th class="num">Crecimiento Est.</th>
+              </tr>
+            </thead>
+            <tbody id="est-eps-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" style="margin-bottom:20px;">
+        <h2>Proyección de Ingresos Totales</h2>
+        <div class="table-wrap">
+          <table class="data-table" id="est-rev-table">
+            <thead>
+              <tr>
+                <th>Periodo</th>
+                <th class="num">Est. Promedio</th>
+                <th class="num">Mínimo</th>
+                <th class="num">Máximo</th>
+                <th class="num">Año Anterior</th>
+                <th class="num">Analistas</th>
+                <th class="num">Crecimiento Est.</th>
+              </tr>
+            </thead>
+            <tbody id="est-rev-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- MODELOS DETALLADOS INDIVIDUALES (DESPLEGABLES) -->
+      <section class="card" style="margin-bottom:20px;">
+        <h3 style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:12px;">Desglose Detallado de Modelos</h3>
+        
+        <details style="margin-bottom:12px; padding:12px; background:var(--bg); border-radius:6px; border:1px solid var(--border);">
+          <summary style="font-weight:700; cursor:pointer; color:var(--text);">🏷️ Modelo PER Histórico Detallado</summary>
+          <div id="eps-fv-details" style="margin-top:12px;">—</div>
+        </details>
+
+        <details style="margin-bottom:12px; padding:12px; background:var(--bg); border-radius:6px; border:1px solid var(--border);">
+          <summary style="font-weight:700; cursor:pointer; color:var(--text);">💎 Modelo DCF (Descuento de Flujos) & Supuestos Interactivas</summary>
+          <div id="dcf-fv-details" style="margin-top:12px;">—</div>
+          <div style="margin-top:16px; padding-top:16px; border-top:1px dashed var(--border);">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+              <div class="slider-row">
+                <label style="font-size:13px; color:var(--text); font-weight:500; display:flex; justify-content:space-between;">Crecimiento FCF <b id="lbl-growth">—</b></label>
+                <input type="range" id="sl-growth" min="-5" max="35" step="0.5" style="width:100%; margin-top:4px;">
+              </div>
+              <div class="slider-row">
+                <label style="font-size:13px; color:var(--text); font-weight:500; display:flex; justify-content:space-between;">Tasa de descuento WACC <b id="lbl-discount">—</b></label>
+                <input type="range" id="sl-discount" min="5" max="18" step="0.25" style="width:100%; margin-top:4px;">
+              </div>
+            </div>
+            <div class="slider-row" style="margin-top:12px; margin-bottom:12px;">
+              <label style="font-size:13px; color:var(--text); font-weight:500; display:flex; justify-content:space-between;">Crecimiento terminal <b id="lbl-terminal">—</b></label>
+              <input type="range" id="sl-terminal" min="1" max="4" step="0.25" style="width:100%; margin-top:4px;">
+            </div>
+            <button id="btn-reset-dcf" class="btn btn-sm">Restaurar supuestos</button>
+          </div>
+          
+          <div id="implied-growth" class="yield-compare hidden" style="margin-top:16px; font-size:13px; padding:10px; background:var(--bg); border-radius:6px; border:1px solid var(--border); color:var(--text);"></div>
+          
+          <div id="sensitivity" class="sensitivity hidden" style="margin-top:16px;">
+            <p class="card-sub" style="margin:16px 0 8px; font-size:13px; font-weight:600; color:var(--text);">Matriz de sensibilidad — valor justo según crecimiento × tasa de descuento</p>
+            <div id="sensitivity-table" style="overflow-x:auto;"></div>
+          </div>
+        </details>
+
+        <details style="padding:12px; background:var(--bg); border-radius:6px; border:1px solid var(--border);">
+          <summary style="font-weight:700; cursor:pointer; color:var(--text);">💵 Modelo DDM (Descuento de Dividendos / Gordon Growth)</summary>
+          <div id="ddm-fv-details" style="margin-top:12px;">—</div>
+        </details>
+      </section>
+    </div>
+
+    <!-- 3. MASTER PANE: FINANCIEROS & MÉTRICAS (div principal) -->
+    <div id="pane-financials-hub-main" class="tab-pane hidden">
+      <!-- ESTADOS FINANCIEROS Y CAGR -->
+      <section class="card" id="growth-card" style="margin-bottom:20px;">
+        <h2>📈 Crecimiento Compuesto <span class="chart-tag">CAGR por período</span></h2>
+        <p class="card-sub">Tasas de crecimiento compuesto anualizadas para el último año fiscal.</p>
+        <div class="table-wrap"><table id="growth-table"></table></div>
+      </section>
+
+      <!-- EXPLORADOR DE ESTADOS FINANCIEROS (INCOME, BALANCE, CASHFLOW) -->
+      <section class="card" style="margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+          <div>
+            <h2 style="font-family:'Outfit',sans-serif; font-size:18px; font-weight:700; color:var(--text); margin:0;">Estados Financieros Desglosados</h2>
+            <p class="card-sub" style="font-size:12.5px; color:var(--muted); margin-top:2px;">Revisa las cifras clave reportadas en los últimos años fiscales.</p>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-sm fin-stmt-btn active" data-stmt="income">Resultados</button>
+            <button class="btn btn-sm fin-stmt-btn" data-stmt="balance">Balance General</button>
+            <button class="btn btn-sm fin-stmt-btn" data-stmt="cashflow">Flujos de Caja</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="fin-stmt-table">
+            <thead id="fin-stmt-thead"></thead>
+            <tbody id="fin-stmt-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- GRÁFICOS FINANCIEROS Y RATIOS HISTÓRICOS -->
+      <section class="charts-grid" style="margin-bottom:20px;">
+        <div class="card chart-card">
+          <h3>Ingresos y utilidad neta</h3>
+          <div class="chart" id="ch-income"></div>
+        </div>
+        <div class="card chart-card">
+          <h3>Márgenes operativos</h3>
+          <div class="chart" id="ch-margins"></div>
+        </div>
+        <div class="card chart-card">
+          <h3>Flujo de caja libre</h3>
+          <div class="chart" id="ch-fcf"></div>
+        </div>
+        <div class="card chart-card">
+          <h3>Deuda vs caja</h3>
+          <div class="chart" id="ch-debt"></div>
+        </div>
+        <div class="card chart-card">
+          <h3>Acciones en circulación <span class="chart-tag">recompras ↓</span></h3>
+          <div class="chart" id="ch-shares"></div>
+        </div>
+        <div class="card chart-card">
+          <h3>ROE y ROIC <span class="chart-tag">umbral Buffett 15%</span></h3>
+          <div class="chart" id="ch-returns"></div>
+        </div>
+      </section>
+
+      <!-- TABLA DE RATIOS HISTÓRICOS EDGAR (10-15 AÑOS) -->
+      <section class="card" style="margin-bottom:20px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:4px;">
+          <div>
+            <h2 style="margin:0;">📜 Histórico de Ratios Financieros (SEC EDGAR)</h2>
+            <p class="card-sub" style="margin-top:4px;">Evolución año a año de la rentabilidad, estructura de capital y múltiplos.</p>
+          </div>
+          <div id="hist-ratios-csv-wrap"></div>
+        </div>
+        <div class="table-wrap" style="margin-top:14px;">
+          <table class="data-table" id="hist-ratios-table">
+            <thead id="hist-ratios-thead"></thead>
+            <tbody id="hist-ratios-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- GRÁFICOS DE MÚLTIPLOS HISTÓRICOS CON MEDIANA -->
+      <section class="card" style="margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:16px;">
+          <h2 style="font-family:'Outfit',sans-serif; font-size:18px; font-weight:700; color:var(--text); margin:0;">📊 Gráficos de Múltiplos Históricos (15 Años)</h2>
+          <div class="chart-range-controls" id="multiples-range-controls" style="display:flex; gap:4px;">
+            <button class="period-btn-mult" data-range="ytd">YTD</button>
+            <button class="period-btn-mult" data-range="1">1 Year</button>
+            <button class="period-btn-mult" data-range="3">3 Years</button>
+            <button class="period-btn-mult" data-range="5">5 Years</button>
+            <button class="period-btn-mult" data-range="10">10 Years</button>
+            <button class="period-btn-mult active" data-range="all">Todo</button>
+          </div>
+        </div>
+        
+        <div class="charts-grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:20px;">
+          <div class="chart-card wide" style="grid-column: span 3; padding-top:10px;">
+            <h3 style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:8px;">PE histórico (TTM) con mediana y banda p25-p75</h3>
+            <div class="chart" id="ch-pe" style="height:320px; width:100%;"></div>
+          </div>
+          <div class="chart-card" style="grid-column: span 1.5; padding-top:10px;">
+            <h3 style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:8px;">P/Ventas histórico</h3>
+            <div class="chart" id="ch-ps" style="height:250px; width:100%;"></div>
+          </div>
+          <div class="chart-card" style="grid-column: span 1.5; padding-top:10px;">
+            <h3 style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:8px;">P/Valor libro histórico</h3>
+            <div class="chart" id="ch-pb" style="height:250px; width:100%;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- EARNINGS & DIVIDENDOS -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+        <section class="card">
+          <h2>💰 Seguridad del Dividendo</h2>
+          <div id="div-safety" class="div-safety hidden"></div>
+          <div class="chart" id="ch-divs"></div>
+        </section>
+
+        <section class="card">
+          <h2>💵 Historico de Beneficio Por Acción (EPS)</h2>
+          <div class="chart" id="ch-eps"></div>
+        </section>
+      </div>
+    </div>
+
+    <!-- 4. MASTER PANE: PROPIETARIOS & DATOS CORPORATIVOS -->
+    <div id="pane-ownership" class="tab-pane hidden">
+      <section class="card" style="margin-bottom:20px;">
+        <h2>👔 Estructura de Propiedad Accionaria</h2>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:16px;" class="ratios-checks-grid">
+          <div style="padding:16px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); text-align:center;">
+            <span style="font-size:12px; color:var(--muted); font-weight:600;">% Propiedad de Directivos (Insiders)</span>
+            <div id="ins-pct-val" style="font-size:28px; font-weight:800; color:var(--primary); margin-top:4px;">—</div>
+          </div>
+          <div style="padding:16px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); text-align:center;">
+            <span style="font-size:12px; color:var(--muted); font-weight:600;">% Propiedad de Fondos Institucionales</span>
+            <div id="inst-pct-val" style="font-size:28px; font-weight:800; color:var(--cyan); margin-top:4px;">—</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" style="margin-bottom:20px;">
+        <h2>📝 Últimas Transacciones de Directivos (Insiders)</h2>
+        <div class="table-wrap">
+          <table class="data-table" id="ins-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Insider (Persona)</th>
+                <th>Cargo / Transacción</th>
+                <th class="num">Acciones</th>
+                <th class="num">Valor Total ($)</th>
+              </tr>
+            </thead>
+            <tbody id="ins-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" style="margin-bottom:20px;">
+        <h2>Principales Fondos Accionistas (Institutional Holders)</h2>
+        <div class="table-wrap">
+          <table class="data-table" id="holders-table">
+            <thead>
+              <tr>
+                <th>Fondo Accionista</th>
+                <th class="num">Acciones Poseídas</th>
+                <th class="num">Valor Total ($)</th>
+                <th class="num">Cambio Reciente</th>
+                <th>Fecha Reportada</th>
+              </tr>
+            </thead>
+            <tbody id="holders-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>📋 Perfil Corporativo y Enlaces Oficiales SEC EDGAR</h2>
+        <div id="additional-details" style="margin-top:16px;">—</div>
+      </section>
+    </div>
+
+    <p id="co-summary" class="summary muted"></p>
+  </div> <!-- analysis-content -->
+</main>
+
+<!-- ============================ VISTA SCREENER ============================ -->
+<main id="view-screener" class="view hidden">
+  <section class="card">
+    <div class="screener-head">
+      <div>
+        <h2>Screener de valor</h2>
+        <p class="card-sub" id="screener-sub">Acciones puntuadas por valoración, calidad y salud financiera. Haz clic en una fila para analizarla.</p>
+      </div>
+      <div class="head-actions">
+        <button id="btn-csv" class="btn btn-sm">Exportar CSV</button>
+        <button id="btn-refresh" class="btn">Actualizar datos</button>
+      </div>
+    </div>
+
+    <!-- Presets de inversión -->
+    <div class="presets-row" id="presets-row">
+      <span class="presets-label">Presets:</span>
+      <button class="preset-btn" data-preset="quality" title="ROE > 15% · Margen neto > 10% · FCF Yield > 3% · D/E < 1">🏆 Calidad Total</button>
+      <button class="preset-btn" data-preset="buffett" title="ROE > 15% · Margen neto > 10% · PE < 25 · D/E < 0.5">💎 Buffett</button>
+      <button class="preset-btn" data-preset="deep"    title="Margen de seguridad > 20% · PE < 20 (usa modo profundo)">🔥 Valor Profundo</button>
+      <button class="preset-btn" data-preset="growth"  title="ROE > 20% · FCF Yield > 4% · PE Forward < PE TTM">📈 Crecimiento</button>
+      <button class="preset-btn" data-preset="targets2030" title="Matriz de Precios Objetivos a 2030E en 3 escenarios PER">🎯 Objetivos 2030</button>
+      <button class="preset-btn" data-preset="clean"   title="FCF Yield > 0% · D/E < 1.5 · No sobrevendido">🚩 Sin Red Flags</button>
+      <button class="preset-btn clear" data-preset="clear">✕ Limpiar</button>
+    </div>
+
+    <div class="controls-row">
+      <div class="control">
+        <label>Universo</label>
+        <select id="f-universe">
+          <option value="us">EE.UU. (~200)</option>
+          <option value="cl">Chile — IPSA</option>
+        </select>
+      </div>
+      <div class="control">
+        <label>Modo</label>
+        <select id="f-mode">
+          <option value="quick">Rápido (puntaje)</option>
+          <option value="deep">Profundo (margen de seguridad)</option>
+        </select>
+      </div>
+      <div class="control">
+        <label>Sector</label>
+        <select id="f-sector"><option value="">Todos</option></select>
+      </div>
+      <div class="control">
+        <label>Filtro</label>
+        <input type="text" id="f-text" placeholder="símbolo o nombre…">
+      </div>
+      <div class="control">
+        <label>MoS mín. %</label>
+        <input type="number" id="f-min-mos" placeholder="Ej: 20" style="width:75px">
+      </div>
+      <div class="control">
+        <label>PE máx.</label>
+        <input type="number" id="f-max-pe" placeholder="Ej: 25" style="width:68px">
+      </div>
+      <div class="control">
+        <label>PE fwd máx.</label>
+        <input type="number" id="f-max-fwdpe" placeholder="Ej: 20" style="width:75px">
+      </div>
+      <div class="control">
+        <label>ROE mín. %</label>
+        <input type="number" id="f-min-roe" placeholder="Ej: 15" style="width:75px">
+      </div>
+      <div class="control">
+        <label>Mg. Neto mín. %</label>
+        <input type="number" id="f-min-netmargin" placeholder="Ej: 10" style="width:80px">
+      </div>
+      <div class="control">
+        <label>FCF Yield mín. %</label>
+        <input type="number" id="f-min-fcfyield" placeholder="Ej: 3" style="width:80px">
+      </div>
+      <div class="control">
+        <label>D/E máx.</label>
+        <input type="number" id="f-max-de" placeholder="Ej: 1" step="0.1" style="width:68px">
+      </div>
+      <div class="control" id="ctl-view">
+        <label>Vista</label>
+        <select id="f-view">
+          <option value="table">Tabla General</option>
+          <option value="targets2030">🎯 Precios Objetivos 2030 (Escenarios PER)</option>
+          <option value="map">Mapa de calor</option>
+        </select>
+      </div>
+    </div>
+
+
+    <div id="screener-loading" class="loading hidden">
+      <div class="spinner"></div>
+      <p id="screener-loading-msg">Escaneando universo de acciones…</p>
+      <div class="progress hidden" id="deep-progress"><div class="progress-fill" id="deep-progress-fill"></div></div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="screener-table" class="hidden">
+        <thead><tr id="screener-thead"></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div id="screener-heatmap" class="heatmap hidden"></div>
+  </section>
+</main>
+
+<!-- ============================ VISTA COMPARAR ============================ -->
+<main id="view-comparar" class="view hidden">
+  <section class="card">
+    <h2>Comparador de empresas</h2>
+    <p class="card-sub">Hasta 4 acciones lado a lado — ¿KO o PEP? ¿V o MA?</p>
+    <div class="compare-controls">
+      <input type="text" id="cmp-input" placeholder="Símbolo (ej: PEP)" autocomplete="off" spellcheck="false">
+      <button id="cmp-add" class="btn">Agregar</button>
+      <div id="cmp-chips" class="cmp-chips"></div>
+    </div>
+    <div id="cmp-loading" class="loading hidden"><div class="spinner"></div><p>Cargando empresas…</p></div>
+    <div id="cmp-content" class="hidden">
+      <div class="table-wrap"><table id="cmp-table"></table></div>
+    </div>
+  </section>
+  <section class="charts-grid" id="cmp-charts" style="display:none">
+    <div class="card chart-card wide">
+      <h3>Retorno total normalizado <span class="chart-tag">base 100</span></h3>
+      <div class="chart" id="cmp-price"></div>
+    </div>
+    <div class="card chart-card">
+      <h3>PE histórico (TTM)</h3>
+      <div class="chart" id="cmp-pe"></div>
+    </div>
+    <div class="card chart-card">
+      <h3>Margen neto anual</h3>
+      <div class="chart" id="cmp-margins"></div>
+    </div>
+  </section>
+</main>
+
+<!-- ============================ VISTA WATCHLIST ============================ -->
+<main id="view-watchlist" class="view hidden">
+  <section class="card">
+    <div class="screener-head">
+      <div>
+        <h2>Watchlist</h2>
+        <p class="card-sub">Tus acciones seguidas con margen de seguridad objetivo. Cuando el MoS actual supera tu objetivo, la acción entra en <b>zona de compra</b>.</p>
+      </div>
+      <div class="head-actions">
+        <button id="wl-csv" class="btn btn-sm">Exportar CSV</button>
+        <button id="wl-refresh" class="btn">Reevaluar</button>
+      </div>
+    </div>
+    <div id="wl-loading" class="loading hidden"><div class="spinner"></div><p>Evaluando margen de seguridad de tus acciones…</p></div>
+    <div id="wl-empty" class="empty-state hidden">
+      <p>Aún no sigues ninguna acción.</p>
+      <p class="muted">Busca una acción y presiona <b>☆ Seguir</b> en su página de análisis.</p>
+    </div>
+    <div class="table-wrap">
+      <table id="wl-table" class="hidden">
+        <thead>
+          <tr>
+            <th>Símbolo</th><th>Empresa</th><th class="num">Precio</th>
+            <th class="num">Valor justo</th><th class="num">MoS actual</th>
+            <th class="num" title="Precio objetivo conservador (PE mediana × 0.80)">Obj. Conservador</th>
+            <th class="num" style="color:var(--primary);" title="Precio objetivo base (PE mediana histórica)">★ Obj. Base</th>
+            <th class="num" title="Precio objetivo optimista (PE mediana × 1.20)">Obj. Optimista</th>
+            <th class="num">CAGR base</th>
+            <th class="num">MoS objetivo</th><th>Estado</th><th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<!-- ============================ VISTA PORTAFOLIO ============================ -->
+<main id="view-portafolio" class="view hidden">
+  <!-- Tarjetas resumen del portafolio -->
+  <div id="pf-summary-grid" class="summary-cards-grid hidden" style="margin-bottom:16px;">
+    <div class="summary-card-item">
+      <div class="card-header">Valor Total</div>
+      <div class="card-value" id="pf-sum-val">—</div>
+      <div class="card-subtext" id="pf-sum-inv">Invertido: —</div>
+    </div>
+    <div class="summary-card-item">
+      <div class="card-header">Ganancia / Pérdida</div>
+      <div class="card-value" id="pf-sum-profit">—</div>
+      <div class="card-subtext" id="pf-sum-profit-pct">—</div>
+    </div>
+    <div class="summary-card-item">
+      <div class="card-header">Alfa vs S&P 500</div>
+      <div class="card-value" id="pf-sum-alpha">—</div>
+      <div class="card-subtext" id="pf-sum-alpha-lbl">Comparado con índice</div>
+    </div>
+    <div class="summary-card-item">
+      <div class="card-header">Posición Top</div>
+      <div class="card-value" id="pf-sum-top">—</div>
+      <div class="card-subtext" id="pf-sum-top-val">—</div>
+    </div>
+    <div class="summary-card-item">
+      <div class="card-header">Total Posiciones</div>
+      <div class="card-value" id="pf-sum-count">—</div>
+      <div class="card-subtext">Acciones registradas</div>
+    </div>
+  </div>
+
+  <!-- Layout principal del portafolio con gráfico de sectores -->
+  <div class="summary-bottom-layout" id="pf-analytics-layout" style="margin-bottom:16px;">
+    <div class="summary-chart-card hidden" id="pf-sector-card">
+      <div class="chart-header-row">
+        <h3>Distribución por Sector del Portafolio</h3>
+        <span class="chart-tag">Ponderación de Capital</span>
+      </div>
+      <div id="pf-sector-chart" style="width:100%; height:240px;"></div>
+    </div>
+  </div>
+
+  <section class="card">
+    <div class="screener-head">
+      <div>
+        <h2>Portafolio y diario de inversión</h2>
+        <p class="card-sub">Registra tus compras reales y compáralas contra el S&P 500 desde cada fecha. ¿Le estás ganando al índice?</p>
+      </div>
+      <div class="head-actions">
+        <button id="pf-csv" class="btn btn-sm">Exportar CSV</button>
+        <button id="pf-export" class="btn btn-sm">Exportar respaldo</button>
+        <button id="pf-import" class="btn btn-sm">Importar respaldo</button>
+        <input type="file" id="pf-import-file" accept=".json" class="hidden">
+        <button id="pf-refresh" class="btn">Actualizar precios</button>
+      </div>
+    </div>
+
+    <form id="pf-form" class="pf-form">
+      <div class="control"><label>Símbolo</label><input type="text" id="pf-symbol" placeholder="KO" required></div>
+      <div class="control"><label>Fecha compra</label><input type="date" id="pf-date" required></div>
+      <div class="control"><label>Precio</label><input type="number" id="pf-price" step="0.01" min="0.01" placeholder="61.50" required></div>
+      <div class="control"><label>Cantidad</label><input type="number" id="pf-shares" step="any" min="0.0001" placeholder="10" required></div>
+      <div class="control pf-note"><label>Tesis / nota</label><input type="text" id="pf-note" maxlength="300" placeholder="¿por qué compraste? (opcional)"></div>
+      <button type="submit" class="btn">Registrar compra</button>
+    </form>
+
+    <div id="pf-loading" class="loading hidden"><div class="spinner"></div><p>Calculando rendimientos vs S&P 500…</p></div>
+    <div id="pf-empty" class="empty-state hidden">
+      <p>Aún no registras compras.</p>
+      <p class="muted">Anota cada compra real con su tesis — tu yo del futuro te lo agradecerá.</p>
+    </div>
+    <div id="pf-concentration-alert" class="hidden" style="margin:8px 0; padding:10px 16px; background:var(--gold-soft); border:1px solid var(--gold-border); border-radius:8px; font-size:12.5px;"></div>
+    <div class="table-wrap">
+      <table id="pf-table" class="hidden">
+        <thead>
+          <tr>
+            <th>Símbolo</th><th>Fecha</th><th class="num">P. compra</th><th class="num">P. actual</th>
+            <th class="num">Cant.</th><th class="num">Valor</th><th class="num">% Portafolio</th><th class="num">Retorno</th>
+            <th class="num">S&amp;P 500</th><th class="num">Alfa</th><th>Tesis</th><th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
+    </div>
+  </section>
+</main>
+
+<!-- ============================ SIDEBAR FAVORITOS ============================ -->
+<aside id="sidebar" class="sidebar hidden">
+  <div class="sidebar-head">
+    <span>☆ Favoritos</span>
+    <button id="sb-close" class="btn-x" title="Ocultar">✕</button>
+  </div>
+  <div id="sb-list" class="sb-list"></div>
+  <p class="sb-hint muted">Se sincroniza con tu watchlist (botón ☆ Seguir)</p>
+</aside>
+<button id="sb-open" class="sb-open" title="Mostrar favoritos">☆</button>
+
+<footer class="footer">
+  <p>Datos: Yahoo Finance + SEC EDGAR. Esta herramienta es de uso personal y educativo — <b>no constituye asesoría financiera</b>.</p>
+  <p class="muted">“El precio es lo que pagas; el valor es lo que recibes.” — Warren Buffett</p>
+</footer>
+
+<!-- MODAL CALCULADORA CAGR -->
+<div id="modal-cagr" class="modal-overlay hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>🧮 Calculadora de CAGR y Retorno Proyectado</h3>
+      <button id="modal-cagr-close" class="btn-x">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="card-sub" style="margin-bottom:16px;">Simula la tasa de crecimiento anual compuesto (CAGR) o proyecta el valor futuro de tu inversión.</p>
+      
+      <div class="cagr-inputs-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+        <label style="font-size:12.5px; font-weight:600; color:#334155;">Monto Inicial ($)
+          <input type="number" id="cagr-in-principal" value="1000" step="100" style="width:100%; margin-top:4px; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+        </label>
+        <label style="font-size:12.5px; font-weight:600; color:#334155;">Tasa CAGR Anual (%)
+          <input type="number" id="cagr-in-rate" value="12.5" step="0.5" style="width:100%; margin-top:4px; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+        </label>
+        <label style="font-size:12.5px; font-weight:600; color:#334155; grid-column:span 2;">Años de Proyección (<b id="cagr-lbl-years">5</b> años)
+          <input type="range" id="cagr-in-years" min="1" max="30" value="5" step="1" style="width:100%; margin-top:4px;">
+        </label>
+      </div>
+
+      <div class="cagr-result-box" style="padding:16px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <span style="font-size:12px; color:#64748b; font-weight:600;">Valor Futuro Estimado</span>
+          <div id="cagr-res-future" style="font-size:24px; font-weight:800; color:#10b981;">$1,802 USD</div>
+        </div>
+        <div style="text-align:right;">
+          <span style="font-size:12px; color:#64748b; font-weight:600;">Ganancia Total / Multiplicador</span>
+          <div id="cagr-res-gain" style="font-size:14px; font-weight:700; color:#0f172a;">+$802 (1.80x)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ALERTAS INTELIGENTES -->
+<div id="modal-alerts" class="modal-overlay hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>🔔 Alertas Inteligentes de Precio y Valoración</h3>
+      <button id="modal-alerts-close" class="btn-x">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="card-sub" style="margin-bottom:16px;">Recibe un aviso visual cuando la acción alcance tu objetivo de precio o margen de seguridad.</p>
+      
+      <form id="form-alert-add" style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <label style="font-size:12px; font-weight:600; color:var(--text);">Símbolo
+            <input type="text" id="alert-in-sym" style="width:100%; margin-top:4px; padding:6px 8px; border:1px solid var(--border-dark); border-radius:6px; background:var(--panel); color:var(--text);" readonly>
+          </label>
+          <label style="font-size:12px; font-weight:600; color:var(--text);">Tipo de Alerta
+            <select id="alert-in-type" style="width:100%; margin-top:4px; padding:6px 8px; border:1px solid var(--border-dark); border-radius:6px; background:var(--panel); color:var(--text);">
+              <option value="price_below">Precio cae por debajo de ($)</option>
+              <option value="price_above">Precio sube por encima de ($)</option>
+              <option value="mos_above">Margen de Seguridad supera (%)</option>
+            </select>
+          </label>
+        </div>
+        <label style="font-size:12px; font-weight:600; color:var(--text);">Valor Objetivo ($ o %)
+          <input type="number" id="alert-in-target" step="0.1" placeholder="Ej: 150.0" style="width:100%; margin-top:4px; padding:6px 8px; border:1px solid var(--border-dark); border-radius:6px; background:var(--panel); color:var(--text);" required>
+        </label>
+        <button type="submit" class="btn" style="align-self:flex-start;">+ Guardar Alerta</button>
+      </form>
+
+      <h4 style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:8px;">Mis Alertas Activas</h4>
+      <div id="alerts-list" style="display:flex; flex-direction:column; gap:8px; max-height:200px; overflow-y:auto;">
+        <!-- Las alertas se listan dinámicamente aquí -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="js/format.js?v=14.0"></script>
+<script src="js/glossary.js?v=14.0"></script>
+<script src="js/charts.js?v=14.0"></script>
+<script src="js/screener.js?v=14.0"></script>
+<script src="js/compare.js?v=14.0"></script>
+<script src="js/watchlist.js?v=14.0"></script>
+<script src="js/portfolio.js?v=14.0"></script>
+<script src="js/app.js?v=14.0"></script>
+</body>
+</html>
