@@ -1,0 +1,758 @@
+/* =====================================================================
+   El Inversor Inteligente — ADDITIONS.CSS
+   Clases que reemplazan inline styles + accesibilidad + mobile menu
+   Importar DESPUÉS de style.css en index.html:
+     <link rel="stylesheet" href="css/style.css?v=20.0">
+     <link rel="stylesheet" href="css/additions.css?v=1.0">
+   ===================================================================== */
+
+/* ── ACCESIBILIDAD: Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .card:hover,
+  .summary-card-item:hover,
+  .scorecard-item-row:hover {
+    transform: none;
+  }
+  .btn:hover {
+    transform: none;
+  }
+}
+
+/* ── ACCESIBILIDAD: Skip-nav link ── */
+.skip-nav {
+  position: absolute;
+  top: -100%;
+  left: 16px;
+  background: var(--primary);
+  color: #000;
+  padding: 8px 16px;
+  border-radius: 0 0 8px 8px;
+  font-weight: 700;
+  z-index: 9999;
+  text-decoration: none;
+  transition: top 0.2s ease;
+}
+.skip-nav:focus {
+  top: 0;
+}
+
+/* ── SCROLLBAR: Firefox fallback ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-dark) transparent;
+}
+
+/* ── ACTION TABS (reemplaza inline styles) ── */
+.action-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+}
+.action-tabs .a-tab {
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  padding: 10px 14px;
+}
+
+/* ── SECTION HEADINGS ── */
+.section-heading {
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.section-heading-lg {
+  font-family: 'Outfit', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+}
+.section-sub {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+.section-sub-lg {
+  font-size: 13.5px;
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+
+/* ── GRID LAYOUTS ── */
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.grid-3col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.grid-auto-fit-sm {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.grid-auto-fit-md {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+.grid-multiples {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.grid-multiples .chart-wide {
+  grid-column: span 3;
+  padding-top: 10px;
+}
+.grid-multiples .chart-half {
+  grid-column: span 1;
+}
+
+/* ── FLEX LAYOUTS ── */
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.flex-between-baseline {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.flex-col-gap-12 {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.flex-col-gap-12-mb20 {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.flex-wrap-gap-8 {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.flex-wrap-gap-12 {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.flex-justify-between-border {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+.flex-justify-between-mt {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── EARNINGS SECTION ── */
+.earnings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+.earnings-chart-container {
+  height: 240px;
+  width: 100%;
+  min-width: 300px;
+}
+
+/* ── SCENARIO CARDS ── */
+.scenario-card-lg {
+  padding: 24px;
+  text-align: left;
+  height: 100%;
+}
+
+/* ── GROWTH ESTIMATES ── */
+.growth-subtext {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* ── ESTIMATES SECTION ── */
+.est-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.est-subtitle {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
+/* ── SCENARIO BADGES ── */
+.badge-cons {
+  background: #4b5563;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.badge-base {
+  background: #10b981;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.badge-opt {
+  background: #3b82f6;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ── SCENARIO VALUES ── */
+.scenario-price-lg {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+  margin-top: 10px;
+}
+.scenario-price-xl {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--green);
+  margin-top: 10px;
+}
+.scenario-ret {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.scenario-ret-green {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--green);
+  margin-top: 4px;
+}
+
+/* ── CUSTOM SCENARIO ── */
+.custom-scenario-box {
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.custom-scenario-label {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.custom-scenario-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--primary);
+}
+.custom-scenario-price {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+}
+.custom-scenario-metric {
+  font-size: 12px;
+  color: var(--muted);
+}
+.custom-scenario-metric-val {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+/* ── ANALYST PANELS ── */
+.analyst-panel {
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.analyst-panel h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+/* ── DCF DETAILS ── */
+.dcf-slider-label {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ── FINANCIAL STATEMENT HEADER ── */
+.fin-stmt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.fin-stmt-sub {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.fin-stmt-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ── MULTIPLES CHART HEADER ── */
+.multiples-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+.multiples-sub {
+  margin: 0;
+}
+
+/* ── GROWTH TABLE ── */
+.growth-card {
+  margin-bottom: 20px;
+}
+
+/* ── TABLE OVERFLOW ── */
+.table-overflow {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* ── HISTORY TABLE HEADER ── */
+.hist-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.hist-sub {
+  margin-top: 4px;
+}
+
+/* ── WARNINGS ── */
+.warnings-details {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+.warnings-list {
+  margin: 6px 0 0 0;
+  padding-left: 18px;
+}
+
+/* ── MOAT GRID ── */
+.moat-grid {
+  margin-top: 12px;
+  margin-bottom: 16px;
+}
+
+/* ── NOTES GRID ── */
+.note-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.note-label-lg {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ── CHART TITLE ROW ── */
+.chart-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chart-title-row h2 {
+  margin: 0;
+}
+
+/* ── DCF PRICE BAR ── */
+.dcf-bar-wrap {
+  margin-top: 10px;
+  display: block;
+}
+.dcf-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+.dcf-bar-track {
+  background: var(--border);
+  border-radius: 4px;
+  height: 6px;
+  position: relative;
+  overflow: hidden;
+}
+.dcf-bar-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+/* ── AFTER HOURS WRAPPER ── */
+.after-hours-wrapper {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+/* ── PE MEDIAN ROW ── */
+.pe-median-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+/* ── INFO ICON ── */
+.info-icon {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+/* ── NOTE STATUS CHART TAG ── */
+.note-status {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 400;
+  text-transform: none;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ── HAMBURGER MENU (MÓVIL) ── */
+.hamburger {
+  display: none;
+  background: var(--panel-2);
+  border: 1px solid var(--border-dark);
+  color: var(--text);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+.hamburger span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: var(--text);
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+.hamburger.open span:nth-child(1) {
+  transform: rotate(45deg) translate(4px, 4px);
+}
+.hamburger.open span:nth-child(2) {
+  opacity: 0;
+}
+.hamburger.open span:nth-child(3) {
+  transform: rotate(-45deg) translate(4px, -4px);
+}
+
+/* ── MOBILE NAV OVERLAY ── */
+.mobile-nav-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(4, 8, 18, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 200;
+  animation: fadeIn 0.2s ease;
+}
+.mobile-nav-overlay.open {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.mobile-nav-link {
+  display: block;
+  width: 260px;
+  padding: 14px 20px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 15px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+.mobile-nav-link:hover,
+.mobile-nav-link.active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-soft);
+  box-shadow: 0 0 20px var(--primary-glow);
+}
+.mobile-nav-search {
+  width: 260px;
+  padding: 12px 16px;
+  background: var(--panel);
+  border: 1px solid var(--border-dark);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  margin-top: 12px;
+  transition: border-color 0.2s ease;
+}
+.mobile-nav-search:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.mobile-nav-close {
+  margin-top: 20px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.mobile-nav-close:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* ── EARNINGS INSIGHT WARNING ── */
+.earnings-warning {
+  margin: 8px 0;
+  padding: 10px 16px;
+  background: var(--gold-soft);
+  border: 1px solid var(--gold-border);
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+
+/* ── OWNERSHIP SECTION ── */
+.ownership-header {
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+/* ── RESPONSIVE: MOBILE ── */
+@media (max-width: 768px) {
+  /* Hamburger visible */
+  .hamburger {
+    display: flex;
+  }
+
+  /* Topbar: hide tabs and search on mobile */
+  .tabs {
+    display: none;
+  }
+  .search-box {
+    display: none;
+  }
+  .theme-toggle-btn {
+    display: none;
+  }
+
+  /* Action tabs: horizontal scroll */
+  .action-tabs {
+    display: flex !important;
+    overflow-x: auto;
+    gap: 4px;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .action-tabs .a-tab {
+    white-space: nowrap;
+    min-width: auto;
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+
+  /* Grids: stack */
+  .summary-cards-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .grid-2col,
+  .grid-3col,
+  .grid-multiples {
+    grid-template-columns: 1fr !important;
+  }
+  .grid-multiples .chart-wide,
+  .grid-multiples .chart-half {
+    grid-column: span 1 !important;
+  }
+  .ratios-tables-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .ratios-checks-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Summary bottom: stack */
+  .summary-bottom-layout {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .summary-sidebar-card {
+    width: 100% !important;
+  }
+
+  /* Analysis header: stack */
+  .analysis-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .header-right {
+    align-self: flex-end;
+    margin-top: -52px;
+  }
+
+  /* Charts: single column */
+  .charts-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .chart-card.wide {
+    grid-column: span 1 !important;
+  }
+
+  /* Moats & Notes */
+  .moats {
+    grid-template-columns: 1fr !important;
+  }
+  .notes-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Earnings grid */
+  .earnings-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Scenario cards: stack */
+  .grid-auto-fit-sm {
+    grid-template-columns: 1fr !important;
+  }
+  .grid-auto-fit-md {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Sidebar: full width overlay */
+  .sidebar {
+    width: 100% !important;
+  }
+
+  /* Tables: horizontal scroll */
+  .data-table,
+  #wl-table,
+  #pf-table,
+  #screener-table {
+    font-size: 11px;
+  }
+  .data-table th,
+  .data-table td,
+  #wl-table th,
+  #wl-table td,
+  #pf-table th,
+  #pf-table td,
+  #screener-table th,
+  #screener-table td {
+    padding: 7px 8px;
+  }
+
+  /* Scorecard donut: stack */
+  .scorecard-donut-card {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .summary-cards-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .view {
+    padding: 14px 12px;
+  }
+}
