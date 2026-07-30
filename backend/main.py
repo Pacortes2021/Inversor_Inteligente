@@ -12,6 +12,7 @@ from . import notes as NT
 from . import portfolio as PF
 from . import watchlist as WL
 from .data import atomic_write_json
+from .market import get_indices, get_movers, get_oversold
 from .screener import run_deep_screener, run_screener
 from .stock import build_payload
 
@@ -276,6 +277,21 @@ def api_restore(b: Backup):
     PF._save(b.portfolio)
     atomic_write_json(NT.NOTES_FILE, b.notes)
     return {"ok": True}
+
+
+@app.get("/api/dashboard/indices")
+def api_dashboard_indices():
+    return get_indices()
+
+
+@app.get("/api/dashboard/oversold")
+def api_dashboard_oversold():
+    return get_oversold()
+
+
+@app.get("/api/dashboard/movers")
+def api_dashboard_movers():
+    return get_movers()
 
 
 class NoCacheStaticFiles(StaticFiles):

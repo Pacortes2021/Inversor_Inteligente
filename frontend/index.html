@@ -23,11 +23,12 @@
 
 <!-- ============================ TOP BAR / NAV GLOBAL ============================ -->
 <header class="topbar" role="banner">
-  <div class="brand" onclick="location.hash='#/analisis'">
+  <div class="brand" onclick="location.hash='#/inicio'">
     <span class="brand-icon" aria-hidden="true">◆</span>
     <span class="brand-name">El Inversor <em>Inteligente</em></span>
   </div>
   <nav class="tabs" role="navigation" aria-label="Navegación principal">
+    <a href="#/inicio" id="tab-inicio" class="tab">Inicio</a>
     <a href="#/analisis" id="tab-analisis" class="tab active">Análisis</a>
     <a href="#/screener" id="tab-screener" class="tab">Screener</a>
     <a href="#/comparar" id="tab-comparar" class="tab">Comparar</a>
@@ -46,6 +47,7 @@
 
 <!-- MOBILE NAV OVERLAY -->
 <div id="mobile-nav" class="mobile-nav-overlay" role="dialog" aria-label="Menú de navegación">
+  <a href="#/inicio" class="mobile-nav-link" data-nav="inicio">🏠 Inicio</a>
   <a href="#/analisis" class="mobile-nav-link" data-nav="analisis">📊 Análisis</a>
   <a href="#/screener" class="mobile-nav-link" data-nav="screener">🔍 Screener</a>
   <a href="#/comparar" class="mobile-nav-link" data-nav="comparar">⇄ Comparar</a>
@@ -54,6 +56,98 @@
   <input id="mobile-search-input" class="mobile-nav-search" type="text" placeholder="Buscar acción…" autocomplete="off" spellcheck="false" aria-label="Buscar acción">
   <button id="mobile-nav-close" class="mobile-nav-close">Cerrar</button>
 </div>
+
+<!-- ============================ VISTA INICIO / DASHBOARD ============================ -->
+<main id="view-inicio" class="view hidden">
+
+  <!-- Bloque 1: Mercado Hoy -->
+  <section class="card">
+    <div class="flex-between-baseline" style="margin-bottom:14px;">
+      <h2 class="section-heading">📊 Mercado Hoy</h2>
+      <span id="market-updated" class="muted" style="font-size:11px;"></span>
+    </div>
+    <div id="dash-indices" class="dash-indices-grid">
+      <div class="dash-loading"><div class="spinner"></div><p>Cargando índices…</p></div>
+    </div>
+  </section>
+
+  <!-- Bloque 2: Mi Watchlist -->
+  <section class="card" id="dash-watchlist-section">
+    <div class="flex-between-baseline" style="margin-bottom:14px;">
+      <h2 class="section-heading">⭐ Mi Watchlist</h2>
+      <a href="#/watchlist" class="dash-see-all">Ver todo →</a>
+    </div>
+    <div id="dash-watchlist">
+      <div class="dash-loading"><div class="spinner"></div><p>Cargando watchlist…</p></div>
+    </div>
+  </section>
+
+  <!-- Bloque 3: Sobrevendidas -->
+  <section class="card">
+    <div class="flex-between-baseline" style="margin-bottom:14px;">
+      <h2 class="section-heading">🔥 Sobrevendidas (RSI &lt; 30)</h2>
+      <a href="#/screener" class="dash-see-all">Ver screener →</a>
+    </div>
+    <div id="dash-oversold" class="dash-movers-grid">
+      <div class="dash-loading"><div class="spinner"></div><p>Escaneando universo…</p></div>
+    </div>
+  </section>
+
+  <!-- Bloque 4: Top Ganadores / Perdedores -->
+  <section class="card">
+    <div class="flex-between-baseline" style="margin-bottom:14px;">
+      <h2 class="section-heading">📈 Top Movers del Día</h2>
+      <a href="#/screener" class="dash-see-all">Ver screener →</a>
+    </div>
+    <div class="dash-movers-split">
+      <div>
+        <h4 class="dash-subtitle">🚀 Ganadores</h4>
+        <div id="dash-gainers" class="dash-movers-list">
+          <div class="dash-loading-sm">Cargando…</div>
+        </div>
+      </div>
+      <div>
+        <h4 class="dash-subtitle">📉 Perdedores</h4>
+        <div id="dash-losers" class="dash-movers-list">
+          <div class="dash-loading-sm">Cargando…</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bloque 5: Portafolio -->
+  <section class="card" id="dash-portfolio-section">
+    <div class="flex-between-baseline" style="margin-bottom:14px;">
+      <h2 class="section-heading">💼 Mi Portafolio</h2>
+      <a href="#/portafolio" class="dash-see-all">Ver portafolio →</a>
+    </div>
+    <div id="dash-portfolio">
+      <div class="dash-loading"><div class="spinner"></div><p>Cargando portafolio…</p></div>
+    </div>
+  </section>
+
+  <!-- Bloque 6: Buscar -->
+  <section class="card">
+    <h2 class="section-heading" style="margin-bottom:12px;">🔍 Buscar Acción</h2>
+    <p class="card-sub" style="margin-bottom:12px;">Escribe un símbolo o nombre para analizar cualquier empresa.</p>
+    <div class="dash-search-wrap">
+      <input type="text" id="dash-search-input" class="dash-search-input" placeholder="Ej: AAPL, Tesla, Coca-Cola…" autocomplete="off" spellcheck="false">
+      <div id="dash-search-results" class="dash-search-results hidden"></div>
+    </div>
+    <div class="dash-popular">
+      <span class="muted" style="font-size:12px; font-weight:600;">Populares:</span>
+      <button class="dash-chip" onclick="go('AAPL')">AAPL</button>
+      <button class="dash-chip" onclick="go('MSFT')">MSFT</button>
+      <button class="dash-chip" onclick="go('GOOGL')">GOOGL</button>
+      <button class="dash-chip" onclick="go('AMZN')">AMZN</button>
+      <button class="dash-chip" onclick="go('NVDA')">NVDA</button>
+      <button class="dash-chip" onclick="go('TSLA')">TSLA</button>
+      <button class="dash-chip" onclick="go('META')">META</button>
+      <button class="dash-chip" onclick="go('KO')">KO</button>
+    </div>
+  </section>
+
+</main>
 
 <!-- ============================ VISTA ANÁLISIS ============================ -->
 <main id="view-analisis" class="view">
@@ -1397,6 +1491,7 @@
 <script src="js/compare.js?v=20.0"></script>
 <script src="js/watchlist.js?v=20.0"></script>
 <script src="js/portfolio.js?v=20.0"></script>
+<script src="js/dashboard.js?v=1.0"></script>
 <script src="js/app.js?v=20.0"></script>
 <script src="js/mobile-nav.js?v=1.0"></script>
 </body>

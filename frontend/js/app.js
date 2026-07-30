@@ -6,7 +6,7 @@ let currentPeriodYears = 1;
 const $ = id => document.getElementById(id);
 
 /* ------------------------------------------------------------- routing */
-const VIEWS = ["analisis", "screener", "comparar", "watchlist", "portafolio"];
+const VIEWS = ["inicio", "analisis", "screener", "comparar", "watchlist", "portafolio"];
 const UNLOCKED_TABS = ["summary", "valuation", "financials-hub", "ownership", "financials", "ratios", "rating", "estimates", "insiders", "eps-fv", "dcf-fv", "ddm-fv", "historical-ratios", "dividends", "earnings", "qualitative", "additional"];
 
 /* ------------------------------------------------------------- theme toggle */
@@ -57,15 +57,16 @@ const TAB_MAP = {
 };
 
 function route() {
-  const hash = location.hash || "#/analisis";
-  let current = VIEWS.find(v => hash.startsWith(`#/${v}`)) || "analisis";
+  const hash = location.hash || "#/inicio";
+  let current = VIEWS.find(v => hash.startsWith(`#/${v}`)) || "inicio";
   
   for (const v of VIEWS) {
     $(`view-${v}`).classList.toggle("hidden", v !== current);
     $(`tab-${v}`).classList.toggle("active", v === current);
   }
   
-  if (current === "screener") loadScreener();
+  if (current === "inicio") loadDashboard();
+  else if (current === "screener") loadScreener();
   else if (current === "watchlist") loadWatchlist();
   else if (current === "portafolio") loadPortfolio();
   else if (current === "analisis") {
