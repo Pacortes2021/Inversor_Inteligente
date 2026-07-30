@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, Field
 
 from . import notes as NT
 from . import portfolio as PF
@@ -100,7 +100,7 @@ def api_quotes(symbols: str):
 
 class WatchItem(BaseModel):
     symbol: str
-    targetMos: float = 25.0
+    targetMos: float = Field(25.0, ge=0, le=95)
 
     @field_validator("symbol")
     @classmethod
@@ -113,8 +113,6 @@ class WatchItem(BaseModel):
     @field_validator("targetMos")
     @classmethod
     def check_target_mos(cls, v: float) -> float:
-        if v < 0 or v > 95:
-            raise ValueError("El margen de seguridad objetivo debe estar entre 0% y 95%")
         return round(v, 2)
 
 
@@ -144,8 +142,8 @@ def api_watchlist_symbols():
 class Position(BaseModel):
     symbol: str
     date: str
-    price: float
-    shares: float
+    price: float = Field(..., gt=0, le=1_000_000_000)
+    shares: float = Field(..., gt=0, le=1_000_000_000)
     note: str = ""
 
     @field_validator("symbol")
@@ -170,18 +168,9 @@ class Position(BaseModel):
             raise ValueError(f"Fecha inválida (usar AAAA-MM-DD): {e}")
         return s
 
-    @field_validator("price")
+    @field_validator("price", "shares")
     @classmethod
-    def check_price(cls, v: float) -> float:
-        if v <= 0 or v > 1_000_000_000:
-            raise ValueError("El precio debe ser un número positivo mayor a 0")
-        return round(v, 4)
-
-    @field_validator("shares")
-    @classmethod
-    def check_shares(cls, v: float) -> float:
-        if v <= 0 or v > 1_000_000_000:
-            raise ValueError("La cantidad de acciones debe ser un número positivo mayor a 0")
+    def round_values(cls, v: float) -> float:
         return round(v, 4)
 
     @field_validator("note")
@@ -289,4 +278,8 @@ def api_restore(b: Backup):
     return {"ok": True}
 
 
-app.mount("/", StaticFiles(directory=str(FRONTEND), html=True), name="static")
+class NoCacheStaticFiles(StaticFiles):
+    def is_not_modified(self, response_headers, request_headers) -> bool:
+        return False
+
+app.mount("/", NoCacheStaticFiles(directory=str(FRONTEND), html=True), name="static")

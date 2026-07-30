@@ -53,8 +53,9 @@ function renderPortfolio({ positions, totals }) {
     const sortedByVal = [...positions].sort((a, b) => (b.value || 0) - (a.value || 0));
     const topPos = sortedByVal[0];
     if (topPos) {
+      const pct = totals.value > 0 ? ((topPos.value / totals.value) * 100).toFixed(1) : "0.0";
       document.getElementById("pf-sum-top").textContent = topPos.symbol;
-      document.getElementById("pf-sum-top-val").textContent = fmtBig(topPos.value, "USD") + ` (${((topPos.value / totals.value) * 100).toFixed(1)}%)`;
+      document.getElementById("pf-sum-top-val").textContent = fmtBig(topPos.value, "USD") + ` (${pct}%)`;
     }
     document.getElementById("pf-sum-count").textContent = positions.length;
     document.getElementById("pf-summary-grid").classList.remove("hidden");

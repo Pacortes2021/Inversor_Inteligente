@@ -78,7 +78,7 @@ def graham_number(eps, bvps, fcf_per_share=None):
 
 def graham_intrinsic_value(eps, growth, bond10y=None):
     """Fórmula de Benjamin Graham revisada: (EPS * (8.5 + 2g) * 4.4) / Y."""
-    if not _ok(eps) or eps <= 0 or not _ok(growth) or growth <= 0:
+    if not _ok(eps) or eps <= 0 or not _ok(growth) or growth < 0:
         return None
     y = bond10y if _ok(bond10y) else 4.2
     if y <= 0:
@@ -353,7 +353,7 @@ def buffett_scorecard(info, annuals, pe_stats):
     checks.append(_check("fcf", "FCF positivo todos los años", "Genera caja real de forma consistente",
                          len(fcfs) if fcfs else None, fcf_pos, "años"))
 
-    revs = [a["revenue"] for a in annuals if _ok(a.get("revenue"))]
+    revs = [a["revenue"] for a in annuals if _ok(a.get("revenue")) and a["revenue"] > 0]
     rev_g = None
     if len(revs) >= 3:
         rev_g = ((revs[-1] / revs[0]) ** (1 / (len(revs) - 1)) - 1) * 100

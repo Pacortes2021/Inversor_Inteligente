@@ -203,13 +203,13 @@ function renderScreener() {
 
       // 3. Precios objetivo
       r.targetCons = Math.round(eps2030 * consPe * 100) / 100;
-      r.cagrCons   = Math.round((((r.targetCons / r.price) ** (1/5)) - 1) * 1000) / 10;
+      r.cagrCons   = Math.round((((r.targetCons / r.price) ** (1/4)) - 1) * 1000) / 10;
 
       r.targetBase = Math.round(eps2030 * basePe * 100) / 100;
-      r.cagrBase   = Math.round((((r.targetBase / r.price) ** (1/5)) - 1) * 1000) / 10;
+      r.cagrBase   = Math.round((((r.targetBase / r.price) ** (1/4)) - 1) * 1000) / 10;
 
       r.targetOpt  = Math.round(eps2030 * optPe * 100) / 100;
-      r.cagrOpt    = Math.round((((r.targetOpt / r.price) ** (1/5)) - 1) * 1000) / 10;
+      r.cagrOpt    = Math.round((((r.targetOpt / r.price) ** (1/4)) - 1) * 1000) / 10;
 
       // 4. Upside vs precio actual al objetivo base
       r.upsideBase = r.targetBase > 0 ? Math.round((r.targetBase / r.price - 1) * 1000) / 10 : null;

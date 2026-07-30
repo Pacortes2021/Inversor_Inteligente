@@ -119,8 +119,10 @@ class RawData:
             "recommendations": lambda: T().recommendations,
             "earnings_estimate": lambda: T().earnings_estimate,
             "revenue_estimate": lambda: T().revenue_estimate,
+            "earnings_dates": lambda: T().earnings_dates,
             "insider_transactions": lambda: T().insider_transactions,
             "institutional_holders": lambda: T().institutional_holders,
+            "news": lambda: T().news,
         }
         with ThreadPoolExecutor(max_workers=8) as ex:
             futures = {name: ex.submit(self._safe, fn) for name, fn in tasks.items()}
@@ -149,8 +151,10 @@ class RawData:
         self.recommendations = results["recommendations"]
         self.earnings_estimate = results["earnings_estimate"]
         self.revenue_estimate = results["revenue_estimate"]
+        self.earnings_dates = results["earnings_dates"]
         self.insider_transactions = results["insider_transactions"]
         self.institutional_holders = results["institutional_holders"]
+        self.news = results["news"]
 
     @staticmethod
     def _safe(fn):

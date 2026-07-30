@@ -1,6 +1,7 @@
 """Portafolio y diario de inversión: compras reales comparadas contra el S&P 500."""
 
 import json
+import math
 import time
 from pathlib import Path
 
@@ -59,7 +60,7 @@ def get_portfolio():
         return {"positions": [], "totals": None}
 
     spy = _history(BENCHMARK, "_pf_spy")
-    spy_now = float(spy.iloc[-1]) if spy is not None else None
+    spy_now = float(spy.iloc[-1]) if spy is not None and not spy.empty and math.isfinite(float(spy.iloc[-1])) else None
 
     positions = []
     tot_invested = tot_value = 0.0
@@ -69,7 +70,7 @@ def get_portfolio():
     for it in items:
         sym = it["symbol"]
         s = _history(sym, f"_pf_{sym.replace('/', '_').replace('.', '_')}")
-        price_now = float(s.iloc[-1]) if s is not None and not s.empty else None
+        price_now = float(s.iloc[-1]) if s is not None and not s.empty and math.isfinite(float(s.iloc[-1])) else None
 
         # Obtener sector del ticker (con caché en disco)
         sector_key = f"_pf_sector_{sym.replace('/', '_')}"

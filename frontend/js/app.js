@@ -11,7 +11,7 @@ const UNLOCKED_TABS = ["summary", "valuation", "financials-hub", "ownership", "f
 
 /* ------------------------------------------------------------- theme toggle */
 function initTheme() {
-  const stored = localStorage.getItem("theme") || "light";
+  const stored = localStorage.getItem("theme") || "dark";
   setTheme(stored);
 }
 
@@ -340,6 +340,7 @@ function renderAnalysis(d) {
   safeCall(renderHistoricalRatios, d);
   safeCall(renderAdditional, d);
   safeCall(checkStockAlerts, d);
+  safeCall(renderNews, d.news);
 
   try { loadNotes(d.symbol); } catch(e){}
   try { setStarState(d.inWatchlist); } catch(e){}
@@ -562,6 +563,66 @@ function renderSummary(d) {
   // Performance title badge
   $("stock-perf-val").textContent = d.current.perf1y != null ? `Performance: ${fmtPct(d.current.perf1y, 2, true)}` : "Performance: —";
   $("stock-perf-val").className = "perf-badge " + (d.current.perf1y >= 0 ? "up" : "down");
+
+  // Reporte de Ganancias (Earnings Surprises)
+  const earningsSec = $("earnings-section");
+  if (earningsSec && d.earningsSurprises && d.earningsSurprises.length > 0) {
+    earningsSec.style.display = "block";
+    
+    // Próximo reporte y estimación
+    const nxtDt = d.profile.nextEarnings;
+    const nxtEst = d.profile.nextEarningsEst;
+    $("lbl-next-earnings-date").textContent = nxtDt ? nxtDt : "Por anunciar";
+    $("lbl-next-earnings-est").textContent = nxtEst != null ? fmtPrice(nxtEst, cur) : "N/D";
+    
+    // Gráfico de sorpresas
+    if (typeof chartEarningsSurprise === "function") {
+      chartEarningsSurprise("ch-earnings-surprise", d.earningsSurprises);
+    }
+  } else if (earningsSec) {
+    earningsSec.style.display = "none";
+  }
+}
+
+function renderNews(news) {
+  const container = $("news-container");
+  const section = $("news-section");
+  if (!container || !section) return;
+
+  if (!news || news.length === 0) {
+    section.style.display = "none";
+    return;
+  }
+  section.style.display = "block";
+
+  // Renderizar máximo 6 noticias
+  const topNews = news.slice(0, 6);
+  container.innerHTML = topNews.map(item => {
+    const n = item.content || item; // Manejar si viene anidado en .content (formato de yfinance)
+    let thumb = "";
+    if (n.thumbnail && n.thumbnail.resolutions && n.thumbnail.resolutions.length > 0) {
+      thumb = n.thumbnail.resolutions[0].url;
+    } else if (n.thumbnail && n.thumbnail.originalUrl) {
+      thumb = n.thumbnail.originalUrl;
+    }
+    
+    const publisher = n.provider ? n.provider.displayName : "News";
+    const date = n.pubDate ? new Date(n.pubDate).toLocaleDateString() : "";
+    const link = n.clickThroughUrl ? n.clickThroughUrl.url : (n.canonicalUrl ? n.canonicalUrl.url : "#");
+
+    return `
+      <a href="${link}" target="_blank" style="display:flex; gap:16px; padding:12px; border:1px solid var(--border); border-radius:var(--radius); text-decoration:none; color:inherit; transition:all 0.2s; background:var(--surface);" class="hover-card">
+        ${thumb ? `<img src="${thumb}" alt="thumbnail" style="width:100px; height:70px; object-fit:cover; border-radius:4px;">` : `<div style="width:100px; height:70px; background:var(--bg); border-radius:4px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:10px;">Sin Imagen</div>`}
+        <div style="display:flex; flex-direction:column; justify-content:space-between; flex:1;">
+          <h4 style="margin:0; font-size:14px; font-weight:600; line-height:1.3; color:var(--text);">${n.title || 'Noticia'}</h4>
+          <div style="font-size:11px; color:var(--muted); margin-top:6px; display:flex; justify-content:space-between;">
+            <span style="font-weight:600; color:var(--primary);">${publisher}</span>
+            <span>${date}</span>
+          </div>
+        </div>
+      </a>
+    `;
+  }).join('');
 }
 
 /* -------------------------------------------- chart price summary */
@@ -597,6 +658,16 @@ $("tg-sma-summary").onclick = () => {
 $("tg-log-summary").onclick = () => {
   priceView.log = !priceView.log;
   $("tg-log-summary").classList.toggle("active", priceView.log);
+  chartPriceSummary(state.data);
+};
+$("tg-macd").onclick = () => {
+  priceView.macd = !priceView.macd;
+  $("tg-macd").classList.toggle("active", priceView.macd);
+  chartPriceSummary(state.data);
+};
+$("tg-rsi").onclick = () => {
+  priceView.rsi = !priceView.rsi;
+  $("tg-rsi").classList.toggle("active", priceView.rsi);
   chartPriceSummary(state.data);
 };
 
@@ -1056,7 +1127,7 @@ function renderRatiosGrid(d) {
   // Helper para formato de diferencias porcentuales
   const fmtDiff = (comp, compRef) => {
     if (comp == null || compRef == null || compRef === 0) return "—";
-    const diff = (comp / compRef - 1) * 100;
+    const diff = ((comp - compRef) / Math.abs(compRef)) * 100;
     const up = diff >= 0;
     const sign = up ? "↑" : "↓";
     const absDiff = Math.abs(diff);
@@ -1455,8 +1526,10 @@ function renderEpsValuationCalculator(d) {
   const peStats = d.history?.peStats || {};
   const fwdPe = d.current?.forwardPe;
   let rawPe = peStats.median ? Number(peStats.median) : (d.current?.pe || 20);
+  let isAdjusted = false;
   if (rawPe > 80 || (fwdPe && rawPe > 3 * fwdPe)) {
     rawPe = (fwdPe && fwdPe > 0 && fwdPe <= 80) ? fwdPe : 25;
+    isAdjusted = true;
   }
   let medianPe = rawPe;
 
@@ -1466,6 +1539,20 @@ function renderEpsValuationCalculator(d) {
     const epsRow = grid.rows.find(r => r.label === "EPS");
     if (epsRow && epsRow.values && epsRow.values.length) {
       eps2030 = epsRow.values[epsRow.values.length - 1];
+    }
+  }
+  
+  if (!eps2030 || eps2030 <= 0) {
+    let growthEst = d.current?.earningsGrowth || d.current?.revenueGrowth || 0.10;
+    if (growthEst > 0.40) growthEst = 0.20;
+    if (growthEst < -0.05) growthEst = 0.03;
+    const cleanPe = (d.current?.pe && d.current.pe > 0 && d.current.pe <= 80) ? d.current.pe : null;
+    const cleanFpe = (d.current?.forwardPe && d.current.forwardPe > 0 && d.current.forwardPe <= 80) ? d.current.forwardPe : null;
+    const epsCurrent = cleanPe ? (currentPrice / cleanPe) : null;
+    const epsFwd = cleanFpe ? (currentPrice / cleanFpe) : null;
+    const epsBase = epsFwd ? epsFwd : (epsCurrent ? epsCurrent * (1 + growthEst) : null);
+    if (epsBase && epsBase > 0) {
+      eps2030 = epsBase * Math.pow(1 + growthEst, 4);
     }
   }
   
@@ -1486,7 +1573,7 @@ function renderEpsValuationCalculator(d) {
   function calcReturn(targetPe) {
     const targetPrice = eps2030 * targetPe;
     const totalReturnPct = ((targetPrice - currentPrice) / currentPrice) * 100;
-    const cagrPct = currentPrice > 0 && targetPrice > 0 ? ((targetPrice / currentPrice) ** (1 / 5) - 1) * 100 : 0;
+    const cagrPct = currentPrice > 0 && targetPrice > 0 ? ((targetPrice / currentPrice) ** (1 / 4) - 1) * 100 : 0;
     return { targetPrice, totalReturnPct, cagrPct };
   }
 
@@ -1494,11 +1581,12 @@ function renderEpsValuationCalculator(d) {
   const baseRes = calcReturn(basePe);
   const optRes = calcReturn(optPe);
 
-  if ($("est-pe-cons-label")) $("est-pe-cons-label").textContent = `Conservador (-20% Mediana: ${consPe.toFixed(1)}x)`;
+  if ($("est-pe-cons-label")) $("est-pe-cons-label").textContent = `Conservador (-20%: ${consPe.toFixed(1)}x)`;
   if ($("est-pe-cons-price")) $("est-pe-cons-price").textContent = fmtPrice(consRes.targetPrice, curr);
   if ($("est-pe-cons-ret")) $("est-pe-cons-ret").innerHTML = `<span class="${consRes.totalReturnPct >= 0 ? 'up' : 'down'}">${fmtPct(consRes.totalReturnPct, 1, true)}</span> <span style="font-size:11px; font-weight:400; color:var(--muted);">(${fmtPct(consRes.cagrPct, 1, true)}/año)</span>`;
 
-  if ($("est-pe-base-label")) $("est-pe-base-label").textContent = `★ Base (Mediana Histórica: ${basePe.toFixed(1)}x)`;
+  const labelBaseText = isAdjusted ? `★ Base (Fwd PER: ${basePe.toFixed(1)}x)` : `★ Base (Mediana Histórica: ${basePe.toFixed(1)}x)`;
+  if ($("est-pe-base-label")) $("est-pe-base-label").textContent = labelBaseText;
   if ($("est-pe-base-price")) $("est-pe-base-price").textContent = fmtPrice(baseRes.targetPrice, curr);
   if ($("est-pe-base-ret")) $("est-pe-base-ret").innerHTML = `<span class="${baseRes.totalReturnPct >= 0 ? 'up' : 'down'}">${fmtPct(baseRes.totalReturnPct, 1, true)}</span> <span style="font-size:11px; font-weight:400; color:var(--muted);">(${fmtPct(baseRes.cagrPct, 1, true)}/año)</span>`;
 
@@ -1666,24 +1754,37 @@ function renderInsidersHolders(ih) {
 
 /* ----------------------------------------------------- financial statement explorer */
 let currentFinStmt = "income";
+let currentFinFreq = "annual";
 
-function renderFinancialStatements(d, stmtType = currentFinStmt) {
+function renderFinancialStatements(d, stmtType = currentFinStmt, freqType = currentFinFreq) {
   currentFinStmt = stmtType;
-  const annuals = d.annuals || [];
-  const years = annuals.map(a => a.year);
+  currentFinFreq = freqType;
+  
+  const series = freqType === "annual" ? (d.annuals || []) : (d.quarterlies || []);
+  const periods = series.map(a => freqType === "annual" ? a.year : new Date(a.endDate).toISOString().split('T')[0]);
   const cur = d.profile.currency || "USD";
 
-  // Botones activos
+  // Botones activos de estado
   document.querySelectorAll(".fin-stmt-btn").forEach(btn => {
     btn.classList.toggle("active", btn.dataset.stmt === stmtType);
-    btn.onclick = () => renderFinancialStatements(d, btn.dataset.stmt);
+    btn.onclick = () => renderFinancialStatements(d, btn.dataset.stmt, currentFinFreq);
   });
+
+  // Botones activos de frecuencia
+  const btnAnnual = $("tg-freq-annual");
+  const btnQuarter = $("tg-freq-quarter");
+  if (btnAnnual && btnQuarter) {
+    btnAnnual.classList.toggle("active", freqType === "annual");
+    btnQuarter.classList.toggle("active", freqType === "quarterly");
+    btnAnnual.onclick = () => renderFinancialStatements(d, currentFinStmt, "annual");
+    btnQuarter.onclick = () => renderFinancialStatements(d, currentFinStmt, "quarterly");
+  }
 
   const headEl = $("fin-stmt-thead");
   const bodyEl = $("fin-stmt-tbody");
   if (!headEl || !bodyEl) return;
 
-  headEl.innerHTML = `<tr><th>Concepto</th>${years.map(y => `<th class="num">${y}</th>`).join('')}</tr>`;
+  headEl.innerHTML = `<tr><th>Concepto</th>${periods.map(p => `<th class="num" style="font-size:11px;">${p}</th>`).join('')}</tr>`;
 
   let rows = [];
   if (stmtType === "income") {
@@ -1697,6 +1798,7 @@ function renderFinancialStatements(d, stmtType = currentFinStmt) {
       ["Margen Neto (%)", a => a.netMargin != null ? fmtPct(a.netMargin, 1) : "—"],
       ["EBITDA", a => fmtBig(a.ebitda, cur)],
       ["Beneficio Por Acción (EPS)", a => a.eps != null ? fmtPrice(a.eps, cur) : "—"],
+      ["Dividendos Pagados (DPS)", a => a.dividendPS != null ? fmtPrice(a.dividendPS, cur) : "—"]
     ];
   } else if (stmtType === "balance") {
     rows = [
@@ -1705,7 +1807,7 @@ function renderFinancialStatements(d, stmtType = currentFinStmt) {
       ["Deuda Total", a => fmtBig(a.totalDebt, cur)],
       ["Patrimonio de Accionistas", a => fmtBig(a.equity, cur)],
       ["Capital de Trabajo (Working Cap.)", a => a.workingCapital != null ? fmtBig(a.workingCapital, cur) : "—"],
-      ["Acciones en Circulación", a => a.sharesOut != null ? fmtBig(a.sharesOut, "") : "—"],
+      ["Acciones en Circulación", a => a.shares != null ? fmtBig(a.shares, "") : "—"],
       ["Deuda / Patrimonio", a => a.debtToEquity != null ? fmtRatio(a.debtToEquity, 2) : "—"],
       ["Razón Corriente (Current Ratio)", a => a.currentRatio != null ? fmtRatio(a.currentRatio, 2) : "—"],
     ];
@@ -1725,12 +1827,14 @@ function renderFinancialStatements(d, stmtType = currentFinStmt) {
     ];
   }
 
-  bodyEl.innerHTML = rows.map(([label, fn]) => `
-    <tr>
-      <td><b>${label}</b></td>
-      ${annuals.map(a => `<td class="num">${fn(a)}</td>`).join('')}
-    </tr>
-  `).join('');
+  bodyEl.innerHTML = rows.map(([label, fn]) => {
+    return `
+      <tr>
+        <td style="font-weight:500">${label}</td>
+        ${series.map(a => `<td class="num">${fn(a)}</td>`).join('')}
+      </tr>
+    `;
+  }).join('');
 }
 
 /* ----------------------------------------------------- sistema de alertas */

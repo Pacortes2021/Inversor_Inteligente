@@ -97,10 +97,9 @@ function timeOption(extra) {
     tooltip: {
       trigger: 'axis',
       backgroundColor: cc.panel, borderColor: cc.border,
-      borderWidth: 1, borderRadius: 6,
-      padding: [8, 12],
-      textStyle: { color: cc.text, fontSize: 11, fontFamily: 'Inter, sans-serif' },
-      axisPointer: { type: 'cross', label: { backgroundColor: '#64748b' } },
+      borderWidth: 1, borderRadius: 8, padding: [12, 16],
+      textStyle: { color: cc.text, fontSize: 12, fontFamily: 'Inter, sans-serif' },
+      axisPointer: { type: 'cross', label: { backgroundColor: cc.muted, color: '#fff' }, lineStyle: { type: 'dashed', color: cc.muted } },
     },
     xAxis: Object.assign({ type: 'time' }, ba, { splitLine: { show: false } }),
     yAxis: Object.assign({ type: 'value', scale: true }, ba),
@@ -116,9 +115,11 @@ function yearsOption(years, extra) {
     tooltip: {
       trigger: 'axis',
       backgroundColor: cc.panel, borderColor: cc.border,
-      textStyle: { color: cc.text, fontSize: 11 },
+      borderWidth: 1, borderRadius: 8, padding: [12, 16],
+      textStyle: { color: cc.text, fontSize: 12, fontFamily: 'Inter, sans-serif' },
+      axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(128,128,128,0.05)' } }
     },
-    legend: { textStyle: { color: cc.muted, fontSize: 10 }, top: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 6 },
+    legend: { textStyle: { color: cc.muted, fontSize: 11, fontWeight: 500 }, top: 0, icon: 'circle', itemWidth: 8, itemHeight: 8 },
     xAxis: Object.assign({ type: 'category', data: years }, ba, { splitLine: { show: false } }),
     yAxis: Object.assign({ type: 'value', scale: true }, ba),
   }, extra);
@@ -138,6 +139,72 @@ function sma(pts, n) {
   return out;
 }
 
+function calculateEMA(pts, period) {
+  const out = [];
+  const k = 2 / (period + 1);
+  let ema = pts[0][1];
+  out.push([pts[0][0], ema]);
+  for (let i = 1; i < pts.length; i++) {
+    ema = (pts[i][1] * k) + (ema * (1 - k));
+    out.push([pts[i][0], ema]);
+  }
+  return out;
+}
+
+function calculateMACD(pts, shortP = 12, longP = 26, sigP = 9) {
+  const macdLine = [];
+  const signalLine = [];
+  const histogram = [];
+  if (pts.length < longP) return { macdLine, signalLine, histogram };
+  
+  const shortEma = calculateEMA(pts, shortP);
+  const longEma = calculateEMA(pts, longP);
+  
+  for (let i = 0; i < pts.length; i++) {
+    const ts = pts[i][0];
+    const macdVal = shortEma[i][1] - longEma[i][1];
+    macdLine.push([ts, macdVal]);
+  }
+  
+  const sigEma = calculateEMA(macdLine, sigP);
+  for (let i = 0; i < pts.length; i++) {
+    const ts = pts[i][0];
+    const macdVal = macdLine[i][1];
+    const sigVal = sigEma[i][1];
+    signalLine.push([ts, sigVal]);
+    histogram.push([ts, macdVal - sigVal]);
+  }
+  
+  return { macdLine, signalLine, histogram };
+}
+
+function calculateRSI(pts, period = 14) {
+  const out = [];
+  if (pts.length < period) return out;
+  
+  let gain = 0, loss = 0;
+  for (let i = 1; i <= period; i++) {
+    const change = pts[i][1] - pts[i - 1][1];
+    if (change > 0) gain += change;
+    else loss -= change;
+  }
+  
+  let avgGain = gain / period;
+  let avgLoss = loss / period;
+  
+  for (let i = period; i < pts.length; i++) {
+    if (i > period) {
+      const change = pts[i][1] - pts[i - 1][1];
+      avgGain = (avgGain * (period - 1) + (change > 0 ? change : 0)) / period;
+      avgLoss = (avgLoss * (period - 1) + (change < 0 ? -change : 0)) / period;
+    }
+    const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+    const rsi = avgLoss === 0 ? 100 : 100 - (100 / (1 + rs));
+    out.push([pts[i][0], rsi]);
+  }
+  return out;
+}
+
 function chartPrice(data, id = 'ch-price', customPts = null) {
   const pts = customPts || data.history.price;
   if (!pts || pts.length < 5) return hideCard(id);
@@ -146,46 +213,175 @@ function chartPrice(data, id = 'ch-price', customPts = null) {
   const cc = getChartColors();
   const ba = baseAxisStyle(cc);
 
+  // TradingView dynamic coloring based on the period trend
+  const firstPrice = pts[0][1];
+  const lastPrice = pts[pts.length - 1][1];
+  const isUp = lastPrice >= firstPrice;
+  const lineColor = isUp ? cc.green : cc.red;
+  const fillStart = isUp ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)';
+  const fillEnd   = isUp ? 'rgba(16, 185, 129, 0.01)' : 'rgba(239, 68, 68, 0.01)';
+
   const isArea = priceView.type === 'area';
-  const series = [{
-    type: 'line', data: pts, showSymbol: false, name: 'Precio',
-    lineStyle: { color: cc.gold, width: 2 },
+  
+  const hasMACD = priceView.macd && pts.length > 26;
+  const hasRSI = priceView.rsi && pts.length > 14;
+
+  let grids = [];
+  let xAxes = [];
+  let yAxes = [];
+  
+  if (hasMACD && hasRSI) {
+    grids = [
+      { left: 16, right: 65, top: 20, height: '42%' },
+      { left: 16, right: 65, top: '53%', height: '18%' },
+      { left: 16, right: 65, top: '75%', height: '18%' }
+    ];
+  } else if (hasMACD || hasRSI) {
+    grids = [
+      { left: 16, right: 65, top: 20, height: '55%' },
+      { left: 16, right: 65, top: '65%', height: '22%' }
+    ];
+  } else {
+    grids = [
+      { left: 16, right: 65, top: 20, bottom: 48 }
+    ];
+  }
+
+  // xAxes setup (one for each grid)
+  grids.forEach((g, i) => {
+    xAxes.push(Object.assign({ gridIndex: i, type: 'time' }, ba, {
+      splitLine: { show: true, lineStyle: { color: cc.grid, type: 'dashed' } },
+      axisLabel: { show: i === grids.length - 1, color: cc.muted, fontSize: 10 },
+      axisTick: { show: i === grids.length - 1 }
+    }));
+  });
+
+  // yAxes setup
+  yAxes.push(Object.assign(
+    priceView.log ? { type: 'log', logBase: 10, min: 'dataMin' } : { type: 'value', scale: true },
+    ba,
+    { 
+      gridIndex: 0, position: 'right', 
+      splitLine: { show: true, lineStyle: { color: cc.grid, type: 'dashed' } },
+      axisLabel: { color: cc.text, fontSize: 11, fontWeight: '500', formatter: v => fmtBig(v, cur) }
+    }
+  ));
+
+  let currentGrid = 1;
+  const series = [];
+
+  // 1. Price Series
+  series.push({
+    type: 'line', data: pts, showSymbol: false, name: 'Precio', xAxisIndex: 0, yAxisIndex: 0,
+    lineStyle: { color: lineColor, width: 2 },
     areaStyle: isArea ? { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-      { offset: 0, color: 'rgba(217,119,6,0.22)' }, { offset: 1, color: 'rgba(217,119,6,0.01)' },
+      { offset: 0, color: fillStart }, { offset: 1, color: fillEnd },
     ]) } : undefined,
     tooltip: { valueFormatter: v => fmtPrice(v, cur) },
-    /* markLine: precio actual como referencia horizontal */
     markLine: {
       silent: true, symbol: 'none',
-      data: [{ yAxis: data.quote.price, lineStyle: { color: cc.gold, type: 'dashed', width: 1 },
-        label: { color: cc.gold, fontSize: 10, position: 'insideEndTop', formatter: `Hoy ${fmtPrice(data.quote.price, cur)}` } }],
+      data: [{ 
+        yAxis: lastPrice, 
+        lineStyle: { color: lineColor, type: 'dashed', width: 1.5 },
+        label: { 
+          color: '#ffffff', backgroundColor: lineColor, 
+          padding: [4, 6], borderRadius: 4, fontSize: 11, fontWeight: 'bold', position: 'end',
+          formatter: fmtPrice(lastPrice, cur)
+        } 
+      }],
     },
-  }];
+  });
 
   if (priceView.sma && pts.length > 50) {
-    series.push({ type: 'line', name: 'SMA 50', data: sma(pts, 50), showSymbol: false,
-      lineStyle: { color: cc.cyan, width: 1.3 }, itemStyle: { color: cc.cyan },
+    series.push({ type: 'line', name: 'SMA 50', data: sma(pts, 50), showSymbol: false, xAxisIndex: 0, yAxisIndex: 0,
+      lineStyle: { color: cc.cyan, width: 1.5 }, itemStyle: { color: cc.cyan },
       tooltip: { valueFormatter: v => fmtPrice(v, cur) } });
-    series.push({ type: 'line', name: 'SMA 200', data: sma(pts, 200), showSymbol: false,
-      lineStyle: { color: cc.violet, width: 1.3 }, itemStyle: { color: cc.violet },
+    series.push({ type: 'line', name: 'SMA 200', data: sma(pts, 200), showSymbol: false, xAxisIndex: 0, yAxisIndex: 0,
+      lineStyle: { color: cc.gold, width: 1.5 }, itemStyle: { color: cc.gold },
       tooltip: { valueFormatter: v => fmtPrice(v, cur) } });
   }
 
-  makeChart(id, timeOption({
-    legend: priceView.sma ? { textStyle: { color: cc.text, fontSize: 10 }, top: 0 } : undefined,
-    dataZoom: [
-      { type: 'inside' },
-      { type: 'slider', height: 16, bottom: 4, borderColor: cc.border,
-        backgroundColor: 'transparent', fillerColor: 'rgba(217,119,6,0.08)',
-        handleStyle: { color: cc.gold }, textStyle: { color: cc.muted, fontSize: 9 } },
-    ],
-    grid: { left: 45, right: 12, top: 20, bottom: 48 },
-    yAxis: Object.assign(
-      priceView.log ? { type: 'log', logBase: 10, min: 'dataMin' } : { type: 'value', scale: true },
-      ba,
-      { axisLabel: { color: cc.muted, fontSize: 10, formatter: v => fmtBig(v, cur) } }),
-    series,
-  }));
+  // 2. MACD Series
+  if (hasMACD) {
+    const macdData = calculateMACD(pts);
+    yAxes.push(Object.assign({ type: 'value', scale: true }, ba, {
+      gridIndex: currentGrid, position: 'right',
+      splitLine: { show: true, lineStyle: { color: cc.grid, type: 'dashed' } },
+      axisLabel: { color: cc.muted, fontSize: 10 }
+    }));
+    
+    // Histogram
+    series.push({
+      type: 'bar', name: 'MACD Hist', data: macdData.histogram, xAxisIndex: currentGrid, yAxisIndex: currentGrid,
+      itemStyle: { color: (params) => params.value[1] >= 0 ? cc.green : cc.red },
+      tooltip: { valueFormatter: v => v.toFixed(2) }
+    });
+    // MACD Line
+    series.push({
+      type: 'line', name: 'MACD', data: macdData.macdLine, showSymbol: false, xAxisIndex: currentGrid, yAxisIndex: currentGrid,
+      lineStyle: { color: cc.cyan, width: 1.5 }, tooltip: { valueFormatter: v => v.toFixed(2) }
+    });
+    // Signal Line
+    series.push({
+      type: 'line', name: 'Signal', data: macdData.signalLine, showSymbol: false, xAxisIndex: currentGrid, yAxisIndex: currentGrid,
+      lineStyle: { color: cc.gold, width: 1.5 }, tooltip: { valueFormatter: v => v.toFixed(2) }
+    });
+    
+    currentGrid++;
+  }
+
+  // 3. RSI Series
+  if (hasRSI) {
+    const rsiData = calculateRSI(pts);
+    yAxes.push(Object.assign({ type: 'value', min: 0, max: 100 }, ba, {
+      gridIndex: currentGrid, position: 'right',
+      splitLine: { show: true, lineStyle: { color: cc.grid, type: 'dashed' } },
+      axisLabel: { color: cc.muted, fontSize: 10 }
+    }));
+    
+    series.push({
+      type: 'line', name: 'RSI 14', data: rsiData, showSymbol: false, xAxisIndex: currentGrid, yAxisIndex: currentGrid,
+      lineStyle: { color: cc.violet, width: 1.5 },
+      tooltip: { valueFormatter: v => v.toFixed(2) },
+      markLine: {
+        silent: true, symbol: 'none',
+        data: [
+          { yAxis: 70, lineStyle: { color: cc.red, type: 'dashed', width: 1 } },
+          { yAxis: 30, lineStyle: { color: cc.green, type: 'dashed', width: 1 } }
+        ]
+      }
+    });
+  }
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const opt = timeOption({
+    legend: { textStyle: { color: cc.text, fontSize: 10 }, top: 0, right: 80 },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'cross', label: { backgroundColor: cc.muted, color: '#fff' }, lineStyle: { type: 'dashed', color: cc.muted } },
+      backgroundColor: cc.panel, borderColor: cc.border, borderWidth: 1, padding: 12,
+      textStyle: { color: cc.text, fontSize: 12, fontFamily: 'Inter, sans-serif' }
+    },
+    graphic: [
+      {
+        type: 'text', left: 'center', top: 'center', z: -1,
+        style: { text: data.symbol, fontSize: 100, fontWeight: 'bold', fill: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }
+      }
+    ]
+  });
+
+  opt.grid = grids;
+  opt.xAxis = xAxes;
+  opt.yAxis = yAxes;
+  opt.dataZoom = [
+    { type: 'inside', xAxisIndex: grids.map((_, i) => i) },
+    { type: 'slider', xAxisIndex: grids.map((_, i) => i), height: 20, bottom: 4, borderColor: cc.border,
+      backgroundColor: 'transparent', fillerColor: isUp ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+      handleStyle: { color: lineColor }, textStyle: { color: cc.muted, fontSize: 9 } }
+  ];
+  opt.series = series;
+
+  makeChart(id, opt);
 }
 
 /* ----------------------------------------------- ratios PE / PS / PB */
@@ -431,6 +627,94 @@ function mosColor(mos) {
   if (t >= -15) return "#a16207";
   if (t >= -30) return "#c2410c";
   return "#b91c1c";
+}
+
+function chartEarningsSurprise(elemId, surprises) {
+  if (!surprises || !surprises.length) return;
+  const dates = surprises.map(s => s.date.substring(0,7)); // YYYY-MM
+  const est = surprises.map(s => s.estimate);
+  const rep = surprises.map(s => s.reported);
+  
+  const cc = getChartColors();
+  
+  makeChart(elemId, {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: cc.bg,
+      borderColor: cc.border,
+      textStyle: { color: cc.text, fontSize: 12 },
+      padding: [12, 16],
+      borderRadius: 8,
+      formatter: (params) => {
+        let tip = `<div style="font-weight:700;margin-bottom:4px;color:${cc.text}">${params[0].axisValue}</div>`;
+        let e = null, r = null;
+        params.forEach(p => {
+          tip += `<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:2px;">
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:6px;"></span>${p.seriesName}</span>
+            <span style="font-family:var(--font-mono);font-weight:600;">$${p.value != null ? p.value.toFixed(2) : '—'}</span>
+          </div>`;
+          if (p.seriesIndex === 0) e = p.value;
+          if (p.seriesIndex === 1) r = p.value;
+        });
+        if (e != null && r != null && e !== 0) {
+          const diff = ((r - e) / Math.abs(e)) * 100;
+          const color = diff >= 0 ? 'var(--green)' : 'var(--red)';
+          const icon = diff >= 0 ? '▲' : '▼';
+          tip += `<div style="margin-top:8px;padding-top:8px;border-top:1px solid ${cc.border};font-weight:600;color:${color}">${icon} Sorpresa: ${diff > 0 ? '+' : ''}${diff.toFixed(1)}%</div>`;
+        }
+        return tip;
+      }
+    },
+    legend: {
+      data: ['Estimado', 'Reportado'],
+      textStyle: { color: cc.muted, fontSize: 11 },
+      bottom: 0,
+      icon: 'circle',
+      itemWidth: 8
+    },
+    grid: { left: 45, right: 20, top: 20, bottom: 40 },
+    xAxis: {
+      type: 'category',
+      data: dates,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: cc.muted, fontSize: 10, margin: 12 }
+    },
+    yAxis: {
+      type: 'value',
+      splitLine: { lineStyle: { color: cc.grid, type: 'dashed' } },
+      axisLabel: {
+        color: cc.muted,
+        fontSize: 10,
+        formatter: (v) => '$' + v
+      }
+    },
+    series: [
+      {
+        name: 'Estimado',
+        type: 'bar',
+        data: est,
+        itemStyle: { color: 'rgba(59, 130, 246, 0.3)', borderRadius: [4, 4, 0, 0] },
+        barWidth: '25%',
+        barGap: '15%'
+      },
+      {
+        name: 'Reportado',
+        type: 'bar',
+        data: rep,
+        itemStyle: {
+          color: (p) => {
+            const e = est[p.dataIndex];
+            if (e == null) return '#10b981';
+            return p.value >= e ? '#10b981' : '#ef4444';
+          },
+          borderRadius: [4, 4, 0, 0]
+        },
+        barWidth: '25%'
+      }
+    ]
+  });
 }
 
 function renderHeatmap(rows) {

@@ -179,20 +179,19 @@ def series_stats(pairs):
         "p75": round(float(np.percentile(vals, 75)), 2),
         "min": round(float(vals.min()), 2),
         "max": round(float(vals.max()), 2),
-        "vsMedian": round((cur / med - 1) * 100, 1) if med else None,
+        "vsMedian": round((cur - med) / abs(med) * 100, 1) if med else None,
     }
 
 
 # ------------------------------------------------------ fundamentales anuales
 
-def annual_fundamentals(raw: RawData):
-    inc, bs, cf = raw.inc_a, raw.bs_a, raw.cf_a
+def build_fundamentals(inc, bs, cf, dividends=None):
     if inc is None:
         return []
 
     div_by_year = {}
-    if raw.dividends is not None and not raw.dividends.empty:
-        div_by_year = raw.dividends.groupby(raw.dividends.index.year).sum().to_dict()
+    if dividends is not None and not dividends.empty:
+        div_by_year = dividends.groupby(dividends.index.year).sum().to_dict()
 
     out = []
     for col in sorted(inc.columns):
@@ -253,10 +252,16 @@ def annual_fundamentals(raw: RawData):
             "assets": assets,
             "workingCapital": (cur_assets - cur_liab) if (cur_assets is not None and cur_liab is not None) else None,
             "longTermDebt": long_term_debt,
-            "sharesOut": shares_n,
-            "dividendPS": div_by_year.get(year),
+            "shares": shares_n,
+            "dividendPS": div_by_year.get(year, 0.0) if dividends is not None else 0.0
         })
     return out
+
+def annual_fundamentals(raw: RawData):
+    return build_fundamentals(raw.inc_a, raw.bs_a, raw.cf_a, raw.dividends)
+
+def quarterly_fundamentals(raw: RawData):
+    return build_fundamentals(raw.inc_q, raw.bs_q, raw.cf_q, None)
 
 
 def _closest_col(df, target):

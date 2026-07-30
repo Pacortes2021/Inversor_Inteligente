@@ -132,7 +132,7 @@ def score_stock(info):
     }
 
 
-def _calc_target_scenarios(price, pe, fpe, pe_median, info):
+def _calc_target_scenarios(price, pe, fpe, pe_median, info, eps2030_override=None):
     if not price or price <= 0:
         return {}
     
@@ -146,23 +146,26 @@ def _calc_target_scenarios(price, pe, fpe, pe_median, info):
     cons_pe = max(5.0, base_pe * 0.80)
     opt_pe = base_pe * 1.20
     
-    growth_est = info.get("earningsGrowth") or info.get("revenueGrowth") or 0.10
-    if growth_est > 0.40: growth_est = 0.20
-    if growth_est < -0.05: growth_est = 0.03
-    
-    eps_current = (price / clean_pe) if clean_pe else None
-    eps_fwd = (price / clean_fpe) if clean_fpe else None
-    
-    eps_base = eps_fwd if eps_fwd else (eps_current * (1 + growth_est) if eps_current else None)
-    if not eps_base or eps_base <= 0:
-        return {}
+    if eps2030_override is not None and eps2030_override > 0:
+        eps_2030 = eps2030_override
+    else:
+        growth_est = info.get("earningsGrowth") or info.get("revenueGrowth") or 0.10
+        if growth_est > 0.40: growth_est = 0.20
+        if growth_est < -0.05: growth_est = 0.03
         
-    eps_2030 = round(eps_base * ((1 + growth_est) ** 4), 2)
+        eps_current = (price / clean_pe) if clean_pe else None
+        eps_fwd = (price / clean_fpe) if clean_fpe else None
+        
+        eps_base = eps_fwd if eps_fwd else (eps_current * (1 + growth_est) if eps_current else None)
+        if not eps_base or eps_base <= 0:
+            return {}
+            
+        eps_2030 = round(eps_base * ((1 + growth_est) ** 4), 2)
     
     def _target_metrics(target_pe):
         target_p = round(eps_2030 * target_pe, 2)
         tot_ret = round(((target_p - price) / price) * 100.0, 1)
-        cagr = round(((target_p / price) ** (1.0 / 5.0) - 1.0) * 100.0, 1) if (price > 0 and target_p > 0) else 0.0
+        cagr = round(((target_p / price) ** (1.0 / 4.0) - 1.0) * 100.0, 1) if (price > 0 and target_p > 0) else 0.0
         return target_p, tot_ret, cagr
 
     cons_p, cons_tot, cons_cagr = _target_metrics(cons_pe)
@@ -173,6 +176,7 @@ def _calc_target_scenarios(price, pe, fpe, pe_median, info):
         "eps2030": eps_2030,
         "consPe": round(cons_pe, 1),
         "targetCons": cons_p,
+        "targetPessimistic": cons_p,
         "retCons": cons_tot,
         "cagrCons": cons_cagr,
         "basePe": round(base_pe, 1),
@@ -297,7 +301,21 @@ def scan_one_deep(symbol, bond10y):
 
         roc = V.greenblatt_roc(info, annuals)
         f_score = V.piotroski_f_score(annuals)
-        deep_scenarios = _calc_target_scenarios(price, info.get("trailingPE"), info.get("forwardPE"), pe_stats["median"] if pe_stats else None, info)
+        
+        from .stock import _build_estimates_payload
+        raw = yf.Ticker(symbol)
+        est = _build_estimates_payload(raw, info, annuals, price)
+        eps_2030 = None
+        grid = est.get("growthGrid", {}) if est else {}
+        if grid and "rows" in grid:
+            for r in grid["rows"]:
+                if r.get("label") == "EPS" and r.get("values"):
+                    eps_val = r["values"][-1]
+                    if eps_val is not None:
+                        eps_2030 = float(eps_val)
+                    break
+
+        deep_scenarios = _calc_target_scenarios(price, info.get("trailingPE"), info.get("forwardPE"), pe_stats["median"] if pe_stats else None, info, eps2030_override=eps_2030)
 
         row = {
             **_base_row(symbol, info),
@@ -322,7 +340,9 @@ def scan_one_deep(symbol, bond10y):
         from . import snapshots as S
         S.append(symbol, row.get("price"), row.get("mos"), row.get("fairValue"))
         return row
-    except Exception:
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
         return None
 
 

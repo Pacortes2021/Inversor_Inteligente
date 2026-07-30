@@ -120,6 +120,12 @@ def _sec_context(symbol, calendar):
         eds = calendar.get("Earnings Date") or []
         if eds:
             next_earnings = str(eds[0])
+            
+        est_avg = calendar.get("Earnings Average")
+        if est_avg is not None:
+            if isinstance(est_avg, (list, tuple)):
+                est_avg = est_avg[0]
+            next_earnings_est = float(est_avg)
     except Exception:
         pass
     try:
@@ -130,7 +136,25 @@ def _sec_context(symbol, calendar):
             filings = {"annual": base + "10-K", "quarterly": base + "10-Q"}
     except Exception:
         pass
-    return next_earnings, filings
+    return next_earnings, next_earnings_est, filings
+
+def _build_earnings_surprises(earnings_dates_df):
+    """Extrae las sorpresas EPS trimestrales (últimos 4-5 trimestres)"""
+    surprises = []
+    try:
+        if earnings_dates_df is not None and not earnings_dates_df.empty:
+            df = earnings_dates_df.dropna(subset=['Reported EPS']).head(5)
+            for idx, row in df.iterrows():
+                surprises.append({
+                    "date": str(idx)[:10],
+                    "estimate": M._f(row.get("EPS Estimate")),
+                    "reported": M._f(row.get("Reported EPS")),
+                    "surprise": M._f(row.get("Surprise(%)"))
+                })
+    except Exception:
+        pass
+    # Devolver orden cronológico ascendente (el más viejo primero)
+    return surprises[::-1]
 
 def _calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps_hist):
     import numpy as np
@@ -255,7 +279,7 @@ def _calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps
     ps_ttm = M._f(info.get("priceToSalesTrailing12Months")) or M._f(info.get("priceToSales"))
     
     fcf_now = annuals[-1].get("fcf") if annuals else None
-    mc = M._f(info.get("marketCap")) or 1.0
+    mc = M._f(info.get("marketCap"))
     fcf_yield = (fcf_now / mc * 100) if (fcf_now and mc) else None
     pcf_ttm = 100.0 / fcf_yield if fcf_yield and fcf_yield > 0 else None
     
@@ -389,6 +413,7 @@ def build_payload(symbol: str, refresh: bool = False):
 
     annuals = _merge_annuals(M.annual_fundamentals(raw), E.to_annual_rows(edgar_hist),
                              raw.dividends, splits)
+    quarterlies = M.quarterly_fundamentals(raw)
 
     # ------------------------------------------------ snapshot actual
     fcf_now = M._f(info.get("freeCashflow"))
@@ -517,7 +542,7 @@ def build_payload(symbol: str, refresh: bool = False):
     bond10y = bond_yield_10y()
     valuation = V.build_valuation(price, info, annuals, pe_stats, bond10y)
     scorecard = V.buffett_scorecard(info, annuals, pe_stats)
-    next_earnings, sec_filings = _sec_context(symbol, raw.calendar)
+    next_earnings, next_earnings_est, sec_filings = _sec_context(symbol, raw.calendar)
 
     dividends_annual = M.dividend_history(raw)
     div_safety = _dividend_safety(annuals, dividends_annual, info)
@@ -543,6 +568,7 @@ def build_payload(symbol: str, refresh: bool = False):
             "exchange": info.get("fullExchangeName") or info.get("exchange"),
             "currency": info.get("currency") or "USD",
             "nextEarnings": next_earnings,
+            "nextEarningsEst": next_earnings_est,
             "secFilings": sec_filings,
         },
         "quote": {
@@ -570,6 +596,8 @@ def build_payload(symbol: str, refresh: bool = False):
             "mos": S.history(symbol),
         },
         "annuals": annuals,
+        "quarterlies": quarterlies,
+        "news": raw.news if hasattr(raw, "news") else None,
         "growthTable": _growth_table(annuals),
         "valuation": valuation,
         "scorecard": scorecard,
@@ -578,6 +606,7 @@ def build_payload(symbol: str, refresh: bool = False):
         "ratios": ratios,
         "estimates": estimates,
         "insidersHolders": insiders_holders,
+        "earningsSurprises": _build_earnings_surprises(getattr(raw, "earnings_dates", None)),
     }
     payload = jclean(payload)
     cache_set(key, payload)
