@@ -181,6 +181,14 @@
   gap: 20px;
   align-items: start;
 }
+.chart-lg {
+  height: 320px;
+  width: 100%;
+}
+.chart-md {
+  height: 250px;
+  width: 100%;
+}
 .earnings-chart-container {
   height: 240px;
   width: 100%;

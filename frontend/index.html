@@ -403,7 +403,7 @@
     <div id="pane-financials-hub" class="tab-pane hidden" role="tabpanel" aria-labelledby="tab-financials">
 
       <!-- RATIOS CHECKS & COMPARISON TABLES (migrado desde pane-ratios) -->
-      <section class="card" style="margin-bottom:20px;">
+      <section class="card">
         <h2 class="section-heading">🧮 Chequeos de Solvencia, Valoración y Retorno</h2>
         <p class="card-sub section-sub">Reglas cuantitativas de inversión valor basadas en la filosofía Graham–Buffett.</p>
 
@@ -628,7 +628,131 @@
 
       <!-- Fin de sección ratios checks — el contenido de estados financieros sigue abajo -->
 
-      <section class="card" style="margin-top:20px; margin-bottom:20px;" id="news-section">
+      <!-- ESTADOS FINANCIEROS Y CAGR -->
+      <section class="card" id="growth-card">
+        <h2>📈 Crecimiento Compuesto <span class="chart-tag">CAGR por período</span></h2>
+        <p class="card-sub">Tasas de crecimiento compuesto anualizadas para el último año fiscal.</p>
+        <div class="table-wrap"><table id="growth-table" class="data-table"></table></div>
+      </section>
+
+      <!-- EXPLORADOR DE ESTADOS FINANCIEROS (INCOME, BALANCE, CASHFLOW) -->
+      <section class="card">
+        <div class="fin-stmt-header">
+          <div>
+            <h2 class="section-heading">Estados Financieros Desglosados</h2>
+            <p class="card-sub fin-stmt-sub">Revisa las cifras clave reportadas en los últimos períodos.</p>
+          </div>
+          <div class="fin-stmt-controls">
+            <div class="chart-toggles-style">
+              <button id="tg-freq-annual" class="tg-btn active">Anual</button>
+              <button id="tg-freq-quarter" class="tg-btn">Trimestral</button>
+            </div>
+            <div class="chart-toggles-style">
+              <button class="tg-btn fin-stmt-btn active" data-stmt="income">Resultados</button>
+              <button class="tg-btn fin-stmt-btn" data-stmt="balance">Balance General</button>
+              <button class="tg-btn fin-stmt-btn" data-stmt="cashflow">Flujos de Caja</button>
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="fin-stmt-table">
+            <thead id="fin-stmt-thead"></thead>
+            <tbody id="fin-stmt-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- GRÁFICOS FINANCIEROS Y RATIOS HISTÓRICOS -->
+      <section class="charts-grid">
+        <div class="card chart-card">
+          <h3>Ingresos y utilidad neta</h3>
+          <div class="chart" id="ch-income"></div>
+        </div>
+        <div class="card chart-card">
+          <h3>Márgenes operativos</h3>
+          <div class="chart" id="ch-margins"></div>
+        </div>
+        <div class="card chart-card">
+          <h3>Flujo de caja libre</h3>
+          <div class="chart" id="ch-fcf"></div>
+        </div>
+        <div class="card chart-card">
+          <h3>Deuda vs caja</h3>
+          <div class="chart" id="ch-debt"></div>
+        </div>
+        <div class="card chart-card">
+          <h3>Acciones en circulación <span class="chart-tag">recompras ↓</span></h3>
+          <div class="chart" id="ch-shares"></div>
+        </div>
+        <div class="card chart-card">
+          <h3>ROE y ROIC <span class="chart-tag">umbral Buffett 15%</span></h3>
+          <div class="chart" id="ch-returns"></div>
+        </div>
+      </section>
+
+      <!-- TABLA DE RATIOS HISTÓRICOS EDGAR (10-15 AÑOS) -->
+      <section class="card">
+        <div class="hist-header">
+          <div>
+            <h2 class="section-heading-lg" style="margin:0;">📜 Histórico de Ratios Financieros (SEC EDGAR)</h2>
+            <p class="card-sub hist-sub">Evolución año a año de la rentabilidad, estructura de capital y múltiplos.</p>
+          </div>
+          <div id="hist-ratios-csv-wrap"></div>
+        </div>
+        <div class="table-wrap" style="margin-top:14px;">
+          <table class="data-table" id="hist-ratios-table">
+            <thead id="hist-ratios-thead"></thead>
+            <tbody id="hist-ratios-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- GRÁFICOS DE MÚLTIPLOS HISTÓRICOS CON MEDIANA -->
+      <section class="card">
+        <div class="multiples-header">
+          <h2 class="section-heading" style="margin:0;">📊 Gráficos de Múltiplos Históricos (15 Años)</h2>
+          <div class="chart-range-controls" id="multiples-range-controls" style="display:flex; gap:4px;">
+            <button class="period-btn-mult" data-range="ytd">YTD</button>
+            <button class="period-btn-mult" data-range="1">1 Year</button>
+            <button class="period-btn-mult" data-range="3">3 Years</button>
+            <button class="period-btn-mult" data-range="5">5 Years</button>
+            <button class="period-btn-mult" data-range="10">10 Years</button>
+            <button class="period-btn-mult active" data-range="all">Todo</button>
+          </div>
+        </div>
+        
+        <div class="grid-multiples">
+          <div class="chart-card chart-wide">
+            <h3>PE histórico (TTM) con mediana y banda p25-p75</h3>
+            <div class="chart chart-lg" id="ch-pe"></div>
+          </div>
+          <div class="chart-card chart-half">
+            <h3>P/Ventas histórico</h3>
+            <div class="chart chart-md" id="ch-ps"></div>
+          </div>
+          <div class="chart-card chart-half">
+            <h3>P/Valor libro histórico</h3>
+            <div class="chart chart-md" id="ch-pb"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- EARNINGS & DIVIDENDOS -->
+      <div class="grid-2col">
+        <section class="card">
+          <h2>💰 Seguridad del Dividendo</h2>
+          <div id="div-safety" class="div-safety hidden"></div>
+          <div class="chart" id="ch-divs"></div>
+        </section>
+
+        <section class="card">
+          <h2>💵 Historico de Beneficio Por Acción (EPS)</h2>
+          <div class="chart" id="ch-eps"></div>
+        </section>
+      </div>
+    
+
+      <section class="card" id="news-section">
         <h2 style="font-family:'Outfit',sans-serif; font-size:18px; font-weight:700; color:var(--text); margin-bottom:12px;">📰 Noticias Recientes</h2>
         <div id="news-container" style="display:flex; flex-direction:column; gap:12px;">
           <!-- Las tarjetas de noticias se inyectarán aquí -->
@@ -639,7 +763,7 @@
     </div>
     <div id="pane-valuation" class="tab-pane hidden" role="tabpanel" aria-labelledby="tab-valuation">
       <!-- MATRIZ COMPARATIVA DE MODELOS DE VALORACIÓN -->
-      <section class="card" style="margin-bottom:20px;">
+      <section class="card">
         <h2 class="section-heading-lg">
           💎 Consenso & Matriz Comparativa de Valor Intrínseco
         </h2>
@@ -745,7 +869,7 @@
         <div id="est-eps-chart" style="height:220px; width:100%;"></div>
       </section>
 
-      <section class="card" style="margin-bottom:20px;">
+      <section class="card">
         <h2>Proyección de Beneficio por Acción (EPS)</h2>
         <div class="table-wrap">
           <table class="data-table" id="est-eps-table">
@@ -765,7 +889,7 @@
         </div>
       </section>
 
-      <section class="card" style="margin-bottom:20px;">
+      <section class="card">
         <h2>Proyección de Ingresos Totales</h2>
         <div class="table-wrap">
           <table class="data-table" id="est-rev-table">
@@ -836,137 +960,11 @@
       </section>
     </div>
 
-    <!-- 3. MASTER PANE: FINANCIEROS & MÉTRICAS (div principal) -->
-    <div id="pane-financials-hub-main" class="tab-pane hidden">
-      <!-- ESTADOS FINANCIEROS Y CAGR -->
-      <section class="card" id="growth-card" style="margin-bottom:20px;">
-        <h2>📈 Crecimiento Compuesto <span class="chart-tag">CAGR por período</span></h2>
-        <p class="card-sub">Tasas de crecimiento compuesto anualizadas para el último año fiscal.</p>
-        <div class="table-wrap"><table id="growth-table" class="data-table"></table></div>
-      </section>
-
-      <!-- EXPLORADOR DE ESTADOS FINANCIEROS (INCOME, BALANCE, CASHFLOW) -->
-      <section class="card">
-        <div class="fin-stmt-header">
-          <div>
-            <h2 class="section-heading">Estados Financieros Desglosados</h2>
-            <p class="card-sub fin-stmt-sub">Revisa las cifras clave reportadas en los últimos períodos.</p>
-          </div>
-          <div class="fin-stmt-controls">
-            <div class="chart-toggles-style">
-              <button id="tg-freq-annual" class="tg-btn active">Anual</button>
-              <button id="tg-freq-quarter" class="tg-btn">Trimestral</button>
-            </div>
-            <div class="chart-toggles-style">
-              <button class="tg-btn fin-stmt-btn active" data-stmt="income">Resultados</button>
-              <button class="tg-btn fin-stmt-btn" data-stmt="balance">Balance General</button>
-              <button class="tg-btn fin-stmt-btn" data-stmt="cashflow">Flujos de Caja</button>
-            </div>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table class="data-table" id="fin-stmt-table">
-            <thead id="fin-stmt-thead"></thead>
-            <tbody id="fin-stmt-tbody"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- GRÁFICOS FINANCIEROS Y RATIOS HISTÓRICOS -->
-      <section class="charts-grid" style="margin-bottom:20px;">
-        <div class="card chart-card">
-          <h3>Ingresos y utilidad neta</h3>
-          <div class="chart" id="ch-income"></div>
-        </div>
-        <div class="card chart-card">
-          <h3>Márgenes operativos</h3>
-          <div class="chart" id="ch-margins"></div>
-        </div>
-        <div class="card chart-card">
-          <h3>Flujo de caja libre</h3>
-          <div class="chart" id="ch-fcf"></div>
-        </div>
-        <div class="card chart-card">
-          <h3>Deuda vs caja</h3>
-          <div class="chart" id="ch-debt"></div>
-        </div>
-        <div class="card chart-card">
-          <h3>Acciones en circulación <span class="chart-tag">recompras ↓</span></h3>
-          <div class="chart" id="ch-shares"></div>
-        </div>
-        <div class="card chart-card">
-          <h3>ROE y ROIC <span class="chart-tag">umbral Buffett 15%</span></h3>
-          <div class="chart" id="ch-returns"></div>
-        </div>
-      </section>
-
-      <!-- TABLA DE RATIOS HISTÓRICOS EDGAR (10-15 AÑOS) -->
-      <section class="card" style="margin-bottom:20px;">
-        <div class="hist-header">
-          <div>
-            <h2 class="section-heading-lg" style="margin:0;">📜 Histórico de Ratios Financieros (SEC EDGAR)</h2>
-            <p class="card-sub hist-sub">Evolución año a año de la rentabilidad, estructura de capital y múltiplos.</p>
-          </div>
-          <div id="hist-ratios-csv-wrap"></div>
-        </div>
-        <div class="table-wrap" style="margin-top:14px;">
-          <table class="data-table" id="hist-ratios-table">
-            <thead id="hist-ratios-thead"></thead>
-            <tbody id="hist-ratios-tbody"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- GRÁFICOS DE MÚLTIPLOS HISTÓRICOS CON MEDIANA -->
-      <section class="card">
-        <div class="multiples-header">
-          <h2 class="section-heading" style="margin:0;">📊 Gráficos de Múltiplos Históricos (15 Años)</h2>
-          <div class="chart-range-controls" id="multiples-range-controls" style="display:flex; gap:4px;">
-            <button class="period-btn-mult" data-range="ytd">YTD</button>
-            <button class="period-btn-mult" data-range="1">1 Year</button>
-            <button class="period-btn-mult" data-range="3">3 Years</button>
-            <button class="period-btn-mult" data-range="5">5 Years</button>
-            <button class="period-btn-mult" data-range="10">10 Years</button>
-            <button class="period-btn-mult active" data-range="all">Todo</button>
-          </div>
-        </div>
-        
-        <div class="grid-multiples">
-          <div class="chart-card chart-wide">
-            <h3>PE histórico (TTM) con mediana y banda p25-p75</h3>
-            <div class="chart" id="ch-pe" style="height:320px; width:100%;"></div>
-          </div>
-          <div class="chart-card chart-half">
-            <h3>P/Ventas histórico</h3>
-            <div class="chart" id="ch-ps" style="height:250px; width:100%;"></div>
-          </div>
-          <div class="chart-card chart-half">
-            <h3>P/Valor libro histórico</h3>
-            <div class="chart" id="ch-pb" style="height:250px; width:100%;"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- EARNINGS & DIVIDENDOS -->
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-        <section class="card">
-          <h2>💰 Seguridad del Dividendo</h2>
-          <div id="div-safety" class="div-safety hidden"></div>
-          <div class="chart" id="ch-divs"></div>
-        </section>
-
-        <section class="card">
-          <h2>💵 Historico de Beneficio Por Acción (EPS)</h2>
-          <div class="chart" id="ch-eps"></div>
-        </section>
-      </div>
-    </div>
-
     <!-- 4. MASTER PANE: PROPIETARIOS & DATOS CORPORATIVOS -->
     <div id="pane-ownership" class="tab-pane hidden" role="tabpanel" aria-labelledby="tab-ownership">
-      <section class="card" style="margin-bottom:20px;">
+      <section class="card">
         <h2>👔 Estructura de Propiedad Accionaria</h2>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:16px;" class="ratios-checks-grid">
+        <div class="ratios-checks-grid grid-2col">
           <div style="padding:16px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); text-align:center;">
             <span style="font-size:12px; color:var(--muted); font-weight:600;">% Propiedad de Directivos (Insiders)</span>
             <div id="ins-pct-val" style="font-size:28px; font-weight:800; color:var(--primary); margin-top:4px;">—</div>
@@ -978,7 +976,7 @@
         </div>
       </section>
 
-      <section class="card" style="margin-bottom:20px;">
+      <section class="card">
         <h2>📝 Últimas Transacciones de Directivos (Insiders)</h2>
         <div class="table-wrap">
           <table class="data-table" id="ins-table">
@@ -996,7 +994,7 @@
         </div>
       </section>
 
-      <section class="card" style="margin-bottom:20px;">
+      <section class="card">
         <h2>Principales Fondos Accionistas (Institutional Holders)</h2>
         <div class="table-wrap">
           <table class="data-table" id="holders-table">
@@ -1162,7 +1160,7 @@
 <!-- ============================ VISTA WATCHLIST ============================ -->
 <main id="view-watchlist" class="view hidden">
   <section class="card" style="padding:24px; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
-    <div class="screener-head" style="margin-bottom:20px;">
+    <div class="screener-head">
       <div>
         <h2 style="font-family:'Outfit',sans-serif; font-size:24px; font-weight:800; color:var(--text); margin-bottom:8px;">⭐ Watchlist Premium</h2>
         <p class="card-sub" style="font-size:13px; color:var(--muted); max-width:600px;">
@@ -1327,7 +1325,7 @@
     <div class="modal-body">
       <p class="card-sub" style="margin-bottom:16px;">Simula la tasa de crecimiento anual compuesto (CAGR) o proyecta el valor futuro de tu inversión.</p>
       
-      <div class="cagr-inputs-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+      <div class="cagr-inputs-grid grid-2col">
         <label style="font-size:12.5px; font-weight:600; color:#334155;">Monto Inicial ($)
           <input type="number" id="cagr-in-principal" value="1000" step="100" style="width:100%; margin-top:4px; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
         </label>
@@ -1363,7 +1361,7 @@
     <div class="modal-body">
       <p class="card-sub" style="margin-bottom:16px;">Recibe un aviso visual cuando la acción alcance tu objetivo de precio o margen de seguridad.</p>
       
-      <form id="form-alert-add" style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
+      <form id="form-alert-add" class="flex-col-gap-12">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
           <label style="font-size:12px; font-weight:600; color:var(--text);">Símbolo
             <input type="text" id="alert-in-sym" style="width:100%; margin-top:4px; padding:6px 8px; border:1px solid var(--border-dark); border-radius:6px; background:var(--panel); color:var(--text);" readonly>
