@@ -231,10 +231,10 @@ async function doSearch(q) {
     const box = $("search-results");
     if (!results.length) return hideSearch();
     box.innerHTML = results.map(it =>
-      `<div class="search-item" onclick="go('${it.symbol}')">
-         <span class="sym">${it.symbol}</span>
-         <span class="name">${it.name}</span>
-         <span class="ex">${it.exchange}</span>
+      `<div class="search-item" onclick="go('${escHtml(it.symbol)}')">
+         <span class="sym">${escHtml(it.symbol)}</span>
+         <span class="name">${escHtml(it.name)}</span>
+         <span class="ex">${escHtml(it.exchange)}</span>
        </div>`).join("");
     box.classList.remove("hidden");
   } catch { hideSearch(); }
@@ -611,13 +611,13 @@ function renderNews(news) {
     const link = n.clickThroughUrl ? n.clickThroughUrl.url : (n.canonicalUrl ? n.canonicalUrl.url : "#");
 
     return `
-      <a href="${link}" target="_blank" style="display:flex; gap:16px; padding:12px; border:1px solid var(--border); border-radius:var(--radius); text-decoration:none; color:inherit; transition:all 0.2s; background:var(--surface);" class="hover-card">
-        ${thumb ? `<img src="${thumb}" alt="thumbnail" style="width:100px; height:70px; object-fit:cover; border-radius:4px;">` : `<div style="width:100px; height:70px; background:var(--bg); border-radius:4px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:10px;">Sin Imagen</div>`}
+      <a href="${escHtml(link)}" target="_blank" style="display:flex; gap:16px; padding:12px; border:1px solid var(--border); border-radius:var(--radius); text-decoration:none; color:inherit; transition:all 0.2s; background:var(--surface);" class="hover-card">
+        ${thumb ? `<img src="${escHtml(thumb)}" alt="thumbnail" style="width:100px; height:70px; object-fit:cover; border-radius:4px;">` : `<div style="width:100px; height:70px; background:var(--bg); border-radius:4px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:10px;">Sin Imagen</div>`}
         <div style="display:flex; flex-direction:column; justify-content:space-between; flex:1;">
-          <h4 style="margin:0; font-size:14px; font-weight:600; line-height:1.3; color:var(--text);">${n.title || 'Noticia'}</h4>
+          <h4 style="margin:0; font-size:14px; font-weight:600; line-height:1.3; color:var(--text);">${escHtml(n.title || 'Noticia')}</h4>
           <div style="font-size:11px; color:var(--muted); margin-top:6px; display:flex; justify-content:space-between;">
-            <span style="font-weight:600; color:var(--primary);">${publisher}</span>
-            <span>${date}</span>
+            <span style="font-weight:600; color:var(--primary);">${escHtml(publisher)}</span>
+            <span>${escHtml(date)}</span>
           </div>
         </div>
       </a>
@@ -729,10 +729,10 @@ function renderWarnings(warnings) {
   if (summary && list) {
     // Nueva UI colapsable
     summary.innerHTML = `⚠️ ${warnings.length} aviso${warnings.length > 1 ? 's' : ''} de calidad de datos <span style="font-size:11px; font-weight:400; color:var(--muted); margin-left:4px;">(haz clic para expandir)</span>`;
-    list.innerHTML = warnings.map(w => `<li style="margin-bottom:4px; line-height:1.5;">${w}</li>`).join("");
+    list.innerHTML = warnings.map(w => `<li style="margin-bottom:4px; line-height:1.5;">${escHtml(w)}</li>`).join("");
   } else {
     // Fallback para compatibilidad
-    box.innerHTML = `<details><summary style="cursor:pointer; font-weight:700;">⚠️ ${warnings.length} aviso${warnings.length > 1 ? 's' : ''} de calidad de datos</summary><ul style="margin:6px 0 0 18px; padding:0;">${warnings.map(w => `<li>${w}</li>`).join("")}</ul></details>`;
+    box.innerHTML = `<details><summary style="cursor:pointer; font-weight:700;">⚠️ ${warnings.length} aviso${warnings.length > 1 ? 's' : ''} de calidad de datos</summary><ul style="margin:6px 0 0 18px; padding:0;">${warnings.map(w => `<li>${escHtml(w)}</li>`).join("")}</ul></details>`;
   }
   box.classList.remove("hidden");
 }
@@ -812,9 +812,9 @@ function renderBuffettScorecard(sc) {
         else val = String(ch.value);
         val = ` · <b>${val}</b>`;
       }
-      return `<div class="check ${cls}" title="${ch.desc}">
+      return `<div class="check ${cls}" title="${escHtml(ch.desc)}">
         <span class="icon">${icon}</span>
-        <div><div class="name">${ch.name}</div><div class="val">${ch.desc}${val}</div></div>
+        <div><div class="name">${escHtml(ch.name)}</div><div class="val">${escHtml(ch.desc)}${val}</div></div>
       </div>`;
     }).join("");
   }
@@ -870,8 +870,8 @@ function renderBuffettScorecard(sc) {
           <div class="scorecard-item-left">
             ${badgeHtml}
             <div class="scorecard-item-info">
-              <span class="scorecard-item-name">${c.name}</span>
-              <span class="scorecard-item-desc">${c.desc}</span>
+              <span class="scorecard-item-name">${escHtml(c.name)}</span>
+              <span class="scorecard-item-desc">${escHtml(c.desc)}</span>
             </div>
           </div>
           <div class="scorecard-item-right">
@@ -897,7 +897,7 @@ function renderGrowthTable(d) {
       <th class="num">${termify("CAGR 5A", "cagr")}</th><th class="num">${termify("CAGR 10A", "cagr")}</th></tr></thead>
     <tbody>${rows.map(r => `
       <tr>
-        <td>${r.metric}</td>
+        <td>${escHtml(r.metric)}</td>
         <td class="num">${r.metric.includes("EPS") || r.metric.includes("Dividendo") ? fmtNum(r.current, 2) : fmtBig(r.current, d.profile.currency)}</td>
         ${cell(r.cagr1)}${cell(r.cagr3)}${cell(r.cagr5)}${cell(r.cagr10)}
       </tr>`).join("")}</tbody>`;

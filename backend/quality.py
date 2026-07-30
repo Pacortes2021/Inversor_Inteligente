@@ -1,10 +1,8 @@
 """Banderas de calidad de datos: la app te avisa cuándo dudar de ella."""
 
-import math
+from datetime import datetime
 
-
-def _ok(x):
-    return x is not None and isinstance(x, (int, float)) and math.isfinite(x)
+from .valuation import _ok
 
 
 def build_warnings(info, annuals, valuation, pe_pairs, edgar_hist):
@@ -55,7 +53,7 @@ def build_warnings(info, annuals, valuation, pe_pairs, edgar_hist):
 
     # 5. Discrepancia real (> 15%) entre Yahoo y SEC EDGAR
     if edgar_hist and "revenue" in edgar_hist:
-        current_yr = 2026
+        current_yr = datetime.now().year
         yahoo_rev = {a["year"]: a["revenue"] for a in annuals
                      if _ok(a.get("revenue")) and a.get("source") != "edgar" and a.get("year", 0) <= current_yr}
         for ystr, (_, val) in sorted(edgar_hist["revenue"].items(), reverse=True):

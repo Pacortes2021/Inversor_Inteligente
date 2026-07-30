@@ -116,11 +116,12 @@ def _dividend_safety(annuals, dividends_annual, info):
 def _sec_context(symbol, calendar):
     """Próxima fecha de resultados y links a los informes en EDGAR."""
     next_earnings = None
+    next_earnings_est = None
+    filings = None
     try:
         eds = calendar.get("Earnings Date") or []
         if eds:
             next_earnings = str(eds[0])
-            
         est_avg = calendar.get("Earnings Average")
         if est_avg is not None:
             if isinstance(est_avg, (list, tuple)):

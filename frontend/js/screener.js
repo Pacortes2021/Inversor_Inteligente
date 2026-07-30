@@ -100,7 +100,7 @@ function fillSectorFilter() {
   const cur = sel.value;
   const sectors = [...new Set((scr.data || []).map(r => r.sector).filter(Boolean))].sort();
   sel.innerHTML = `<option value="">Todos</option>` +
-    sectors.map(s => `<option value="${s}">${s}</option>`).join("");
+    sectors.map(s => `<option value="${escHtml(s)}">${escHtml(s)}</option>`).join("");
   sel.value = sectors.includes(cur) ? cur : "";
 }
 
@@ -223,16 +223,7 @@ function renderScreener() {
     fcfYield: "fcfyield", roe: "roe", debtToEquity: "de", drawdown: "drawdown",
     score: "score", mos: "mos", fairValue: "dcf", pb: "pb" };
   document.getElementById("screener-thead").innerHTML = cols.map(([k, label, cls]) =>
-    `<th data-k="${k}" class="${cls || ""}">${label}${TERMS[k] ? ` <span class="info-i" data-term="${TERMS[k]}">ⓘ</span>` : ""}${scr.sortKey === k ? (scr.sortDir < 0 ? " ↓" : " ↑") : ""}</th>`).join("");
-  document.querySelectorAll("#screener-thead th").forEach(th => {
-    th.addEventListener("click", e => {
-      if (e.target.closest(".info-i")) return;  // el ⓘ abre el glosario, no ordena
-      const k = th.dataset.k;
-      if (scr.sortKey === k) scr.sortDir *= -1;
-      else { scr.sortKey = k; scr.sortDir = ["symbol", "name", "sector"].includes(k) ? 1 : -1; }
-      renderScreener();
-    });
-  });
+    `<th data-k="${k}" class="${cls || ""}">${escHtml(label)}${TERMS[k] ? ` <span class="info-i" data-term="${TERMS[k]}">ⓘ</span>` : ""}${scr.sortKey === k ? (scr.sortDir < 0 ? " ↓" : " ↑") : ""}</th>`).join("");
 
   const rows = filteredRows();
   const tbody = document.querySelector("#screener-table tbody");
@@ -240,8 +231,8 @@ function renderScreener() {
     const cells = cols.map(([k, , cls]) => {
       let v;
       switch (k) {
-        case 'symbol': return `<td class="sym" style="cursor:pointer;">${r.symbol}</td>`;
-        case 'name': return `<td><div style="font-weight:600; font-size:12.5px; line-height:1.3;">${r.name || '—'}</div><div style="font-size:10px; color:var(--muted); margin-top:1px;">${r.sector || ''}</div></td>`;
+        case 'symbol': return `<td class="sym" style="cursor:pointer;">${escHtml(r.symbol)}</td>`;
+        case 'name': return `<td><div style="font-weight:600; font-size:12.5px; line-height:1.3;">${escHtml(r.name || '—')}</div><div style="font-size:10px; color:var(--muted); margin-top:1px;">${escHtml(r.sector || '')}</div></td>`;
         case 'sector': return ''; /* sector ahora va dentro de name */
         case "price": v = fmtPrice(r.price, r.currency); break;
         case "pe": v = r.pe != null ? fmtNum(r.pe, 1) : "—"; break;
@@ -278,7 +269,7 @@ function renderScreener() {
       }
       return `<td class="${cls || ""}">${v}</td>`;
     }).join("");
-    return `<tr onclick="go('${r.symbol}')">${cells}</tr>`;
+    return `<tr onclick="go('${escHtml(r.symbol)}')">${cells}</tr>`;
   }).join("");
 
   if (scr.view === "targets2030") {
@@ -448,4 +439,15 @@ document.getElementById('f-text').addEventListener('input', () => { activePreset
 });
 document.getElementById('f-view').addEventListener('change', e => {
   scr.view = e.target.value; renderScreener();
+});
+
+document.getElementById("screener-thead").addEventListener("click", e => {
+  const th = e.target.closest("th");
+  if (!th) return;
+  if (e.target.closest(".info-i")) return;
+  const k = th.dataset.k;
+  if (!k) return;
+  if (scr.sortKey === k) scr.sortDir *= -1;
+  else { scr.sortKey = k; scr.sortDir = ["symbol", "name", "sector"].includes(k) ? 1 : -1; }
+  renderScreener();
 });

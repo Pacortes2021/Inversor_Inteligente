@@ -250,7 +250,6 @@ document.getElementById("pf-import-file").addEventListener("change", async e => 
   if (!file) return;
   try {
     const data = JSON.parse(await file.text());
-    if (!confirm("Esto reemplazará tu watchlist, portafolio y notas actuales con el respaldo. ¿Continuar?")) return;
     const r = await fetch("/api/restore", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),

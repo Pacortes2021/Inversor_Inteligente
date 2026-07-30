@@ -72,7 +72,7 @@ function renderCompare() {
   const chips = document.getElementById('cmp-chips');
   chips.innerHTML = cmp.symbols.map((s, i) =>
     `<span class="cmp-chip" style="border-color:${CMP_COLORS[i]}66;color:${CMP_COLORS[i]}">
-       ${s} <b onclick="cmpRemove('${s}')" title="Quitar">✕</b></span>`).join('');
+       ${escHtml(s)} <b onclick="cmpRemove('${escHtml(s)}')" title="Quitar">✕</b></span>`).join('');
 
   const content = document.getElementById('cmp-content');
   const chartsWrap = document.getElementById('cmp-charts');
@@ -86,7 +86,7 @@ function renderCompare() {
 
   /* ---- filas de la tabla de comparación ---- */
   const head = `<thead><tr><th></th>${cmp.symbols.map((s, i) =>
-    `<th class="num" style="color:${CMP_COLORS[i]}">${s}</th>`).join('')}</tr></thead>`;
+    `<th class="num" style="color:${CMP_COLORS[i]}">${escHtml(s)}</th>`).join('')}</tr></thead>`;
 
   /* Métricas numéricas donde "mejor" = mayor (retornos, márgenes, crecimiento) */
   const HIGHER_IS_BETTER = new Set(['Margen bruto','Margen neto','ROE (TTM)','ROIC (5Y Avg.)','ROC (Greenblatt)','FCF yield','Div. yield','CAGR Ingresos (5Y)','CAGR FCF (5Y)','Scorecard Buffett','Margen de seguridad']);

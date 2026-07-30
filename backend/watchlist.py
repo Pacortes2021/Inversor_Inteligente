@@ -1,6 +1,7 @@
 """Watchlist persistente con margen de seguridad objetivo por acción."""
 
 import json
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -11,6 +12,7 @@ from .screener import scan_one_deep
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
 WL_FILE = DATA_DIR / "watchlist.json"
+_wl_lock = threading.Lock()
 
 
 def _load():
@@ -118,23 +120,25 @@ def get_watchlist():
 
 def add_symbol(symbol: str, target_mos: float = 25.0):
     symbol = symbol.upper().strip()
-    items = _load()
-    for it in items:
-        if it["symbol"] == symbol:
-            it["targetMos"] = target_mos
-            _save(items)
-            return items
-    items.append({"symbol": symbol, "targetMos": target_mos,
-                  "addedAt": int(time.time() * 1000)})
-    _save(items)
-    return items
+    with _wl_lock:
+        items = _load()
+        for it in items:
+            if it["symbol"] == symbol:
+                it["targetMos"] = target_mos
+                _save(items)
+                return items
+        items.append({"symbol": symbol, "targetMos": target_mos,
+                      "addedAt": int(time.time() * 1000)})
+        _save(items)
+        return items
 
 
 def remove_symbol(symbol: str):
     symbol = symbol.upper().strip()
-    items = [it for it in _load() if it["symbol"] != symbol]
-    _save(items)
-    return items
+    with _wl_lock:
+        items = [it for it in _load() if it["symbol"] != symbol]
+        _save(items)
+        return items
 
 
 def has_symbol(symbol: str) -> bool:

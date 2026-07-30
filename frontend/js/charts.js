@@ -36,14 +36,10 @@ function makeChart(id, option) {
 window.addEventListener('resize', () => Object.values(charts).forEach(c => c.resize()));
 
 /* Cuando cambie el tema, re-renderizar todos los gráficos activos */
-const _origSetTheme = window.setTheme;
 window.addEventListener('DOMContentLoaded', () => {
   const btn = document.getElementById('theme-toggle');
   if (btn) {
-    const origOnClick = btn.onclick;
-    btn.onclick = (e) => {
-      if (origOnClick) origOnClick.call(btn, e);
-      /* Pequeño delay para que el atributo data-theme cambie antes de re-renderizar */
+    btn.addEventListener('click', () => {
       setTimeout(() => {
         if (window.state && window.state.data) {
           const activePane = document.querySelector('.a-tab.active');
@@ -53,7 +49,7 @@ window.addEventListener('DOMContentLoaded', () => {
           else if (pane === 'summary') chartPriceSummary(window.state.data);
         }
       }, 80);
-    };
+    });
   }
 });
 

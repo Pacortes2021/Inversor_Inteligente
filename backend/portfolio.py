@@ -2,6 +2,7 @@
 
 import json
 import math
+import threading
 import time
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from .data import atomic_write_json, cache_get, cache_set
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
 PF_FILE = DATA_DIR / "portfolio.json"
+_pf_lock = threading.Lock()
 
 BENCHMARK = "SPY"
 
@@ -135,20 +137,22 @@ def get_portfolio():
 
 
 def add_position(symbol, date, price, shares, note=""):
-    items = _load()
-    items.append({
-        "id": int(time.time() * 1000),
-        "symbol": symbol.upper().strip(),
-        "date": date,
-        "price": float(price),
-        "shares": float(shares),
-        "note": (note or "").strip()[:300],
-    })
-    _save(items)
-    return items
+    with _pf_lock:
+        items = _load()
+        items.append({
+            "id": int(time.time() * 1000),
+            "symbol": symbol.upper().strip(),
+            "date": date,
+            "price": float(price),
+            "shares": float(shares),
+            "note": (note or "").strip()[:300],
+        })
+        _save(items)
+        return items
 
 
 def remove_position(pid: int):
-    items = [it for it in _load() if it["id"] != pid]
-    _save(items)
-    return items
+    with _pf_lock:
+        items = [it for it in _load() if it["id"] != pid]
+        _save(items)
+        return items

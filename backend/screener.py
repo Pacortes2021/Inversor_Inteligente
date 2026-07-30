@@ -340,9 +340,7 @@ def scan_one_deep(symbol, bond10y):
         from . import snapshots as S
         S.append(symbol, row.get("price"), row.get("mos"), row.get("fairValue"))
         return row
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
+    except Exception:
         return None
 
 

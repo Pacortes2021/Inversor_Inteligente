@@ -205,7 +205,7 @@ def build_valuation(price, info, annuals, pe_stats, bond10y):
 
     cash = info.get("totalCash") or 0
     debt = info.get("totalDebt") or 0
-    net_cash = (cash - debt) if (_ok(cash) or _ok(debt)) else 0
+    net_cash = (cash - debt) if (_ok(cash) and _ok(debt)) else 0
 
     fcf_per_share = (base_fcf / shares) if (_ok(base_fcf) and _ok(shares) and shares > 0) else None
 
