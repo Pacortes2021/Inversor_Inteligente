@@ -111,12 +111,11 @@
 }
 .grid-multiples {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 20px;
 }
-.grid-multiples .chart-wide {
-  grid-column: span 3;
-  padding-top: 10px;
+.grid-multiples .chart-card {
+  min-width: 0;
 }
 .grid-multiples .chart-half {
   grid-column: span 1;
