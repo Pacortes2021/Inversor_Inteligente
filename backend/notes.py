@@ -5,7 +5,7 @@ import threading
 import time
 from pathlib import Path
 
-from .data import atomic_write_json
+from .data import atomic_write_json, load_json
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
@@ -16,12 +16,7 @@ MOAT_TYPES = ["marca", "costos", "red", "switching", "intangibles", "escala"]
 
 
 def _load():
-    if NOTES_FILE.exists():
-        try:
-            return json.loads(NOTES_FILE.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    return {}
+    return load_json(NOTES_FILE, {})
 
 
 def get_note(symbol: str):

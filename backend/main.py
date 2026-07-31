@@ -1,6 +1,7 @@
 """El Inversor Inteligente — servidor FastAPI (API + frontend estático)."""
 
 import re
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -11,22 +12,45 @@ from pydantic import BaseModel, field_validator, Field
 from . import notes as NT
 from . import portfolio as PF
 from . import watchlist as WL
-from .data import atomic_write_json
+from .data import atomic_write_json, clean_expired_cache
 from .market import get_indices, get_movers, get_oversold
 from .screener import run_deep_screener, run_screener
+
 from .stock import build_payload
 
-app = FastAPI(title="El Inversor Inteligente")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    try:
+        clean_expired_cache()
+    except Exception:
+        pass
+    yield
+
+
+app = FastAPI(title="El Inversor Inteligente", lifespan=lifespan)
 
 FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
+
+_SYMBOL_RE = re.compile(r"^[A-Z0-9\.\-\/]{1,15}$")
+
+
+
+def _clean_symbol(symbol: str) -> str:
+    """Valida y normaliza un símbolo: quita espacios, mayúsculas, límite de longitud."""
+    s = (symbol or "").strip().upper()
+    if not _SYMBOL_RE.match(s):
+        raise HTTPException(400, f"Símbolo inválido: '{symbol}'")
+    return s
 
 
 @app.get("/api/stock/{symbol}")
 def api_stock(symbol: str, refresh: bool = False):
-    payload = build_payload(symbol.strip(), refresh=refresh)
+    sym = _clean_symbol(symbol)
+    payload = build_payload(sym, refresh=refresh)
     if payload is None:
-        raise HTTPException(404, f"No se encontraron datos para '{symbol}'. Revisa el símbolo (ej: NVDA, AAPL, KO).")
-    payload["inWatchlist"] = WL.has_symbol(symbol)
+        raise HTTPException(404, f"No se encontraron datos para '{sym}'. Revisa el símbolo (ej: NVDA, AAPL, KO).")
+    payload["inWatchlist"] = WL.has_symbol(sym)
     return payload
 
 
@@ -66,7 +90,15 @@ def api_quotes(symbols: str):
 
     from .data import cache_get, cache_set
 
-    syms = [s.strip().upper() for s in symbols.split(",") if s.strip()][:25]
+    syms = []
+    for s in symbols.split(","):
+        s = s.strip().upper()
+        if not s:
+            continue
+        if not _SYMBOL_RE.match(s):
+            raise HTTPException(400, f"Símbolo inválido: '{s}'")
+        syms.append(s)
+    syms = syms[:25]
     if not syms:
         return {"quotes": []}
     key = "quotes_" + "_".join(sorted(syms)).replace("/", "_").replace(".", "_")
@@ -130,7 +162,7 @@ def api_watchlist_add(item: WatchItem):
 
 @app.delete("/api/watchlist/{symbol}")
 def api_watchlist_remove(symbol: str):
-    WL.remove_symbol(symbol)
+    WL.remove_symbol(_clean_symbol(symbol))
     return {"ok": True}
 
 
@@ -216,12 +248,12 @@ class Note(BaseModel):
 
 @app.get("/api/notes/{symbol}")
 def api_notes_get(symbol: str):
-    return NT.get_note(symbol)
+    return NT.get_note(_clean_symbol(symbol))
 
 
 @app.post("/api/notes/{symbol}")
 def api_notes_set(symbol: str, n: Note):
-    return NT.set_note(symbol, n.thesis, n.risks, n.moats)
+    return NT.set_note(_clean_symbol(symbol), n.thesis, n.risks, n.moats)
 
 
 @app.get("/api/backup")
@@ -247,10 +279,17 @@ class Backup(BaseModel):
         out = []
         for item in v:
             if isinstance(item, dict) and "symbol" in item:
+                sym = str(item["symbol"]).strip().upper()[:15]
+                if not _SYMBOL_RE.match(sym):
+                    continue
+                try:
+                    target = float(item.get("targetMos", 25.0))
+                except (TypeError, ValueError):
+                    target = 25.0
                 out.append({
-                    "symbol": str(item["symbol"]).strip().upper()[:15],
-                    "targetMos": max(0.0, min(95.0, float(item.get("targetMos", 25.0)))),
-                    "addedAt": int(item.get("addedAt", 0)),
+                    "symbol": sym,
+                    "targetMos": max(0.0, min(95.0, target)),
+                    "addedAt": int(item.get("addedAt", 0) or 0),
                 })
         return out
 
@@ -260,12 +299,27 @@ class Backup(BaseModel):
         out = []
         for item in v:
             if isinstance(item, dict) and "symbol" in item and "price" in item and "shares" in item:
+                sym = str(item["symbol"]).strip().upper()[:15]
+                if not _SYMBOL_RE.match(sym):
+                    continue
+                try:
+                    price = float(item["price"])
+                    shares = float(item["shares"])
+                except (TypeError, ValueError):
+                    continue
+                if not (0.0001 < price <= 1_000_000_000) or not (0.0001 < shares <= 1_000_000_000):
+                    continue
+                date = str(item.get("date", "2024-01-01"))
+                try:
+                    datetime.strptime(date, "%Y-%m-%d")
+                except ValueError:
+                    date = "2024-01-01"
                 out.append({
-                    "id": int(item.get("id", 0)),
-                    "symbol": str(item["symbol"]).strip().upper()[:15],
-                    "date": str(item.get("date", "2024-01-01")),
-                    "price": max(0.0001, float(item["price"])),
-                    "shares": max(0.0001, float(item["shares"])),
+                    "id": int(item.get("id", 0) or 0),
+                    "symbol": sym,
+                    "date": date,
+                    "price": price,
+                    "shares": shares,
                     "note": str(item.get("note", ""))[:300],
                 })
         return out
@@ -273,9 +327,23 @@ class Backup(BaseModel):
 
 @app.post("/api/restore")
 def api_restore(b: Backup):
+    # Validar notas antes de tocar disco (estructura estricta de dict[str, dict])
+    notes = {}
+    for k, v in b.notes.items():
+        k = str(k).strip().upper()[:15]
+        if not _SYMBOL_RE.match(k):
+            continue
+        if not isinstance(v, dict):
+            continue
+        notes[k] = {
+            "thesis": str(v.get("thesis", ""))[:2000],
+            "risks": str(v.get("risks", ""))[:2000],
+            "moats": [str(m)[:30] for m in v.get("moats", []) if isinstance(m, (str, int))][:10],
+        }
+    # Escritura transaccional: validar ambos guardados antes de escribir notas
     WL._save(b.watchlist)
     PF._save(b.portfolio)
-    atomic_write_json(NT.NOTES_FILE, b.notes)
+    atomic_write_json(NT.NOTES_FILE, notes)
     return {"ok": True}
 
 

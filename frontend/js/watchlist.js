@@ -124,7 +124,7 @@ function renderWatchlist() {
     };
 
     return `<tr style="transition: background 0.2s; cursor:default;" class="hover-row">
-      <td onclick="go('${escHtml(it.symbol)}')">
+      <td data-symbol="${escHtml(it.symbol)}">
           <div style="font-weight:800; font-size:15px; color:var(--text); cursor:pointer;">${escHtml(it.symbol)}</div>
           <div style="font-size:11px; color:var(--muted); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(it.name || "—")}</div>
       </td>
@@ -142,7 +142,7 @@ function renderWatchlist() {
           <button style="background:transparent; border:none; cursor:pointer; color:var(--muted); padding:6px; border-radius:50%; transition:all 0.2s;" 
                   onmouseover="this.style.background='var(--hover)'; this.style.color='var(--red)';"
                   onmouseout="this.style.background='transparent'; this.style.color='var(--muted)';"
-                  onclick="wlRemove('${escHtml(it.symbol)}')" title="Dejar de seguir">
+                  data-wl-remove="${escHtml(it.symbol)}" title="Dejar de seguir">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
           </button>
       </td>
@@ -162,33 +162,46 @@ document.querySelectorAll('#wl-perf-toggles .tg-btn').forEach(btn => {
 });
 
 async function wlAdd(symbol, targetMos = 25) {
-  await fetch("/api/watchlist", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ symbol, targetMos }),
-  });
-  wlLoaded = false;
-  
-  // Animación de Toast
-  toast(`★ ${symbol} agregada a Favoritos. ¿Quieres ajustar el MoS objetivo?`);
+  try {
+    const r = await fetch("/api/watchlist", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ symbol, targetMos }),
+    });
+    if (!r.ok) throw new Error(`Error ${r.status}`);
+    wlLoaded = false;
+    toast(`★ ${symbol} agregada a Favoritos. ¿Quieres ajustar el MoS objetivo?`);
+  } catch (e) {
+    toast("⚠ No se pudo agregar: " + e.message);
+  }
 }
 
 async function wlRemove(symbol) {
-  await fetch(`/api/watchlist/${encodeURIComponent(symbol)}`, { method: "DELETE" });
-  wlLoaded = false;
-  toast(`${symbol} eliminada de la watchlist`);
+  try {
+    const r = await fetch(`/api/watchlist/${encodeURIComponent(symbol)}`, { method: "DELETE" });
+    if (!r.ok) throw new Error(`Error ${r.status}`);
+    wlLoaded = false;
+    toast(`${symbol} eliminada de la watchlist`);
+    if (state.data && state.data.symbol === symbol) setStarState(false);
+  } catch (e) {
+    toast("⚠ No se pudo eliminar: " + e.message);
+  }
   loadWatchlist(true);
-  if (state.data && state.data.symbol === symbol) setStarState(false);
 }
 
 async function wlSetTarget(symbol, value) {
   const t = parseFloat(value);
   if (!isFinite(t)) return;
-  await fetch("/api/watchlist", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ symbol, targetMos: t }),
-  });
-  wlLoaded = false;
-  toast(`Objetivo de ${symbol} actualizado a MoS ≥ ${t}%`);
+  try {
+    const r = await fetch("/api/watchlist", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ symbol, targetMos: t }),
+    });
+    if (!r.ok) throw new Error(`Error ${r.status}`);
+    wlLoaded = false;
+    toast(`Objetivo de ${symbol} actualizado a MoS ≥ ${t}%`);
+  } catch (e) {
+    toast("⚠ No se pudo actualizar: " + e.message);
+  }
   // loadWatchlist(true); // Omitimos recarga forzada para no perder el foco
 }
 
@@ -216,4 +229,9 @@ document.getElementById("wl-csv").addEventListener("click", async () => {
   } catch (err) {
     toast("⚠ Error exportando CSV: " + err.message);
   }
+});
+
+document.addEventListener("click", e => {
+  const rm = e.target.closest("[data-wl-remove]");
+  if (rm) wlRemove(rm.getAttribute("data-wl-remove"));
 });

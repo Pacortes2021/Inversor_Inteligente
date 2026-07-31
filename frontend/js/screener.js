@@ -6,6 +6,7 @@ const scr = {
   loadedKey: null,     // `${mode}_${universe}` ya cargado
   sortKey: "score", sortDir: -1,
   pollTimer: null,
+  pollToken: 0,
 };
 
 const COLS_QUICK = [
@@ -43,6 +44,7 @@ async function loadScreener(refresh = false) {
   const key = `${scr.mode}_${scr.universe}`;
   if (scr.loadedKey === key && scr.data && !refresh) return;
 
+  scr.pollToken++; // invalida cualquier poll en curso del universo anterior
   clearTimeout(scr.pollTimer);
   const btn = document.getElementById("btn-refresh");
   document.getElementById("screener-loading").classList.remove("hidden");
@@ -68,8 +70,10 @@ async function loadScreener(refresh = false) {
 }
 
 async function pollDeep(refresh = false) {
+  const token = scr.pollToken;
   const r = await fetch(`/api/screener/deep?universe=${scr.universe}${refresh ? "&refresh=1" : ""}`);
   const d = await r.json();
+  if (token !== scr.pollToken) return; // universo/modo cambió mientras se consultaba
   if (d.status === "done") {
     scr.data = d.results || [];
     scr.sortKey = "mos"; scr.sortDir = -1;
@@ -77,6 +81,7 @@ async function pollDeep(refresh = false) {
     return;
   }
   // en curso: muestra progreso y sigue consultando
+  if (token !== scr.pollToken) return;
   document.getElementById("screener-loading").classList.remove("hidden");
   document.getElementById("screener-table").classList.add("hidden");
   document.getElementById("screener-loading-msg").textContent =
@@ -85,7 +90,7 @@ async function pollDeep(refresh = false) {
   bar.classList.remove("hidden");
   document.getElementById("deep-progress-fill").style.width =
     (d.total ? (d.done / d.total * 100) : 0) + "%";
-  scr.pollTimer = setTimeout(() => pollDeep(false), 4000);
+  scr.pollTimer = setTimeout(() => { if (token === scr.pollToken) pollDeep(false); }, 4000);
 }
 
 function finishScreenerLoad(key) {
@@ -269,7 +274,7 @@ function renderScreener() {
       }
       return `<td class="${cls || ""}">${v}</td>`;
     }).join("");
-    return `<tr onclick="go('${escHtml(r.symbol)}')">${cells}</tr>`;
+    return `<tr data-symbol="${escHtml(r.symbol)}">${cells}</tr>`;
   }).join("");
 
   if (scr.view === "targets2030") {

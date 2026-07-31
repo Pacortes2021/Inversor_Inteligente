@@ -11,8 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&family=Fraunces:ital,opsz,wght@1,9..144,700&display=swap" rel="stylesheet">
   
   <!-- CSS Principal -->
-  <link rel="stylesheet" href="css/style.css?v=22.0">
-  <link rel="stylesheet" href="css/additions.css?v=22.0">
+  <link rel="stylesheet" href="css/style.css?v=23.0">
+  <link rel="stylesheet" href="css/additions.css?v=23.0">
   
   <!-- ECharts CDN -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
@@ -58,7 +58,7 @@
 </div>
 
 <!-- ============================ VISTA INICIO / DASHBOARD ============================ -->
-<main id="view-inicio" class="view hidden">
+<div id="view-inicio" class="view hidden">
 
   <!-- Bloque 1: Mercado Hoy -->
   <section class="card">
@@ -147,7 +147,7 @@
     </div>
   </section>
 
-</main>
+</div>
 
 <!-- ============================ VISTA ANÁLISIS ============================ -->
 <main id="view-analisis" class="view">
@@ -270,7 +270,7 @@
             </div>
             <div class="metric-list-row" title="Porcentaje de la empresa que está en manos de directivos y ejecutivos.">
               <span class="k" style="border-bottom:1px dashed #cbd5e1; cursor:help">Insiders Own:</span>
-              <span class="v" id="ind-insider" style="font-weight:700; color:#0f172a">—</span>
+              <span class="v" id="ind-insider" style="font-weight:700; color:var(--green)">—</span>
             </div>
           </div>
         </div>
@@ -295,7 +295,7 @@
             </div>
             <div class="metric-list-row" title="Porcentaje de flotación vendido en corto (Short float). Sentimiento bajista del mercado.">
               <span class="k" style="border-bottom:1px dashed #cbd5e1; cursor:help">Short Float:</span>
-              <span class="v" id="ind-short" style="font-weight:700; color:#0f172a">—</span>
+              <span class="v" id="ind-short" style="font-weight:700; color:var(--red)">—</span>
             </div>
           </div>
         </div>
@@ -1121,7 +1121,7 @@
 </main>
 
 <!-- ============================ VISTA SCREENER ============================ -->
-<main id="view-screener" class="view hidden">
+<div id="view-screener" class="view hidden">
   <section class="card">
     <div class="screener-head">
       <div>
@@ -1222,10 +1222,10 @@
     </div>
     <div id="screener-heatmap" class="heatmap hidden"></div>
   </section>
-</main>
+</div>
 
 <!-- ============================ VISTA COMPARAR ============================ -->
-<main id="view-comparar" class="view hidden">
+<div id="view-comparar" class="view hidden">
   <section class="card">
     <h2>Comparador de empresas</h2>
     <p class="card-sub">Hasta 4 acciones lado a lado — ¿KO o PEP? ¿V o MA?</p>
@@ -1253,10 +1253,10 @@
       <div class="chart" id="cmp-margins"></div>
     </div>
   </section>
-</main>
+</div>
 
 <!-- ============================ VISTA WATCHLIST ============================ -->
-<main id="view-watchlist" class="view hidden">
+<div id="view-watchlist" class="view hidden">
   <section class="card" style="padding:24px; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
     <div class="screener-head">
       <div>
@@ -1307,10 +1307,10 @@
       </table>
     </div>
   </section>
-</main>
+</div>
 
 <!-- ============================ VISTA PORTAFOLIO ============================ -->
-<main id="view-portafolio" class="view hidden">
+<div id="view-portafolio" class="view hidden">
   <!-- Tarjetas resumen del portafolio -->
   <div id="pf-summary-grid" class="summary-cards-grid hidden" style="margin-bottom:16px;">
     <div class="summary-card-item">
@@ -1395,7 +1395,7 @@
       </table>
     </div>
   </section>
-</main>
+</div>
 
 <!-- ============================ SIDEBAR FAVORITOS ============================ -->
 <aside id="sidebar" class="sidebar hidden">
@@ -1488,15 +1488,15 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script src="js/format.js?v=22.0"></script>
-  <script src="js/glossary.js?v=22.0"></script>
-  <script src="js/charts.js?v=22.0"></script>
-  <script src="js/screener.js?v=22.0"></script>
-  <script src="js/compare.js?v=22.0"></script>
-  <script src="js/watchlist.js?v=22.0"></script>
-  <script src="js/portfolio.js?v=22.0"></script>
-  <script src="js/dashboard.js?v=22.0"></script>
-  <script src="js/app.js?v=22.0"></script>
-  <script src="js/mobile-nav.js?v=22.0"></script>
+<script src="js/format.js?v=23.0"></script>
+  <script src="js/glossary.js?v=23.0"></script>
+  <script src="js/charts.js?v=23.0"></script>
+  <script src="js/screener.js?v=23.0"></script>
+  <script src="js/compare.js?v=23.0"></script>
+  <script src="js/watchlist.js?v=23.0"></script>
+  <script src="js/portfolio.js?v=23.0"></script>
+  <script src="js/dashboard.js?v=23.0"></script>
+  <script src="js/app.js?v=23.0"></script>
+  <script src="js/mobile-nav.js?v=23.0"></script>
 </body>
 </html>

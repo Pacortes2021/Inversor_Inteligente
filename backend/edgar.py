@@ -56,8 +56,8 @@ SHARE_UNITS = {"shares"}      # unidad shares
 
 def _cik_map():
     cached = cache_get("_edgar_ciks")
-    if cached:
-        return cached
+    if cached is not None:
+        return cached or {}
     _sec_rate_limit()
     r = requests.get(TICKERS_URL, headers=UA, timeout=30)
     r.raise_for_status()
@@ -127,7 +127,7 @@ def get_annual_history(symbol: str):
     try:
         cik = _cik_map().get(sym)
         if cik is None:
-            cache_set(key, {}, ttl=7 * 24 * 3600)
+            cache_set(key, {}, ttl=24 * 3600)
             return None
         _sec_rate_limit()
         r = requests.get(FACTS_URL.format(cik=cik), headers=UA, timeout=60)

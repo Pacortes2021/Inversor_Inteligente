@@ -76,7 +76,7 @@ function renderPortfolio({ positions, totals }) {
       : `<td class="num">—</td>`;
 
     return `<tr${p.overConcentrated ? ' style="background:rgba(239,68,68,0.03)"' : ''}>
-      <td class="sym" onclick="go('${escHtml(p.symbol)}')">${escHtml(p.symbol)}</td>
+      <td class="sym" data-symbol="${escHtml(p.symbol)}" style="cursor:pointer;">${escHtml(p.symbol)}</td>
       <td>${escHtml(p.date)}</td>
       <td class="num">${fmtNum(p.price, 2)}</td>
       <td class="num">${p.priceNow != null ? fmtNum(p.priceNow, 2) : "—"}</td>
@@ -87,7 +87,7 @@ function renderPortfolio({ positions, totals }) {
       <td class="num ${pctClass(p.spyReturn)}">${fmtPct(p.spyReturn, 1, true)}</td>
       <td class="num"><span class="alpha-chip ${p.alpha == null ? "" : p.alpha >= 0 ? "hi" : "lo"}">${fmtPct(p.alpha, 1, true)}</span></td>
       <td class="pf-note-cell" title="${escHtml(p.note || "")}">${escHtml(p.note || "—")}</td>
-      <td><button class="btn-x" onclick="pfRemove(${p.id})" title="Eliminar">✕</button></td>
+      <td><button class="btn-x" data-pf-remove="${p.id}" title="Eliminar">✕</button></td>
     </tr>`;
   }).join("");
 
@@ -179,8 +179,13 @@ function renderPortfolioSectorChart(positions, totals) {
 }
 
 async function pfRemove(id) {
-  await fetch(`/api/portfolio/${id}`, { method: "DELETE" });
-  toast("Posición eliminada");
+  try {
+    const r = await fetch(`/api/portfolio/${id}`, { method: "DELETE" });
+    if (!r.ok) throw new Error(`Error ${r.status}`);
+    toast("Posición eliminada");
+  } catch (e) {
+    toast("⚠ No se pudo eliminar: " + e.message);
+  }
   loadPortfolio(true);
 }
 
@@ -194,12 +199,17 @@ document.getElementById("pf-form").addEventListener("submit", async e => {
     note: document.getElementById("pf-note").value,
   };
   if (!body.symbol || !body.date || !isFinite(body.price) || !isFinite(body.shares)) return;
-  await fetch("/api/portfolio", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  e.target.reset();
-  toast(`Compra de ${body.symbol} registrada`);
+  try {
+    const r = await fetch("/api/portfolio", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error(`Error ${r.status}`);
+    e.target.reset();
+    toast(`Compra de ${body.symbol} registrada`);
+  } catch (err) {
+    toast("⚠ No se pudo registrar: " + err.message);
+  }
   loadPortfolio(true);
 });
 
@@ -264,4 +274,9 @@ document.getElementById("pf-import-file").addEventListener("change", async e => 
   } finally {
     e.target.value = "";
   }
+});
+
+document.addEventListener("click", e => {
+  const rm = e.target.closest("[data-pf-remove]");
+  if (rm) pfRemove(Number(rm.getAttribute("data-pf-remove")));
 });

@@ -486,24 +486,21 @@ def piotroski_f_score(annuals):
 
 
 def greenblatt_roc(info, annuals):
-    """Calcula el Return on Capital (ROC) estilo Greenblatt: EBIT / (Net Working Capital + Net Fixed Assets).
-    Aproximamos a EBIT / (Total Assets - Current Liabilities)."""
+    """Return on Capital estilo Greenblatt: EBIT / Capital Empleado.
+    Usa ROIC (EBIT*(1-t)/invested) cuando está disponible; para filas EDGAR
+    aproxima EBIT = ingresos * margen operativo y capital = patrimonio."""
     if not annuals:
         return None
 
     current = annuals[-1]
-    ebit = current.get("ebitda") # usamos ebitda si ebit no está disponible, pero no lo tenemos exportado directo como ebit, esperemos
-    # wait, metrics.py no exporta ebit, pero sí exporta interestCoverage = ebit/interest.
-    # vamos a calcular EBIT aproximado
-    ni = current.get("netIncome")
-    if not _ok(ni):
-        return None
-
-    assets = current.get("assets")
-    if not _ok(assets):
-        return None
-
-    # Si no tenemos Current Liabilities, ROC no se puede calcular bien.
-    # Usamos ROIC que ya lo calculamos en metrics como fallback
     roic = current.get("roic")
-    return roic # Como porcentaje
+    if _ok(roic):
+        return round(float(roic), 2)
+
+    rev = current.get("revenue")
+    op_margin = current.get("opMargin")
+    eq = current.get("equity")
+    if not _ok(rev) or not _ok(op_margin) or not _ok(eq) or eq <= 0:
+        return None
+    ebit = float(rev) * float(op_margin) / 100.0
+    return round(ebit / float(eq) * 100, 2)

@@ -2,6 +2,7 @@
 
 from concurrent.futures import ThreadPoolExecutor
 
+import numpy as np
 import pandas as pd
 
 from . import edgar as E
@@ -121,7 +122,7 @@ def _sec_context(symbol, calendar):
     try:
         eds = calendar.get("Earnings Date") or []
         if eds:
-            next_earnings = str(eds[0])
+            next_earnings = pd.Timestamp(eds[0]).strftime("%Y-%m-%d")
         est_avg = calendar.get("Earnings Average")
         if est_avg is not None:
             if isinstance(est_avg, (list, tuple)):
@@ -219,7 +220,15 @@ def _calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps
     def avg_field(field):
         vals = [a.get(field) for a in last_5_annuals if a.get(field) is not None]
         return sum(vals) / len(vals) if vals else None
-        
+
+    def cagr_10y(field):
+        vals = [a for a in annuals if a.get(field) is not None and a.get(field) > 0]
+        if len(vals) >= 6:
+            first, last = vals[0][field], vals[-1][field]
+            years = max(vals[-1]["year"] - vals[0]["year"], 1)
+            return (last / first) ** (1 / years) - 1
+        return None
+
     net_margin_5y_avg = avg_field("netMargin")
     roe_5y_avg = avg_field("roe")
     roic_5y_avg = avg_field("roic")
@@ -297,17 +306,24 @@ def _calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps
     elif annuals:
         net_margin_ttm = annuals[-1].get("netMargin")
         
-    div_yield_ttm = M._f(info.get("dividendYield"))
+    div_yield_ttm = M._f(info.get("trailingAnnualDividendYield"))
     if div_yield_ttm is not None:
         div_yield_ttm *= 100
-    elif info.get("dividendRate") and price:
-        div_yield_ttm = float(info["dividendRate"]) / price * 100
     else:
+        div_yield_ttm = M._f(info.get("dividendYield"))
+        if div_yield_ttm is None and info.get("dividendRate") and price:
+            div_yield_ttm = float(info["dividendRate"]) / price * 100
+    if div_yield_ttm is None:
         div_yield_ttm = 0.0
 
     ev_ebitda_ttm = M._f(info.get("enterpriseValueToEbitda"))
     peg_ttm = M._f(info.get("pegRatio"))
     quick_ttm = M._f(info.get("quickRatio"))
+    cash_ttm = None
+    total_cash = M._f(info.get("totalCash"))
+    cur_liab = M._f(info.get("totalCurrentLiabilities"))
+    if total_cash is not None and cur_liab:
+        cash_ttm = total_cash / cur_liab
     debt_to_equity_ttm = M._f(info.get("debtToEquity"))
     if debt_to_equity_ttm is not None and debt_to_equity_ttm > 5:
         debt_to_equity_ttm /= 100.0
@@ -338,7 +354,7 @@ def _calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps
         "divYield": {"val": div_yield_ttm, "sector": sec["divYield"], "avg5y": div_yield_5y_avg},
         "peg": {"val": peg_ttm, "sector": sec["peg"], "avg5y": None},
         "quick": {"val": quick_ttm, "sector": sec["quick"], "avg5y": quick_ratio_5y_avg},
-        "cash": {"val": (quick_ttm * 0.7 if quick_ttm else None), "sector": sec["cash"], "avg5y": (quick_ratio_5y_avg * 0.7 if quick_ratio_5y_avg else None)},
+        "cash": {"val": cash_ttm, "sector": sec["cash"], "avg5y": (current_ratio_5y_avg * 0.35 if current_ratio_5y_avg else None)},
         "debtToEquity": {"val": debt_to_equity_ttm, "sector": sec["debtToEquity"], "avg5y": debt_to_equity_5y_avg},
         "roe": {"val": roe_ttm, "sector": sec["roe"], "avg5y": roe_5y_avg},
         "fcfPs": {"val": fcf_ps_ttm, "sector": None, "avg5y": fcf_ps_5y_avg},
@@ -348,9 +364,9 @@ def _calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps
         "roa": {"val": (M._f(info.get("returnOnAssets")) * 100 if M._f(info.get("returnOnAssets")) else (annuals[-1].get("netIncome") / annuals[-1].get("assets") * 100 if annuals and annuals[-1].get("netIncome") and annuals[-1].get("assets") else None)), "sector": sec.get("roa") or 8.0, "avg5y": roa_5y},
         "roc": {"val": roc_ttm, "sector": sec.get("roe") * 0.9 if sec.get("roe") else 15.0, "avg5y": roic_5y_avg},
         "roic10yAvg": roic_5y_avg,
-        "revGrowth10y": avg_field("revenue") or info.get("totalRevenue"),
-        "netIncomeGrowth10y": avg_field("netIncome") or info.get("netIncomeToCommon"),
-        "fcfGrowth10y": avg_field("fcf") or fcf_now
+        "revGrowth10y": cagr_10y("revenue"),
+        "netIncomeGrowth10y": cagr_10y("netIncome"),
+        "fcfGrowth10y": cagr_10y("fcf")
     }
 
 
@@ -444,7 +460,7 @@ def build_payload(symbol: str, refresh: bool = False):
         rs = gain / loss
         rsi_series = 100 - (100 / (1 + rs))
         rval = float(rsi_series.iloc[-1])
-        rsi = round(rval, 1) if pd.notna(rval) else None
+        rsi = round(rval, 1) if pd.notna(rval) and np.isfinite(rval) else None
     perf_1m = None
     perf_1y = None
     perf_ytd = None
@@ -787,6 +803,15 @@ def _build_growth_grid(raw, info, annuals, price):
     }
 
 
+def _safe_int(v):
+    """Convierte a int tolerando NaN/None/cadenas."""
+    try:
+        f = M._f(v)
+        return int(f) if f is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 def _build_estimates_payload(raw, info, annuals=None, price=None):
     """Extrae proyecciones de analistas y estimaciones de EPS/Ingresos."""
     rec_dict = {}
@@ -838,7 +863,7 @@ def _build_estimates_payload(raw, info, annuals=None, price=None):
                     "low": M._f(row.get("low")),
                     "high": M._f(row.get("high")),
                     "yearAgoEps": M._f(row.get("yearAgoEps")),
-                    "analysts": int(row.get("numberOfAnalysts", 0)) if row.get("numberOfAnalysts") is not None else None,
+                    "analysts": _safe_int(row.get("numberOfAnalysts")),
                     "growth": M._f(row.get("growth")),
                 })
     except Exception:
@@ -855,13 +880,16 @@ def _build_estimates_payload(raw, info, annuals=None, price=None):
                     "low": M._f(row.get("low")),
                     "high": M._f(row.get("high")),
                     "yearAgoRevenue": M._f(row.get("yearAgoRevenue")),
-                    "analysts": int(row.get("numberOfAnalysts", 0)) if row.get("numberOfAnalysts") is not None else None,
+                    "analysts": _safe_int(row.get("numberOfAnalysts")),
                     "growth": M._f(row.get("growth")),
                 })
     except Exception:
         pass
 
-    growth_grid = _build_growth_grid(raw, info, annuals, price)
+    try:
+        growth_grid = _build_growth_grid(raw, info, annuals, price)
+    except Exception:
+        growth_grid = None
 
     return {
         "recommendations": rec_dict,

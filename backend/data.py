@@ -31,6 +31,8 @@ def atomic_write_json(file_path: Path, data):
         try:
             with os.fdopen(temp_fd, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
+                f.flush()
+                os.fsync(f.fileno())
             os.replace(temp_name, file_path)
         except Exception:
             if os.path.exists(temp_name):
@@ -39,6 +41,25 @@ def atomic_write_json(file_path: Path, data):
                 except Exception:
                     pass
             raise
+
+
+def load_json(file_path: Path, default=None):
+    """Carga JSON de forma segura. Si el archivo está corrupto, lo respalda a
+    `<nombre>.corrupt` (evitando que el siguiente write sobreescriba datos
+    irrecuperables) y devuelve `default`."""
+    file_path = Path(file_path)
+    if not file_path.exists():
+        return default
+    try:
+        data = json.loads(file_path.read_text(encoding="utf-8"))
+        return data
+    except Exception:
+        try:
+            bak = file_path.with_suffix(file_path.suffix + ".corrupt")
+            bak.write_text(file_path.read_text(encoding="utf-8"), encoding="utf-8")
+        except Exception:
+            pass
+        return default
 
 
 def cache_get(key: str):
@@ -67,11 +88,13 @@ def clean_expired_cache() -> int:
         try:
             data = json.loads(f.read_text())
             ts, ttl = data.get("_ts", 0), data.get("_ttl", 0)
-            if ttl > 0 and (now - ts >= ttl):
+            # ttl=0 son marcadores de invalidación: se pueden borrar de inmediato.
+            # ttl<0 (inexistente) y archivos con más de 30 días: se purgan.
+            if ttl == 0 or (ttl > 0 and now - ts >= ttl) or (now - ts >= 30 * 86400):
                 f.unlink(missing_ok=True)
                 removed += 1
         except Exception:
-            pass
+            continue
     return removed
 
 
@@ -126,7 +149,12 @@ class RawData:
         }
         with ThreadPoolExecutor(max_workers=8) as ex:
             futures = {name: ex.submit(self._safe, fn) for name, fn in tasks.items()}
-            results = {name: fut.result() for name, fut in futures.items()}
+            results = {}
+            for name, fut in futures.items():
+                try:
+                    results[name] = fut.result(timeout=45)
+                except Exception:
+                    results[name] = None
 
         self.info = results["info"] or {}
         self.prices = results["prices"]

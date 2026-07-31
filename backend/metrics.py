@@ -95,7 +95,7 @@ def fcf_ttm_series(cf_a, cf_q):
             fcf_sum = sum(_f(cf_q.loc["Free Cash Flow", c]) or 0 for c in cols if "Free Cash Flow" in cf_q.index)
             if fcf_sum == 0 and ocf_sum != 0:
                 fcf_sum = ocf_sum + capex_sum
-            if fcf_sum > 0:
+            if fcf_sum != 0:
                 pts[pd.Timestamp(cf_q.columns[i])] = float(fcf_sum)
     if not pts:
         return None

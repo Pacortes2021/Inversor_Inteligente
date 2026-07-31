@@ -7,3 +7,4 @@ __pycache__/
 # Datos personales del usuario
 data/*.json
 data/*.jsonl
+data/*.log

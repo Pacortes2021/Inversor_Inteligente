@@ -2,6 +2,8 @@
 
 const dash = { loaded: false };
 
+function dashRetry() { dash.loaded = false; }
+
 async function loadDashboard() {
   if (dash.loaded) return;
   dash.loaded = true;
@@ -29,7 +31,7 @@ async function loadIndices() {
       const chgText = idx.changePct != null ? fmtPct(idx.changePct, 2, true) : "—";
       const sparkId = `spark-${idx.symbol.replace(/[^A-Z0-9]/g, "")}`;
       return `
-        <div class="dash-index-card" onclick="go('${escHtml(idx.symbol)}')">
+        <div class="dash-index-card" data-symbol="${escHtml(idx.symbol)}">
           <div class="dash-index-head">
             <span class="dash-index-icon">${idx.icon}</span>
             <span class="dash-index-name">${escHtml(idx.name)}</span>
@@ -68,6 +70,7 @@ async function loadIndices() {
     });
   } catch {
     el.innerHTML = '<p class="muted">Error de conexión.</p>';
+    dashRetry();
   }
 }
 
@@ -100,7 +103,7 @@ async function loadDashWatchlist() {
         const zone = it.inBuyZone === true
           ? '<span class="zone-chip buy">EN ZONA</span>'
           : it.inBuyZone === false ? '<span class="zone-chip wait">Esperando</span>' : '<span class="zone-chip na">—</span>';
-        return `<tr onclick="go('${escHtml(it.symbol)}')" class="hover-row" style="cursor:pointer;">
+        return `<tr data-symbol="${escHtml(it.symbol)}" class="hover-row" style="cursor:pointer;">
           <td><div style="font-weight:700;">${escHtml(it.symbol)}</div><div class="muted" style="font-size:11px;">${escHtml(it.name || "")}</div></td>
           <td class="num" style="font-weight:700;">${fmtPrice(it.price, cur)}</td>
           <td class="num ${cls}" style="font-weight:700;">${p1d != null ? fmtPct(p1d, 2, true) : "—"}</td>
@@ -112,6 +115,7 @@ async function loadDashWatchlist() {
       }).join("")}</tbody></table></div>`;
   } catch {
     section.classList.add("hidden");
+    dashRetry();
   }
 }
 
@@ -126,7 +130,7 @@ async function loadOversold() {
       return;
     }
     el.innerHTML = d.items.map(it => `
-      <div class="dash-mover-card" onclick="go('${escHtml(it.symbol)}')">
+      <div class="dash-mover-card" data-symbol="${escHtml(it.symbol)}">
         <div class="dash-mover-sym">${escHtml(it.symbol)}</div>
         <div class="dash-mover-name">${escHtml(it.name || "")}</div>
         <div class="dash-mover-rsi">${it.rsi}</div>
@@ -134,6 +138,7 @@ async function loadOversold() {
       </div>`).join("");
   } catch {
     el.innerHTML = '<p class="muted">Error al cargar.</p>';
+    dashRetry();
   }
 }
 
@@ -148,12 +153,13 @@ async function loadMovers() {
     elL.innerHTML = (d.losers || []).map(it => moverRow(it)).join("") || '<p class="muted">Sin datos</p>';
   } catch {
     elG.innerHTML = elL.innerHTML = '<p class="muted">Error al cargar.</p>';
+    dashRetry();
   }
 }
 
 function moverRow(it) {
   const cls = it.changePct >= 0 ? "up" : "down";
-  return `<div class="dash-mover-row" onclick="go('${escHtml(it.symbol)}')">
+  return `<div class="dash-mover-row" data-symbol="${escHtml(it.symbol)}">
     <span class="dash-mover-sym">${escHtml(it.symbol)}</span>
     <span class="dash-mover-price">${fmtPrice(it.price, "USD")}</span>
     <span class="dash-mover-chg ${cls}">${fmtPct(it.changePct, 1, true)}</span>
@@ -195,6 +201,7 @@ async function loadDashPortfolio() {
       </div>`;
   } catch {
     section.classList.add("hidden");
+    dashRetry();
   }
 }
 
@@ -214,7 +221,7 @@ function setupDashSearch() {
         const { results: items } = await r.json();
         if (!items.length) { results.classList.add("hidden"); return; }
         results.innerHTML = items.map(it =>
-          `<div class="dash-search-item" onclick="go('${escHtml(it.symbol)}')">
+          `<div class="dash-search-item" data-symbol="${escHtml(it.symbol)}">
             <span class="sym">${escHtml(it.symbol)}</span>
             <span class="name">${escHtml(it.name)}</span>
           </div>`).join("");

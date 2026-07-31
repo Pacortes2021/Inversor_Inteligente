@@ -1,6 +1,7 @@
 /* Lógica principal: routing, carga de datos, render del análisis y DCF interactivo. */
 
 const state = { symbol: null, data: null, activeTab: "summary" };
+window.state = state;
 let currentPeriodYears = 1;
 
 const $ = id => document.getElementById(id);
@@ -98,9 +99,11 @@ function route() {
 }
 
 let currentMultiplesRange = "all";
+window.currentMultiplesRange = currentMultiplesRange;
 
 function renderRatiosCharts(d, range = "all") {
   currentMultiplesRange = range;
+  window.currentMultiplesRange = range;
   const btnContainer = $("multiples-range-controls");
   if (btnContainer) {
     btnContainer.querySelectorAll(".period-btn-mult").forEach(btn => {
@@ -227,21 +230,40 @@ document.addEventListener("click", e => {
   if (!e.target.closest(".search-box")) hideSearch();
 });
 
+let _searchToken = 0;
+
 async function doSearch(q) {
+  const token = ++_searchToken;
   try {
     const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+    if (!r.ok) throw new Error(`Error ${r.status}`);
     const { results } = await r.json();
+    if (token !== _searchToken) return;
     const box = $("search-results");
     if (!results.length) return hideSearch();
     box.innerHTML = results.map(it =>
-      `<div class="search-item" onclick="go('${escHtml(it.symbol)}')">
+      `<div class="search-item" data-symbol="${escHtml(it.symbol)}">
          <span class="sym">${escHtml(it.symbol)}</span>
          <span class="name">${escHtml(it.name)}</span>
          <span class="ex">${escHtml(it.exchange)}</span>
        </div>`).join("");
     box.classList.remove("hidden");
-  } catch { hideSearch(); }
+  } catch { if (token === _searchToken) hideSearch(); }
 }
+
+document.addEventListener("click", e => {
+  const item = e.target.closest(".search-item");
+  if (item && item.dataset.symbol) {
+    go(item.dataset.symbol);
+    return;
+  }
+  if (!e.target.closest(".search-box")) hideSearch();
+});
+
+document.addEventListener("click", e => {
+  const sym = e.target.closest("[data-symbol]");
+  if (sym && sym.dataset.symbol) go(sym.dataset.symbol);
+});
 
 function hideSearch() { $("search-results").classList.add("hidden"); }
 
@@ -259,7 +281,10 @@ const LOADING_MSGS = [
   "Aplicando los criterios de Buffett…",
 ];
 
+let _loadToken = 0;
+
 async function loadSymbol(symbol) {
+  const token = ++_loadToken;
   state.symbol = symbol;
   $("analysis-content").classList.add("hidden");
   $("error-box").classList.add("hidden");
@@ -273,14 +298,17 @@ async function loadSymbol(symbol) {
   }, 2500);
 
   try {
-    const r = await fetch(`/api/stock/${encodeURIComponent(symbol)}`);
+    const r = await fetch(`/api/stock/${encodeURIComponent(symbol.replace(/\//g, '-'))}`);
+    if (token !== _loadToken) return; // respuesta obsoleta
     if (!r.ok) {
       const err = await r.json().catch(() => ({}));
       throw new Error(err.detail || `Error ${r.status}`);
     }
     state.data = await r.json();
+    if (token !== _loadToken) return;
     renderAnalysis(state.data);
   } catch (e) {
+    if (token !== _loadToken) return;
     $("error-box").textContent = "⚠ " + (e.message || "No se pudo cargar el símbolo.");
     $("error-box").classList.remove("hidden");
   } finally {
@@ -721,6 +749,13 @@ $("btn-export-pdf").onclick = () => {
   window.print();
 };
 
+$("btn-compare").onclick = () => {
+  if (state.data) {
+    cmpAdd(state.data.symbol);
+    location.hash = "#/comparar";
+  }
+};
+
 /* ----------------------------------------------------- avisos de datos */
 function renderWarnings(warnings) {
   const box = $("data-warnings");
@@ -769,18 +804,26 @@ let noteSymbol = null;
 
 async function loadNotes(symbol) {
   noteSymbol = symbol;
-  const note = await (await fetch(`/api/notes/${encodeURIComponent(symbol)}`)).json();
-  $("moat-checks").innerHTML = MOATS.map(([id, label, desc]) => `
-    <label class="moat ${note.moats.includes(id) ? "on" : ""}" title="${desc}">
-      <input type="checkbox" value="${id}" ${note.moats.includes(id) ? "checked" : ""}> ${label}
-    </label>`).join("");
-  $("note-thesis").value = note.thesis || "";
-  $("note-risks").value = note.risks || "";
+  try {
+    const r = await fetch(`/api/notes/${encodeURIComponent(symbol.replace(/\//g, '-'))}`);
+    if (!r.ok) throw new Error(`Error ${r.status}`);
+    const note = await r.json();
+    const moats = Array.isArray(note.moats) ? note.moats : [];
+    if (noteSymbol !== symbol) return; // navegó a otro símbolo mientras cargaba
+    $("moat-checks").innerHTML = MOATS.map(([id, label, desc]) => `
+      <label class="moat ${moats.includes(id) ? "on" : ""}" title="${escHtml(desc)}">
+        <input type="checkbox" value="${id}" ${moats.includes(id) ? "checked" : ""}> ${escHtml(label)}
+      </label>`).join("");
+    $("note-thesis").value = note.thesis || "";
+    $("note-risks").value = note.risks || "";
 
-  $("moat-checks").querySelectorAll("input").forEach(cb =>
-    cb.onchange = () => { cb.closest(".moat").classList.toggle("on", cb.checked); saveNotes(); });
-  $("note-thesis").oninput = saveNotesDebounced;
-  $("note-risks").oninput = saveNotesDebounced;
+    $("moat-checks").querySelectorAll("input").forEach(cb =>
+      cb.onchange = () => { cb.closest(".moat").classList.toggle("on", cb.checked); saveNotes(); });
+    $("note-thesis").oninput = saveNotesDebounced;
+    $("note-risks").oninput = saveNotesDebounced;
+  } catch {
+    if (noteSymbol === symbol) $("note-status").textContent = "⚠ no se pudo cargar";
+  }
 }
 
 function saveNotesDebounced() {
@@ -792,11 +835,16 @@ function saveNotesDebounced() {
 async function saveNotes() {
   if (!noteSymbol) return;
   const moats = [...$("moat-checks").querySelectorAll("input:checked")].map(cb => cb.value);
-  await fetch(`/api/notes/${encodeURIComponent(noteSymbol)}`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ thesis: $("note-thesis").value, risks: $("note-risks").value, moats }),
-  });
-  $("note-status").textContent = "guardado ✓";
+  try {
+    const r = await fetch(`/api/notes/${encodeURIComponent(noteSymbol.replace(/\//g, '-'))}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ thesis: $("note-thesis").value, risks: $("note-risks").value, moats }),
+    });
+    if (!r.ok) throw new Error(`Error ${r.status}`);
+    $("note-status").textContent = "guardado ✓";
+  } catch (e) {
+    $("note-status").textContent = "⚠ error de guardado";
+  }
 }
 
 /* --------------------------------------------- buffett scorecard */
@@ -1420,8 +1468,8 @@ async function refreshSidebar() {
     list.innerHTML = quotes.map(q => {
       const up = q.changePct >= 0;
       const color = up ? "#10b981" : "#ef4444";
-      return `<div class="sb-item" onclick="go('${q.symbol}')">
-        <div class="sb-sym">${q.symbol}</div>
+      return `<div class="sb-item" data-symbol="${escHtml(q.symbol)}">
+        <div class="sb-sym">${escHtml(q.symbol)}</div>
         ${sparkSvg(q.spark, color)}
         <div class="sb-quote">
           <div class="sb-price">${fmtNum(q.price, q.price >= 1000 ? 0 : 2)}</div>
@@ -1431,6 +1479,11 @@ async function refreshSidebar() {
     }).join("");
   } catch { /* red caída */ }
 }
+
+document.addEventListener("click", e => {
+  const item = e.target.closest(".sb-item[data-symbol]");
+  if (item) go(item.getAttribute("data-symbol"));
+});
 
 $("sb-close").addEventListener("click", () => sbSetHidden(true));
 $("sb-open").addEventListener("click", () => { sbSetHidden(false); refreshSidebar(); });
@@ -1472,7 +1525,7 @@ function renderGrowthEstimatesGrid(grid) {
     
     // Main Metric Row
     bodyHtml += `<tr class="growth-row-main" style="border-top:1px solid var(--border);">
-      <td style="font-weight:700; color:var(--text); padding:12px 16px;">${row.label}</td>`;
+      <td style="font-weight:700; color:var(--text); padding:12px 16px;">${escHtml(row.label)}</td>`;
     
     row.values.forEach((v, idx) => {
       const isProj = String(grid.years[idx]).endsWith('E');
@@ -1729,9 +1782,9 @@ function renderInsidersHolders(ih) {
       const txnColor = isBuy ? 'color:var(--green); font-weight:700;' : isSell ? 'color:var(--red); font-weight:700;' : '';
       return `
         <tr>
-          <td>${r.date || '—'}</td>
-          <td><b>${r.insider}</b></td>
-          <td>${r.position || '—'} <span style="${txnColor}">${txn !== '—' ? '· ' + txn : ''}</span></td>
+          <td>${escHtml(r.date || '—')}</td>
+          <td><b>${escHtml(r.insider)}</b></td>
+          <td>${escHtml(r.position || '—')} <span style="${txnColor}">${txn !== '—' ? '· ' + escHtml(txn) : ''}</span></td>
           <td class="num">${r.shares != null ? Math.round(r.shares).toLocaleString() : '—'}</td>
           <td class="num">${r.value != null ? '$' + Math.round(r.value).toLocaleString() : '—'}</td>
         </tr>
@@ -1745,11 +1798,11 @@ function renderInsidersHolders(ih) {
     const rows = ih.holders || [];
     hBody.innerHTML = rows.length ? rows.map(r => `
       <tr>
-        <td><b>${r.holder}</b></td>
+        <td><b>${escHtml(r.holder)}</b></td>
         <td class="num">${r.shares != null ? Math.round(r.shares).toLocaleString() : '—'}</td>
         <td class="num">${r.value != null ? '$' + Math.round(r.value).toLocaleString() : '—'}</td>
         <td class="num ${r.pctChange != null && r.pctChange >= 0 ? 'up' : 'down'}">${r.pctChange != null ? fmtPct(r.pctChange * 100, 2, true) : '—'}</td>
-        <td>${r.date || '—'}</td>
+        <td>${escHtml(r.date || '—')}</td>
       </tr>
     `).join('') : '<tr><td colspan="5" class="num muted" style="text-align:center;">Sin registros recientes de fondos institucionales</td></tr>';
   }
@@ -1896,12 +1949,17 @@ function renderAlertsList() {
 
     return `
       <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--bg); border-radius:6px; border:1px solid var(--border);">
-        <span style="font-size:12.5px; font-weight:600; color:var(--text);">${a.symbol}: ${lbl}</span>
-        <button class="btn-x" onclick="deleteAlert(${a.id})" title="Eliminar">✕</button>
+        <span style="font-size:12.5px; font-weight:600; color:var(--text);">${escHtml(a.symbol)}: ${lbl}</span>
+        <button class="btn-x" data-alert-id="${a.id}" title="Eliminar">✕</button>
       </div>
     `;
   }).join("");
 }
+
+document.addEventListener("click", e => {
+  const btn = e.target.closest("[data-alert-id]");
+  if (btn) deleteAlert(Number(btn.getAttribute("data-alert-id")));
+});
 
 function checkStockAlerts(d) {
   if (!d) return;
@@ -2085,13 +2143,20 @@ function renderAdditional(d) {
   const p = d.profile;
   const q = d.quote;
 
+  const safeUrl = (u) => {
+    if (!u) return "#";
+    const s = String(u).trim();
+    if (/^(https?:|mailto:)/i.test(s)) return escHtml(s);
+    return "#";
+  };
+
   let filingsHtml = '<span class="muted" style="font-size:12px;">Sin documentos recientes</span>';
   if (p.secFilings) {
     if (Array.isArray(p.secFilings)) {
-      filingsHtml = p.secFilings.map(f => `<a href="${f.url}" target="_blank" class="btn btn-sm">${f.form} (${f.date})</a>`).join('');
+      filingsHtml = p.secFilings.map(f => `<a href="${safeUrl(f.url)}" target="_blank" rel="noopener" class="btn btn-sm">${escHtml(f.form)} (${escHtml(f.date)})</a>`).join('');
     } else if (typeof p.secFilings === 'object') {
-      filingsHtml = Object.entries(p.secFilings).map(([type, url]) => 
-        `<a href="${url}" target="_blank" class="btn btn-sm">${type === 'annual' ? '📄 10-K Anual (SEC)' : '📄 10-Q Trimestral (SEC)'}</a>`
+      filingsHtml = Object.entries(p.secFilings).map(([type, url]) =>
+        `<a href="${safeUrl(url)}" target="_blank" rel="noopener" class="btn btn-sm">${type === 'annual' ? '📄 10-K Anual (SEC)' : '📄 10-Q Trimestral (SEC)'}</a>`
       ).join('');
     }
   }
@@ -2100,18 +2165,18 @@ function renderAdditional(d) {
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
       <div style="padding:16px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius);">
         <h4 style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:10px;">Perfil de la Empresa</h4>
-        <p style="font-size:12.5px; color:var(--text); margin-bottom:6px;"><b>Nombre:</b> ${p.name}</p>
-        <p style="font-size:12.5px; color:var(--text); margin-bottom:6px;"><b>Sector:</b> ${p.sector || '—'}</p>
-        <p style="font-size:12.5px; color:var(--text); margin-bottom:6px;"><b>Industria:</b> ${p.industry || '—'}</p>
-        <p style="font-size:12.5px; color:var(--text); margin-bottom:6px;"><b>País:</b> ${p.country || '—'}</p>
-        <p style="font-size:12.5px; color:var(--text); margin-bottom:6px;"><b>Bolsa:</b> ${p.exchange || '—'}</p>
+        <p style="font-size:12.5px; color:var(--text); margin-bottom:6px;"><b>Nombre:</b> ${escHtml(p.name)}</p>
+        <p style="font-size:12.5px; color:var(--text); margin-bottom:6px;"><b>Sector:</b> ${escHtml(p.sector || '—')}</p>
+        <p style="font-size:12.5px; color:var(--text); margin-bottom:6px;"><b>Industria:</b> ${escHtml(p.industry || '—')}</p>
+        <p style="font-size:12.5px; color:var(--text); margin-bottom:6px;"><b>País:</b> ${escHtml(p.country || '—')}</p>
+        <p style="font-size:12.5px; color:var(--text); margin-bottom:6px;"><b>Bolsa:</b> ${escHtml(p.exchange || '—')}</p>
         <p style="font-size:12.5px; color:var(--text); margin-bottom:6px;"><b>Empleados:</b> ${p.employees ? p.employees.toLocaleString() : '—'}</p>
-        <p style="font-size:12.5px; color:var(--text); margin-bottom:6px;"><b>Sitio Web:</b> <a href="${p.website}" target="_blank" style="color:var(--primary); text-decoration:underline;">${p.website || '—'}</a></p>
+        <p style="font-size:12.5px; color:var(--text); margin-bottom:6px;"><b>Sitio Web:</b> <a href="${safeUrl(p.website)}" target="_blank" rel="noopener" style="color:var(--primary); text-decoration:underline;">${escHtml(p.website || '—')}</a></p>
       </div>
 
       <div style="padding:16px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius);">
         <h4 style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:10px;">Datos de Mercado y Archivos SEC</h4>
-        <p style="font-size:12.5px; color:var(--text); margin-bottom:6px;"><b>Próximos Resultados:</b> ${p.nextEarnings || 'Por confirmar'}</p>
+        <p style="font-size:12.5px; color:var(--text); margin-bottom:6px;"><b>Próximos Resultados:</b> ${escHtml(p.nextEarnings || 'Por confirmar')}</p>
         <p style="font-size:12.5px; color:var(--text); margin-bottom:6px;"><b>Volumen Diario:</b> ${q.volume ? q.volume.toLocaleString() : '—'}</p>
         <p style="font-size:12.5px; color:var(--text); margin-bottom:6px;"><b>Volumen Promedio:</b> ${q.avgVolume ? q.avgVolume.toLocaleString() : '—'}</p>
         <h5 style="font-size:13px; font-weight:700; color:var(--text); margin-top:14px; margin-bottom:6px;">Documentos Oficiales SEC EDGAR</h5>

@@ -1,8 +1,0 @@
-
-
-/* Watchlist Toggles */
-.chart-toggles-style { display: flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: 8px; }
-.chart-toggles-style .tg-btn { background: transparent; border: none; color: var(--muted); font-weight: 600; padding: 4px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
-.chart-toggles-style .tg-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-.chart-toggles-style .tg-btn:hover:not(.active) { color: var(--text); }
-.hover-row:hover { background: rgba(0,0,0,0.02); }

@@ -390,7 +390,11 @@ def run_deep_screener(universe: str = "us", refresh: bool = False):
         for s in UNIVERSES[universe]:
             cache_set(f"deep_{s.replace('/', '_').replace('.', '_')}", None, ttl=0)
 
+    # Re-chequear estado bajo lock para evitar dos workers simultáneos
     with _deep_lock:
+        state = _deep_states.get(universe)
+        if state and state.get("status") == "running":
+            return {"status": "running", "done": state["done"], "total": state["total"], "universe": universe}
         _deep_states[universe] = {
             "status": "running",
             "done": 0,

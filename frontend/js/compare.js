@@ -1,10 +1,12 @@
 /* Comparador de empresas: hasta 4 lado a lado con gráficos superpuestos. */
 
-const cmp = { symbols: [], payloads: {} };
+const cmp = { symbols: [], payloads: {}, adding: false };
 const CMP_COLORS = ["#d4af37", "#3b82f6", "#22c55e", "#8b5cf6"];
 
 async function cmpAdd(inputStr) {
   if (!inputStr) return;
+  if (cmp.adding) return;
+  cmp.adding = true;
   const syms = inputStr.split(",").map(s => s.trim().toUpperCase()).filter(Boolean);
   for (const symbol of syms) {
     if (cmp.symbols.includes(symbol)) continue;
@@ -15,7 +17,7 @@ async function cmpAdd(inputStr) {
 
     document.getElementById("cmp-loading").classList.remove("hidden");
     try {
-      const r = await fetch(`/api/stock/${encodeURIComponent(symbol)}`);
+      const r = await fetch(`/api/stock/${encodeURIComponent(symbol.replace(/\//g, '-'))}`);
       if (!r.ok) throw new Error(`No se encontró '${symbol}'`);
       cmp.payloads[symbol] = await r.json();
       cmp.symbols.push(symbol);
@@ -25,6 +27,7 @@ async function cmpAdd(inputStr) {
       document.getElementById("cmp-loading").classList.add("hidden");
     }
   }
+  cmp.adding = false;
   renderCompare();
 }
 
@@ -34,6 +37,11 @@ function cmpRemove(symbol) {
   renderCompare();
 }
 
+document.addEventListener("click", e => {
+  const x = e.target.closest("[data-cmp-remove]");
+  if (x) cmpRemove(x.getAttribute("data-cmp-remove"));
+});
+
 const CMP_ROWS = [
   ["Precio", d => fmtPrice(d.quote.price, d.profile.currency)],
   ["Capitalización", d => fmtBig(d.quote.marketCap, d.profile.currency)],
@@ -41,8 +49,7 @@ const CMP_ROWS = [
   ["PE (TTM)", d => fmtRatio(d.current.pe)],
   ["PE forward", d => fmtRatio(d.current.forwardPe)],
   ["PE mediana hist.", d => d.history.peStats ? fmtRatio(d.history.peStats.median) : "—"],
-  ["PE vs mediana", d => spanPct(d.history.peStats ? d.history.peStats.vsMedian : null, false)],
-  ["P/Ventas", d => fmtRatio(d.current.ps)],
+  ["PE vs mediana", d => spanPct(d.history.peStats ? d.history.peStats.vsMedian : null, false)],  ["P/Ventas", d => fmtRatio(d.current.ps)],
   ["P/Libro", d => fmtRatio(d.current.pb, 2)],
   ["EV/EBITDA", d => fmtRatio(d.current.evEbitda)],
   ["Margen bruto", d => d.current.grossMargin != null ? fmtPct(d.current.grossMargin * 100) : "—"],
@@ -53,7 +60,7 @@ const CMP_ROWS = [
   ["Deuda/Patrimonio", d => d.current.debtToEquity != null ? fmtRatio(d.current.debtToEquity / 100, 2) : "—"],
   ["FCF yield", d => fmtPct(d.current.fcfYield, 2)],
   ["Div. yield", d => fmtPct(d.current.divYield, 2)],
-  ["Crec. ingresos (yoy)", d => spanPct(d.current.revenueGrowth != null ? d.current.revenueGrowth * 100 : null)],
+  ["Crec. ingresos (yoy)", d => spanPct(d.current.revenueGrowth != null ? d.current.revenueGrowth * 100 : null, true)],
   ["CAGR Ingresos (5Y)", d => { const g = d.growthTable ? d.growthTable.find(x => x.metric === "Ingresos") : null; return g && g.cagr5 != null ? fmtPct(g.cagr5, 1) : "—"; }],
   ["CAGR FCF (5Y)", d => { const g = d.growthTable ? d.growthTable.find(x => x.metric === "Flujo de caja libre") : null; return g && g.cagr5 != null ? fmtPct(g.cagr5, 1) : "—"; }],
   ["Altman Z-Score", d => d.current.altmanZ != null ? `${d.current.altmanZ.toFixed(2)} (${d.current.altmanZ >= 3 ? 'Seguro' : d.current.altmanZ >= 1.8 ? 'Atención' : 'Riesgo'})` : "—"],
@@ -72,7 +79,7 @@ function renderCompare() {
   const chips = document.getElementById('cmp-chips');
   chips.innerHTML = cmp.symbols.map((s, i) =>
     `<span class="cmp-chip" style="border-color:${CMP_COLORS[i]}66;color:${CMP_COLORS[i]}">
-       ${escHtml(s)} <b onclick="cmpRemove('${escHtml(s)}')" title="Quitar">✕</b></span>`).join('');
+       ${escHtml(s)} <b data-cmp-remove="${escHtml(s)}" title="Quitar" role="button" tabindex="0">✕</b></span>`).join('');
 
   const content = document.getElementById('cmp-content');
   const chartsWrap = document.getElementById('cmp-charts');

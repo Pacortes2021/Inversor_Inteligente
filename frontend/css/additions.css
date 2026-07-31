@@ -24,6 +24,8 @@
 }
 
 /* ── ACCESIBILIDAD: Skip-nav link ── */
+.hover-row:hover { background: rgba(0,0,0,0.02); }
+
 .skip-nav {
   position: absolute;
   top: -100%;
@@ -638,7 +640,9 @@
     display: none;
   }
   .theme-toggle-btn {
-    display: none;
+    display: inline-flex;
+    margin-left: auto;
+    margin-right: 8px;
   }
 
   /* Action tabs: horizontal scroll */

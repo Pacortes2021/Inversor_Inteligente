@@ -6,7 +6,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from .data import atomic_write_json, bond_yield_10y
+from .data import atomic_write_json, bond_yield_10y, load_json
 from .screener import scan_one_deep
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
@@ -16,12 +16,7 @@ _wl_lock = threading.Lock()
 
 
 def _load():
-    if WL_FILE.exists():
-        try:
-            return json.loads(WL_FILE.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    return []
+    return load_json(WL_FILE, [])
 
 
 def _save(items):
@@ -39,7 +34,11 @@ def get_watchlist():
     bond10y = bond_yield_10y()
     
     symbols = [it["symbol"] for it in items]
-    df = yf.download(symbols, period="1y", group_by="ticker", auto_adjust=True, progress=False)
+    df = None
+    try:
+        df = yf.download(symbols, period="1y", group_by="ticker", auto_adjust=True, progress=False)
+    except Exception:
+        df = None
 
     def evaluate(item):
         sym = item["symbol"]
@@ -48,10 +47,16 @@ def get_watchlist():
         
         # Rendimiento y RSI
         perf = {"1D": None, "5D": None, "1M": None, "1Y": None, "RSI": None}
-        if len(symbols) == 1:
-            d = df
-        else:
-            d = df[sym] if sym in df.columns.levels[0] else None
+        d = None
+        if df is not None:
+            try:
+                if len(symbols) == 1:
+                    closes_all = df["Close"] if "Close" in df.columns else None
+                    d = pd.DataFrame({"Close": closes_all}) if closes_all is not None else None
+                else:
+                    d = df[sym] if df.columns.nlevels > 1 and sym in df.columns.levels[0] else None
+            except Exception:
+                d = None
             
         if d is not None and "Close" in d:
             closes = d["Close"].dropna()

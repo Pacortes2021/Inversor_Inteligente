@@ -6,6 +6,7 @@ Programada vía launchd (ver scripts/instalar_alerta.sh). Para desactivarla:
   launchctl unload ~/Library/LaunchAgents/com.inversorinteligente.watchlist.plist
 """
 
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -18,12 +19,19 @@ from backend.watchlist import get_watchlist  # noqa: E402
 
 LOG = ROOT / "data" / "alertas.log"
 
+# Solo caracteres seguros para interpolación en AppleScript
+_SAFE = re.compile(r"[^A-Za-z0-9\.\-\+% ]")
+
+
+def _clean(s):
+    return _SAFE.sub("", str(s or ""))
+
 
 def notify(title: str, message: str):
     subprocess.run([
         "osascript", "-e",
-        f'display notification "{message}" with title "{title}" sound name "Glass"',
-    ], check=False)
+        f'display notification "{_clean(message)}" with title "{_clean(title)}" sound name "Glass"',
+    ], check=False, timeout=20)
 
 
 def main():
