@@ -1,9 +1,13 @@
 /* Comparador de empresas: hasta 4 lado a lado con gráficos superpuestos. */
 
+import { toast } from "./dom.js";
+import { fmtPrice, fmtBig, fmtPct, fmtRatio, escHtml, pctClass } from "./format.js";
+import { renderCompareCharts, charts } from "./charts.js";
+
 const cmp = { symbols: [], payloads: {}, adding: false };
 const CMP_COLORS = ["#d4af37", "#3b82f6", "#22c55e", "#8b5cf6"];
 
-async function cmpAdd(inputStr) {
+export async function cmpAdd(inputStr) {
   if (!inputStr) return;
   if (cmp.adding) return;
   cmp.adding = true;
@@ -85,7 +89,7 @@ function renderCompare() {
   const chartsWrap = document.getElementById('cmp-charts');
   if (!cmp.symbols.length) {
     content.classList.add('hidden');
-    chartsWrap.style.display = 'none';
+    chartsWrap.classList.add('d-none');
     return;
   }
 
@@ -136,7 +140,7 @@ function renderCompare() {
   document.getElementById('cmp-table').innerHTML = head + `<tbody>${body}</tbody>`;
   content.classList.remove('hidden');
 
-  chartsWrap.style.display = '';
+  chartsWrap.classList.remove('d-none');
   renderCompareCharts(cmp.symbols, cmp.payloads, CMP_COLORS);
   requestAnimationFrame(() => ['cmp-price', 'cmp-pe', 'cmp-margins'].forEach(id => charts[id] && charts[id].resize()));
 }

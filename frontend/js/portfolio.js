@@ -1,7 +1,15 @@
+/* Portafolio: posiciones, concentración por sector y respaldo de datos. */
+
+import { toast, apiFetch } from "./dom.js";
+import { fmtBig, fmtNum, fmtPct, fmtPrice, escHtml, pctClass } from "./format.js";
+import { getChartColors } from "./charts.js";
+import { refreshSidebar } from "./analysis.js";
+import { wlInvalidate } from "./watchlist.js";
+
 let pfLoaded = false;
 let pfSectorChartInstance = null;
 
-async function loadPortfolio(refresh = false) {
+export async function loadPortfolio(refresh = false) {
   if (pfLoaded && !refresh) return;
   document.getElementById("pf-loading").classList.remove("hidden");
   document.getElementById("pf-table").classList.add("hidden");
@@ -178,9 +186,9 @@ function renderPortfolioSectorChart(positions, totals) {
   }, true);
 }
 
-async function pfRemove(id) {
+export async function pfRemove(id) {
   try {
-    const r = await fetch(`/api/portfolio/${id}`, { method: "DELETE" });
+    const r = await apiFetch(`/api/portfolio/${id}`, { method: "DELETE" });
     if (!r.ok) throw new Error(`Error ${r.status}`);
     toast("Posición eliminada");
   } catch (e) {
@@ -200,7 +208,7 @@ document.getElementById("pf-form").addEventListener("submit", async e => {
   };
   if (!body.symbol || !body.date || !isFinite(body.price) || !isFinite(body.shares)) return;
   try {
-    const r = await fetch("/api/portfolio", {
+    const r = await apiFetch("/api/portfolio", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
@@ -260,13 +268,13 @@ document.getElementById("pf-import-file").addEventListener("change", async e => 
   if (!file) return;
   try {
     const data = JSON.parse(await file.text());
-    const r = await fetch("/api/restore", {
+    const r = await apiFetch("/api/restore", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
     if (!r.ok) throw new Error("respuesta " + r.status);
     toast("Respaldo restaurado ✓");
-    wlLoaded = false; pfLoaded = false;
+    wlInvalidate(); pfLoaded = false;
     loadPortfolio(true);
     refreshSidebar();
   } catch (err) {

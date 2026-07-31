@@ -1,5 +1,9 @@
 /* Screener de valor: modos rápido/profundo, universos, filtros y export CSV. */
 
+import { fmtPrice, fmtNum, fmtPct, escHtml, pctClass } from "./format.js";
+import { renderHeatmap } from "./charts.js";
+import { go } from "./router.js";
+
 const scr = {
   universe: "us", mode: "quick", view: "table",
   data: null,          // filas del modo/universo actual
@@ -40,7 +44,7 @@ function scrCols() {
   return scr.mode === "deep" ? COLS_DEEP : COLS_QUICK;
 }
 
-async function loadScreener(refresh = false) {
+export async function loadScreener(refresh = false) {
   const key = `${scr.mode}_${scr.universe}`;
   if (scr.loadedKey === key && scr.data && !refresh) return;
 
@@ -173,7 +177,7 @@ function renderScreener() {
     document.getElementById("screener-table").classList.add("hidden");
     document.getElementById("screener-sub").textContent =
       "Mapa del universo: tamaño = capitalización, color = margen de seguridad (verde: infravalorada). Clic para analizar.";
-    renderHeatmap(filteredRows());
+    renderHeatmap(filteredRows(), s => go(s));
     return;
   }
 

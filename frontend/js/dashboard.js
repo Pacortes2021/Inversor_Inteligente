@@ -1,10 +1,13 @@
 /* Dashboard / Home: carga datos del mercado, watchlist, oversold, movers, portafolio. */
 
+import { $ } from "./dom.js";
+import { fmtPct, fmtNum, fmtPrice, fmtBig, escHtml } from "./format.js";
+
 const dash = { loaded: false };
 
 function dashRetry() { dash.loaded = false; }
 
-async function loadDashboard() {
+export async function loadDashboard() {
   if (dash.loaded) return;
   dash.loaded = true;
 

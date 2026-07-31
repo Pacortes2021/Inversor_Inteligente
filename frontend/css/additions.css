@@ -1076,3 +1076,95 @@
     padding: 6px 6px;
   }
 }
+
+/* =====================================================================
+   UTILIDADES — purga de inline styles de index.html (v26.0)
+   Prefijo .u- = utilidad genérica; .d-none = display:none SIN !important
+   (para elementos que JS muestra vía style.display).
+   ===================================================================== */
+
+/* Alineación de texto */
+.u-tl { text-align: left; }
+.u-tr { text-align: right; }
+.u-tc { text-align: center; }
+
+/* Cursor */
+.u-help { cursor: help; }
+.u-help-dash { cursor: help; border-bottom: 1px dashed var(--border); }
+.u-hint { cursor: help; }
+.u-cpo { cursor: pointer; user-select: none; }
+.u-primary-cpo { color: var(--primary); cursor: pointer; user-select: none; }
+
+/* Display (no !important: JS los muestra con style.display) */
+.d-none { display: none; }
+.u-flex { display: flex; }
+.u-flex-col { display: flex; flex-direction: column; gap: 12px; }
+.u-flex-col-scroll { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; }
+.u-flex-gap4 { display: flex; gap: 4px; }
+.u-flex-between { display: flex; justify-content: space-between; font-size: 13px; color: var(--text); font-weight: 500; }
+.u-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.u-grid-2-gap12 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.u-panel-row { padding: 16px; background: var(--panel-2); border-radius: 8px; border: 1px solid var(--border-dark); display: flex; justify-content: space-between; align-items: center; }
+.u-overflow-x { overflow-x: auto; }
+.u-self-start { align-self: flex-start; }
+.u-span2 { font-size: 12.5px; font-weight: 600; color: var(--text); grid-column: span 2; }
+
+/* Márgenes */
+.u-m0 { margin: 0; }
+.u-mb10 { margin-bottom: 10px; }
+.u-mb12 { margin-bottom: 12px; }
+.u-mb14 { margin-bottom: 14px; }
+.u-mb16 { margin-bottom: 16px; }
+.u-mt14 { margin-top: 14px; }
+.u-mt16 { margin-top: 16px; }
+.u-mt20 { margin-top: 20px; }
+.u-my12 { margin-top: 12px; margin-bottom: 12px; }
+.u-w100-mt4 { width: 100%; margin-top: 4px; }
+
+/* Anchos fijos */
+.u-w68 { width: 68px; }
+.u-w75 { width: 75px; }
+.u-w76-h76 { width: 76px; height: 76px; }
+.u-w80 { width: 80px; }
+.u-w120-cpo { width: 120px; cursor: pointer; user-select: none; }
+.u-minw70-cpo { min-width: 70px; cursor: pointer; user-select: none; }
+.u-w0 { width: 0%; }
+.u-l0 { left: 0%; }
+
+/* Tipografía auxiliar */
+.u-text-12-600 { font-size: 12px; font-weight: 600; color: var(--text); }
+.u-text-12-5-600 { font-size: 12.5px; font-weight: 600; color: var(--text); }
+.u-label-xs { font-size: 12px; color: var(--muted); font-weight: 600; }
+.u-fs10-5 { font-size: 10.5px; color: var(--muted); }
+.u-fs11 { font-size: 11px; }
+.u-fs11-600 { font-size: 11px; font-weight: 600; }
+.u-fs11-700 { font-size: 11px; font-weight: 700; }
+.u-fs12-600 { font-size: 12px; font-weight: 600; }
+.u-fs13-mb4 { font-size: 13px; color: var(--text); margin-bottom: 4px; }
+.u-fs13-bold-mb8 { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.u-fs14-bold { font-size: 14px; font-weight: 700; color: var(--text); }
+.u-fs16 { font-size: 16px; }
+.u-eyebrow { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 12px; }
+.u-section-label { margin: 16px 0 8px; font-size: 13px; font-weight: 600; color: var(--text); }
+.u-title-card { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
+.u-red-bold { font-weight: 700; color: var(--red); }
+.u-green-bold { font-weight: 700; color: var(--green); }
+.u-h-24-green { font-size: 24px; font-weight: 800; color: var(--green); }
+.u-h-24-primary { font-size: 24px; font-weight: 800; color: var(--primary); margin-bottom: 8px; }
+.u-h-28-cyan { font-size: 28px; font-weight: 800; color: var(--cyan); margin-top: 4px; }
+.u-h-28-primary { font-size: 28px; font-weight: 800; color: var(--primary); margin-top: 4px; }
+
+/* Componentes ligeros */
+.u-input { width: 100%; margin-top: 4px; padding: 6px 8px; border: 1px solid var(--border-dark); border-radius: 6px; background: var(--panel); color: var(--text); }
+.u-input-lg { width: 100%; margin-top: 4px; padding: 8px; border: 1px solid var(--border-dark); border-radius: 6px; background: var(--panel); color: var(--text); }
+.u-empty-card { padding: 16px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); text-align: center; }
+.u-gold-banner { margin: 8px 0; padding: 10px 16px; background: var(--gold-soft); border: 1px solid var(--gold-border); border-radius: 8px; font-size: 12.5px; }
+.u-note-box { margin-top: 16px; font-size: 13px; padding: 10px; background: var(--bg); border-radius: 6px; border: 1px solid var(--border); color: var(--text); }
+.u-mt16-muted { margin-top: 16px; font-size: 12px; color: var(--muted); }
+.u-divider-top { margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border); }
+.u-dash-top { border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 4px; }
+.u-hint-note { font-size: 10px; margin-top: 4px; padding-top: 4px; font-weight: 600; }
+.u-chip { display: inline-block; margin-left: 4px; padding: 1px 5px; border-radius: 4px; font-size: 9px; font-weight: 700; }
+.u-chart-h220 { height: 220px; width: 100%; }
+.u-chart-h240 { width: 100%; height: 240px; }
+.u-range-full { width: 100%; cursor: pointer; accent-color: var(--primary); }

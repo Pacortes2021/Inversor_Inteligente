@@ -2,7 +2,7 @@
 
 const CUR_SYM = { USD: "US$", EUR: "€", CLP: "CLP$", GBP: "£", JPY: "¥" };
 
-function fmtBig(x, currency) {
+export function fmtBig(x, currency) {
   if (x == null || !isFinite(x)) return "—";
   const sym = currency ? (CUR_SYM[currency] || "") : "";
   const abs = Math.abs(x);
@@ -15,37 +15,37 @@ function fmtBig(x, currency) {
   return sym + v.toLocaleString("en-US", { maximumFractionDigits: 2, minimumFractionDigits: abs >= 1e3 ? 1 : 0 }) + suf;
 }
 
-function fmtPrice(x, currency) {
+export function fmtPrice(x, currency) {
   if (x == null || !isFinite(x)) return "—";
   const sym = CUR_SYM[currency] || "";
   const d = currency === "CLP" || currency === "JPY" ? 0 : 2;  // sin decimales
   return sym + x.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
-function fmtNum(x, d = 2) {
+export function fmtNum(x, d = 2) {
   if (x == null || !isFinite(x)) return "—";
   return x.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
-function fmtPct(x, d = 1, signed = false) {
+export function fmtPct(x, d = 1, signed = false) {
   if (x == null || !isFinite(x)) return "—";
   const s = signed && x > 0 ? "+" : "";
   return s + x.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }) + "%";
 }
 
-function fmtRatio(x, d = 1) {
+export function fmtRatio(x, d = 1) {
   if (x == null || !isFinite(x)) return "—";
   return fmtNum(x, d) + "x";
 }
 
-function pctClass(x) { return x == null ? "" : x >= 0 ? "up" : "down"; }
+export function pctClass(x) { return x == null ? "" : x >= 0 ? "up" : "down"; }
 
-function fmtDate(ts) {
+export function fmtDate(ts) {
   const d = new Date(ts);
   return d.toLocaleDateString("es-CL", { year: "numeric", month: "short" });
 }
 
-function escHtml(str) {
+export function escHtml(str) {
   if (str == null) return "";
   return String(str)
     .replace(/&/g, "&amp;")

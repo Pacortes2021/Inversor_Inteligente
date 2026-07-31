@@ -11,8 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   
   <!-- CSS Principal -->
-  <link rel="stylesheet" href="css/style.css?v=25.0">
-  <link rel="stylesheet" href="css/additions.css?v=25.0">
+  <link rel="stylesheet" href="css/style.css?v=26.0">
+  <link rel="stylesheet" href="css/additions.css?v=26.0">
   
   <!-- ECharts CDN -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
@@ -23,7 +23,7 @@
 
 <!-- ============================ TOP BAR / NAV GLOBAL ============================ -->
 <header class="topbar" role="banner">
-  <div class="brand" onclick="location.hash='#/inicio'">
+  <div class="brand" data-go-home>
     <span class="brand-icon" aria-hidden="true">◆</span>
     <span class="brand-name">El Inversor <em>Inteligente</em></span>
   </div>
@@ -62,9 +62,9 @@
 
   <!-- Bloque 1: Mercado Hoy -->
   <section class="card">
-    <div class="flex-between-baseline" style="margin-bottom:14px;">
+    <div class="flex-between-baseline u-mb14" >
       <h2 class="section-heading">📊 Mercado Hoy</h2>
-      <span id="market-updated" class="muted" style="font-size:11px;"></span>
+      <span id="market-updated" class="muted u-fs11" ></span>
     </div>
     <div id="dash-indices" class="dash-indices-grid">
       <div class="dash-loading"><div class="spinner"></div><p>Cargando índices…</p></div>
@@ -73,7 +73,7 @@
 
   <!-- Bloque 2: Mi Watchlist -->
   <section class="card" id="dash-watchlist-section">
-    <div class="flex-between-baseline" style="margin-bottom:14px;">
+    <div class="flex-between-baseline u-mb14" >
       <h2 class="section-heading">⭐ Mi Watchlist</h2>
       <a href="#/watchlist" class="dash-see-all">Ver todo →</a>
     </div>
@@ -84,7 +84,7 @@
 
   <!-- Bloque 3: Sobrevendidas -->
   <section class="card">
-    <div class="flex-between-baseline" style="margin-bottom:14px;">
+    <div class="flex-between-baseline u-mb14" >
       <h2 class="section-heading">🔥 Sobrevendidas (RSI &lt; 30)</h2>
       <a href="#/screener" class="dash-see-all">Ver screener →</a>
     </div>
@@ -95,7 +95,7 @@
 
   <!-- Bloque 4: Top Ganadores / Perdedores -->
   <section class="card">
-    <div class="flex-between-baseline" style="margin-bottom:14px;">
+    <div class="flex-between-baseline u-mb14" >
       <h2 class="section-heading">📈 Top Movers del Día</h2>
       <a href="#/screener" class="dash-see-all">Ver screener →</a>
     </div>
@@ -117,7 +117,7 @@
 
   <!-- Bloque 5: Portafolio -->
   <section class="card" id="dash-portfolio-section">
-    <div class="flex-between-baseline" style="margin-bottom:14px;">
+    <div class="flex-between-baseline u-mb14" >
       <h2 class="section-heading">💼 Mi Portafolio</h2>
       <a href="#/portafolio" class="dash-see-all">Ver portafolio →</a>
     </div>
@@ -128,22 +128,22 @@
 
   <!-- Bloque 6: Buscar -->
   <section class="card">
-    <h2 class="section-heading" style="margin-bottom:12px;">🔍 Buscar Acción</h2>
-    <p class="card-sub" style="margin-bottom:12px;">Escribe un símbolo o nombre para analizar cualquier empresa.</p>
+    <h2 class="section-heading u-mb12" >🔍 Buscar Acción</h2>
+    <p class="card-sub u-mb12" >Escribe un símbolo o nombre para analizar cualquier empresa.</p>
     <div class="dash-search-wrap">
       <input type="text" id="dash-search-input" class="dash-search-input" placeholder="Ej: AAPL, Tesla, Coca-Cola…" autocomplete="off" spellcheck="false">
       <div id="dash-search-results" class="dash-search-results hidden"></div>
     </div>
     <div class="dash-popular">
-      <span class="muted" style="font-size:12px; font-weight:600;">Populares:</span>
-      <button class="dash-chip" onclick="go('AAPL')">AAPL</button>
-      <button class="dash-chip" onclick="go('MSFT')">MSFT</button>
-      <button class="dash-chip" onclick="go('GOOGL')">GOOGL</button>
-      <button class="dash-chip" onclick="go('AMZN')">AMZN</button>
-      <button class="dash-chip" onclick="go('NVDA')">NVDA</button>
-      <button class="dash-chip" onclick="go('TSLA')">TSLA</button>
-      <button class="dash-chip" onclick="go('META')">META</button>
-      <button class="dash-chip" onclick="go('KO')">KO</button>
+      <span class="muted u-fs12-600" >Populares:</span>
+      <button class="dash-chip" data-go="AAPL">AAPL</button>
+      <button class="dash-chip" data-go="MSFT">MSFT</button>
+      <button class="dash-chip" data-go="GOOGL">GOOGL</button>
+      <button class="dash-chip" data-go="AMZN">AMZN</button>
+      <button class="dash-chip" data-go="NVDA">NVDA</button>
+      <button class="dash-chip" data-go="TSLA">TSLA</button>
+      <button class="dash-chip" data-go="META">META</button>
+      <button class="dash-chip" data-go="KO">KO</button>
     </div>
   </section>
 
@@ -221,7 +221,7 @@
           </div>
           <div class="card-value" id="fv-consensus-val">—</div>
           <div class="card-subtext" id="fv-mos-pct">—</div>
-          <div class="card-subtext" id="fv-analyst-target" style="font-size:10px; border-:1px dashed var(--border-dark); margin-top:4px; padding-top:4px; font-weight:600">—</div>
+          <div class="card-subtext u-hint-note" id="fv-analyst-target" >—</div>
         </div>
 
         <!-- Tarjeta 2: Graham Model -->
@@ -240,7 +240,7 @@
           </div>
           <div class="card-value" id="dcf-val">—</div>
           <div class="card-subtext" id="dcf-upside">—</div>
-          <div id="dcf-price-bar-wrap" class="dcf-bar-wrap" style="display:none;">
+          <div id="dcf-price-bar-wrap" class="dcf-bar-wrap d-none" >
             <div class="dcf-bar-labels">
               <span>Precio</span><span id="dcf-bar-pct">—</span><span>DCF FV</span>
             </div>
@@ -257,20 +257,20 @@
           </div>
           <div class="metrics-list-small">
             <div class="metric-list-row" title="Z > 2.9 (Zona Segura), Z < 1.1 (Zona de Quiebra). Mide solvencia financiera.">
-              <span class="k" style="border-:1px dashed var(--border-dark); cursor:help">Altman Z-Score:</span>
+              <span class="k u-hint" >Altman Z-Score:</span>
               <span class="v" id="ind-altman">—</span>
             </div>
             <div class="metric-list-row" title="Score (0-9): 7-9 es excelente, 0-3 es débil. Evalúa rentabilidad y liquidez histórica.">
-              <span class="k" style="border-:1px dashed var(--border-dark); cursor:help">Piotroski Score:</span>
+              <span class="k u-hint" >Piotroski Score:</span>
               <span class="v" id="ind-piotroski">—</span>
             </div>
             <div class="metric-list-row" title="Activos Corrientes - Pasivos Corrientes. Capacidad de pagar obligaciones a corto plazo.">
-              <span class="k" style="border-:1px dashed var(--border-dark); cursor:help">Working Capital:</span>
+              <span class="k u-hint" >Working Capital:</span>
               <span class="v" id="ind-wc">—</span>
             </div>
             <div class="metric-list-row" title="Porcentaje de la empresa que está en manos de directivos y ejecutivos.">
-              <span class="k" style="border-:1px dashed var(--border-dark); cursor:help">Insiders Own:</span>
-              <span class="v" id="ind-insider" style="font-weight:700; color:var(--green)">—</span>
+              <span class="k u-hint" >Insiders Own:</span>
+              <span class="v u-green-bold" id="ind-insider" >—</span>
             </div>
           </div>
         </div>
@@ -282,20 +282,20 @@
           </div>
           <div class="metrics-list-small">
             <div class="metric-list-row" title="RSI < 30 (Sobrevendido, potencial compra), RSI > 70 (Sobrecomprado, potencial venta).">
-              <span class="k" style="border-:1px dashed var(--border-dark); cursor:help">RSI (14d):</span>
+              <span class="k u-hint" >RSI (14d):</span>
               <span class="v" id="ind-rsi">—</span>
             </div>
             <div class="metric-list-row" title="Precio actual respecto a la media móvil simple de 50 días. Verde indica tendencia alcista.">
-              <span class="k" style="border-:1px dashed var(--border-dark); cursor:help">vs MA50:</span>
+              <span class="k u-hint" >vs MA50:</span>
               <span class="v" id="ind-ma50">—</span>
             </div>
             <div class="metric-list-row" title="Precio actual respecto a la media móvil de 200 días. Soporte o tendencia de largo plazo.">
-              <span class="k" style="border-:1px dashed var(--border-dark); cursor:help">vs MA200:</span>
+              <span class="k u-hint" >vs MA200:</span>
               <span class="v" id="ind-ma200">—</span>
             </div>
             <div class="metric-list-row" title="Porcentaje de flotación vendido en corto (Short float). Sentimiento bajista del mercado.">
-              <span class="k" style="border-:1px dashed var(--border-dark); cursor:help">Short Float:</span>
-              <span class="v" id="ind-short" style="font-weight:700; color:var(--red)">—</span>
+              <span class="k u-hint" >Short Float:</span>
+              <span class="v u-red-bold" id="ind-short" >—</span>
             </div>
           </div>
         </div>
@@ -353,8 +353,8 @@
               <div class="visual-range-bar">
                 <span class="range-low-val" id="range-52w-low">—</span>
                 <div class="range-progress-track">
-                  <div class="range-progress-fill" id="range-52w-fill" style="width: 0%;"></div>
-                  <div class="range-progress-pin" id="range-52w-pin" style="left: 0%;"></div>
+                  <div class="range-progress-fill u-w0" id="range-52w-fill" ></div>
+                  <div class="range-progress-pin u-l0" id="range-52w-pin" ></div>
                 </div>
                 <span class="range-high-val" id="range-52w-high">—</span>
               </div>
@@ -370,11 +370,11 @@
                 <span class="val" id="sum-pe">—</span>
               </span>
             </div>
-            <div class="metrics-row-item" id="sum-pe-median-row" style="display:none;">
-              <span class="label" style="font-size:10.5px; color:var(--muted);">vs. Mediana 15a
-                <span id="sum-pe-vs-median-badge" style="display:inline-block; margin-left:4px; padding:1px 5px; border-radius:4px; font-size:9px; font-weight:700;"></span>
+            <div class="metrics-row-item d-none" id="sum-pe-median-row" >
+              <span class="label u-fs10-5" >vs. Mediana 15a
+                <span class="u-chip" id="sum-pe-vs-median-badge" ></span>
               </span>
-              <span class="val" id="sum-pe-median" style="font-size:11px; font-weight:600;"></span>
+              <span class="val u-fs11-600" id="sum-pe-median" ></span>
             </div>
             <div class="metrics-row-item">
               <span class="label">EPS (TTM)</span>
@@ -398,13 +398,13 @@
               <span class="label">Avg. Volume</span>
               <span class="val" id="sum-avg-vol">—</span>
             </div>
-            <div class="metrics-row-item" title="Flujo de Caja Libre dividido por la capitalización bursátil. FCF Yield > 4% es generalmente atractivo para inversores value." style="border-top:1px dashed var(--border); padding-top:8px; margin-top:4px;">
-              <span class="label" style="cursor:help; border-bottom:1px dashed var(--border);">FCF Yield <span class="info-icon">ⓘ</span></span>
+            <div class="metrics-row-item" title="Flujo de Caja Libre dividido por la capitalización bursátil. FCF Yield > 4% es generalmente atractivo para inversores value." STYLE=("u-dash-top")>
+              <span class="label u-help-dash" >FCF Yield <span class="info-icon">ⓘ</span></span>
               <span class="val" id="sum-fcf-yield">—</span>
             </div>
             <div class="metrics-row-item" title="Fecha estimada de publicación de los próximos resultados trimestrales.">
-              <span class="label" style="cursor:help;">📅 Next Earnings</span>
-              <span class="val" id="sum-next-earnings" style="font-size:11px; font-weight:700;">—</span>
+              <span class="label u-help" >📅 Next Earnings</span>
+              <span class="val u-fs11-700" id="sum-next-earnings" >—</span>
             </div>
           </div>
 
@@ -426,7 +426,7 @@
       </div>
 
       <!-- EVALUADOR DE CALIDAD (BUFFETT SCORECARD) -->
-      <section class="card" style="margin-top:20px;">
+      <section class="card u-mt20" >
         <h2 class="section-heading">🏆 Evaluador de Calidad & Solidez Financiera</h2>
         <p class="card-sub section-sub">
           Evaluación de 9 puntos cuantitativos inspirados en la filosofía de Warren Buffett y Piotroski F-Score.
@@ -434,7 +434,7 @@
         
         <div id="scorecard-total-box" class="scorecard-donut-card">
           <div class="donut-wrapper">
-            <svg class="donut-svg" viewBox="0 0 100 100" style="width:76px; height:76px;">
+            <svg class="donut-svg u-w76-h76" viewBox="0 0 100 100" >
               <circle class="donut-bg" cx="50" cy="50" r="42" fill="none"></circle>
               <circle id="donut-fill" class="donut-fill" cx="50" cy="50" r="42" fill="none" stroke-dasharray="263.89" stroke-dashoffset="263.89"></circle>
             </svg>
@@ -467,20 +467,20 @@
       </section>
 
       <!-- EARNINGS SURPRISES Y CALENDARIO -->
-      <section class="card" id="earnings-section" style="display:none;">
-        <div class="flex-between-baseline" style="margin-bottom:14px;">
+      <section class="card d-none" id="earnings-section" >
+        <div class="flex-between-baseline u-mb14" >
           <h2 class="section-heading-lg">
             📅 Reportes de Ganancias (Earnings) y Sorpresas EPS
           </h2>
         </div>
         <div class="earnings-grid">
           <div class="scenario-card scenario-card-lg">
-            <div style="font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; margin-bottom:12px;">Próximo Reporte Esperado</div>
-            <div id="lbl-next-earnings-date" style="font-size:24px; font-weight:800; color:var(--primary); margin-bottom:8px;">—</div>
-            <div style="font-size:13px; color:var(--text); margin-bottom:4px;">
-              Estimación de EPS: <b id="lbl-next-earnings-est" style="font-size:16px;">—</b>
+            <div class="u-eyebrow" >Próximo Reporte Esperado</div>
+            <div class="u-h-24-primary" id="lbl-next-earnings-date" >—</div>
+            <div class="u-fs13-mb4" >
+              Estimación de EPS: <b class="u-fs16" id="lbl-next-earnings-est" >—</b>
             </div>
-            <div style="margin-top:16px; font-size:12px; color:var(--muted);">
+            <div class="u-mt16-muted" >
               Consulta el calendario de Wall Street para prepararte ante la volatilidad post-reporte.
             </div>
           </div>
@@ -553,13 +553,13 @@
       </div>
 
       <!-- GRID DE TABLAS DE COMPARACIÓN (INFERIOR) -->
-      <div class="ratios-tables-grid" style="margin-top:20px;">
+      <div class="ratios-tables-grid u-mt20" >
         <!-- Tabla Izquierda: Multiplos de Valoración y Margen -->
         <div class="card table-card-ratio">
           <table class="ratio-compare-table">
             <thead>
               <tr>
-                <th style="text-align:left">Metric</th>
+                <th class="u-tl" >Metric</th>
                 <th id="th-sym-left" class="text-right">—</th>
                 <th class="text-right">Sector</th>
                 <th class="text-right">Diff Sec.</th>
@@ -569,7 +569,7 @@
             </thead>
             <tbody>
               <tr id="row-tbl-pe">
-                <td style="text-align:left">P/E GAAP (TTM)</td>
+                <td class="u-tl" >P/E GAAP (TTM)</td>
                 <td class="text-right val-company">—</td>
                 <td class="text-right val-sector">—</td>
                 <td class="text-right val-diff-sector">—</td>
@@ -577,7 +577,7 @@
                 <td class="text-right val-diff-5y">—</td>
               </tr>
               <tr id="row-tbl-pb">
-                <td style="text-align:left">Price / Book (TTM)</td>
+                <td class="u-tl" >Price / Book (TTM)</td>
                 <td class="text-right val-company">—</td>
                 <td class="text-right val-sector">—</td>
                 <td class="text-right val-diff-sector">—</td>
@@ -585,7 +585,7 @@
                 <td class="text-right val-diff-5y">—</td>
               </tr>
               <tr id="row-tbl-ps">
-                <td style="text-align:left">Price / Sales (TTM)</td>
+                <td class="u-tl" >Price / Sales (TTM)</td>
                 <td class="text-right val-company">—</td>
                 <td class="text-right val-sector">—</td>
                 <td class="text-right val-diff-sector">—</td>
@@ -593,7 +593,7 @@
                 <td class="text-right val-diff-5y">—</td>
               </tr>
               <tr id="row-tbl-pcf">
-                <td style="text-align:left">Price / Cash Flow (TTM)</td>
+                <td class="u-tl" >Price / Cash Flow (TTM)</td>
                 <td class="text-right val-company">—</td>
                 <td class="text-right val-sector">—</td>
                 <td class="text-right val-diff-sector">—</td>
@@ -601,7 +601,7 @@
                 <td class="text-right val-diff-5y">—</td>
               </tr>
               <tr id="row-tbl-margin">
-                <td style="text-align:left">Net Profit Margin (TTM)</td>
+                <td class="u-tl" >Net Profit Margin (TTM)</td>
                 <td class="text-right val-company">—</td>
                 <td class="text-right val-sector">—</td>
                 <td class="text-right val-diff-sector">—</td>
@@ -609,7 +609,7 @@
                 <td class="text-right val-diff-5y">—</td>
               </tr>
               <tr id="row-tbl-yield">
-                <td style="text-align:left">Dividend Yield (TTM)</td>
+                <td class="u-tl" >Dividend Yield (TTM)</td>
                 <td class="text-right val-company">—</td>
                 <td class="text-right val-sector">—</td>
                 <td class="text-right val-diff-sector">—</td>
@@ -625,7 +625,7 @@
           <table class="ratio-compare-table">
             <thead>
               <tr>
-                <th style="text-align:left">Metric</th>
+                <th class="u-tl" >Metric</th>
                 <th id="th-sym-right" class="text-right">—</th>
                 <th id="th-sym-5y-right" class="text-right">— 5Y Avg.</th>
                 <th class="text-right">Diff 5Y</th>
@@ -633,37 +633,37 @@
             </thead>
             <tbody>
               <tr id="row-tbl-peg">
-                <td style="text-align:left">PEG GAAP (TTM) &lt; 1</td>
+                <td class="u-tl" >PEG GAAP (TTM) &lt; 1</td>
                 <td class="text-right val-company">—</td>
                 <td class="text-right val-5y">—</td>
                 <td class="text-right val-diff">—</td>
               </tr>
               <tr id="row-tbl-quick">
-                <td style="text-align:left">Quick Ratio (TTM) &gt; 1</td>
+                <td class="u-tl" >Quick Ratio (TTM) &gt; 1</td>
                 <td class="text-right val-company">—</td>
                 <td class="text-right val-5y">—</td>
                 <td class="text-right val-diff">—</td>
               </tr>
               <tr id="row-tbl-cash">
-                <td style="text-align:left">Cash Ratio (TTM) &gt; 0.5</td>
+                <td class="u-tl" >Cash Ratio (TTM) &gt; 0.5</td>
                 <td class="text-right val-company">—</td>
                 <td class="text-right val-5y">—</td>
                 <td class="text-right val-diff">—</td>
               </tr>
               <tr id="row-tbl-de">
-                <td style="text-align:left">Debt to Equity (TTM) &lt; 2</td>
+                <td class="u-tl" >Debt to Equity (TTM) &lt; 2</td>
                 <td class="text-right val-company">—</td>
                 <td class="text-right val-5y">—</td>
                 <td class="text-right val-diff">—</td>
               </tr>
               <tr id="row-tbl-roe">
-                <td style="text-align:left">Return on Equity (TTM) &gt; 0.1</td>
+                <td class="u-tl" >Return on Equity (TTM) &gt; 0.1</td>
                 <td class="text-right val-company">—</td>
                 <td class="text-right val-5y">—</td>
                 <td class="text-right val-diff">—</td>
               </tr>
               <tr id="row-tbl-fcfps">
-                <td style="text-align:left">Free Cash Flow Per Share (TTM)</td>
+                <td class="u-tl" >Free Cash Flow Per Share (TTM)</td>
                 <td class="text-right val-company">—</td>
                 <td class="text-right val-5y">—</td>
                 <td class="text-right val-diff">—</td>
@@ -677,7 +677,7 @@
           <table class="ratio-compare-table">
             <thead>
               <tr>
-                <th style="text-align:left">Calidad y Eficiencia</th>
+                <th class="u-tl" >Calidad y Eficiencia</th>
                 <th id="th-sym-right3" class="text-right">—</th>
                 <th id="th-sym-5y-right3" class="text-right">— 5Y Avg.</th>
                 <th class="text-right">Diff 5Y</th>
@@ -685,31 +685,31 @@
             </thead>
             <tbody>
               <tr id="row-tbl-roc">
-                <td style="text-align:left">ROC (Greenblatt)</td>
+                <td class="u-tl" >ROC (Greenblatt)</td>
                 <td class="text-right val-company">—</td>
                 <td class="text-right val-5y">—</td>
                 <td class="text-right val-diff">—</td>
               </tr>
               <tr id="row-tbl-evebitda">
-                <td style="text-align:left">EV / EBITDA</td>
+                <td class="u-tl" >EV / EBITDA</td>
                 <td class="text-right val-company">—</td>
                 <td class="text-right val-5y">—</td>
                 <td class="text-right val-diff">—</td>
               </tr>
               <tr id="row-tbl-grossm">
-                <td style="text-align:left">Margen Bruto</td>
+                <td class="u-tl" >Margen Bruto</td>
                 <td class="text-right val-company">—</td>
                 <td class="text-right val-5y">—</td>
                 <td class="text-right val-diff">—</td>
               </tr>
               <tr id="row-tbl-opm">
-                <td style="text-align:left">Margen Operativo</td>
+                <td class="u-tl" >Margen Operativo</td>
                 <td class="text-right val-company">—</td>
                 <td class="text-right val-5y">—</td>
                 <td class="text-right val-diff">—</td>
               </tr>
               <tr id="row-tbl-roa">
-                <td style="text-align:left">ROA (Return on Assets)</td>
+                <td class="u-tl" >ROA (Return on Assets)</td>
                 <td class="text-right val-company">—</td>
                 <td class="text-right val-5y">—</td>
                 <td class="text-right val-diff">—</td>
@@ -788,12 +788,12 @@
       <section class="card">
         <div class="hist-header">
           <div>
-            <h2 class="section-heading-lg" style="margin:0;">📜 Histórico de Ratios Financieros (SEC EDGAR)</h2>
+            <h2 class="section-heading-lg u-m0" >📜 Histórico de Ratios Financieros (SEC EDGAR)</h2>
             <p class="card-sub hist-sub">Evolución año a año de la rentabilidad, estructura de capital y múltiplos.</p>
           </div>
           <div id="hist-ratios-csv-wrap"></div>
         </div>
-        <div class="table-wrap" style="margin-top:14px;">
+        <div class="table-wrap u-mt14" >
           <table class="data-table" id="hist-ratios-table">
             <thead id="hist-ratios-thead"></thead>
             <tbody id="hist-ratios-tbody"></tbody>
@@ -804,8 +804,8 @@
       <!-- GRÁFICOS DE MÚLTIPLOS HISTÓRICOS CON MEDIANA -->
       <section class="card">
         <div class="multiples-header">
-          <h2 class="section-heading" style="margin:0;">📊 Gráficos de Múltiplos Históricos (15 Años)</h2>
-          <div class="chart-range-controls" id="multiples-range-controls" style="display:flex; gap:4px;">
+          <h2 class="section-heading u-m0" >📊 Gráficos de Múltiplos Históricos (15 Años)</h2>
+          <div class="chart-range-controls u-flex-gap4" id="multiples-range-controls" >
             <button class="period-btn-mult" data-range="ytd">YTD</button>
             <button class="period-btn-mult" data-range="1">1 Year</button>
             <button class="period-btn-mult" data-range="3">3 Years</button>
@@ -851,8 +851,8 @@
     
 
       <section class="card" id="news-section">
-        <h2 style="font-family:'Outfit',sans-serif; font-size:18px; font-weight:700; color:var(--text); margin-bottom:12px;">📰 Noticias Recientes</h2>
-        <div id="news-container" style="display:flex; flex-direction:column; gap:12px;">
+        <h2 class="u-title-card" >📰 Noticias Recientes</h2>
+        <div class="u-flex-col" id="news-container" >
           <!-- Las tarjetas de noticias se inyectarán aquí -->
         </div>
       </section>
@@ -921,22 +921,22 @@
         </div>
 
         <div class="custom-scenario-box">
-          <div class="flex-between" style="margin-bottom:10px;">
+          <div class="flex-between u-mb10" >
             <label class="custom-scenario-label">Ajustar Múltiplo PER Objetivo:</label>
             <span id="est-pe-val" class="custom-scenario-val">20.0x</span>
           </div>
-          <input type="range" id="est-pe-slider" min="5" max="60" step="0.5" value="20" style="width:100%; cursor:pointer; accent-color:var(--primary);">
+          <input class="u-range-full" type="range" id="est-pe-slider" min="5" max="60" step="0.5" value="20" >
           
           <div class="flex-justify-between-mt">
             <div>
               <span class="custom-scenario-metric">Precio Proyectado 2030E</span>
               <div id="est-pe-custom-price" class="custom-scenario-price">—</div>
             </div>
-            <div style="text-align:center;">
+            <div class="u-tc" >
               <span class="custom-scenario-metric">Retorno Total</span>
               <div id="est-pe-custom-tot" class="custom-scenario-metric-val">—</div>
             </div>
-            <div style="text-align:right;">
+            <div class="u-tr" >
               <span class="custom-scenario-metric">Ganancia Anualizada (CAGR)</span>
               <div id="est-pe-custom-cagr" class="custom-scenario-metric-val">—</div>
             </div>
@@ -963,8 +963,8 @@
 
       <section class="card">
         <h2>Proyección de EPS vs Año Anterior</h2>
-        <p class="card-sub" style="margin-bottom:12px;">Comparación visual del EPS estimado (consenso) vs el EPS real del año anterior.</p>
-        <div id="est-eps-chart" style="height:220px; width:100%;"></div>
+        <p class="card-sub u-mb12" >Comparación visual del EPS estimado (consenso) vs el EPS real del año anterior.</p>
+        <div class="u-chart-h220" id="est-eps-chart" ></div>
       </section>
 
       <section class="card">
@@ -1022,29 +1022,29 @@
           <summary>💎 Modelo DCF (Descuento de Flujos) & Supuestos Interactivas</summary>
           <div class="accordion-content">
             <div id="dcf-fv-details">—</div>
-            <div style="margin-top:16px; padding-top:16px; border-top:1px dashed var(--border);">
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="u-divider-top" >
+              <div class="u-grid-2" >
                 <div class="slider-row">
-                  <label style="font-size:13px; color:var(--text); font-weight:500; display:flex; justify-content:space-between;">Crecimiento FCF <b id="lbl-growth">—</b></label>
-                  <input type="range" id="sl-growth" min="-5" max="35" step="0.5" style="width:100%; margin-top:4px;">
+                  <label class="u-flex-between" >Crecimiento FCF <b id="lbl-growth">—</b></label>
+                  <input class="u-w100-mt4" type="range" id="sl-growth" min="-5" max="35" step="0.5" >
                 </div>
                 <div class="slider-row">
-                  <label style="font-size:13px; color:var(--text); font-weight:500; display:flex; justify-content:space-between;">Tasa de descuento WACC <b id="lbl-discount">—</b></label>
-                  <input type="range" id="sl-discount" min="5" max="18" step="0.25" style="width:100%; margin-top:4px;">
+                  <label class="u-flex-between" >Tasa de descuento WACC <b id="lbl-discount">—</b></label>
+                  <input class="u-w100-mt4" type="range" id="sl-discount" min="5" max="18" step="0.25" >
                 </div>
               </div>
-              <div class="slider-row" style="margin-top:12px; margin-bottom:12px;">
-                <label style="font-size:13px; color:var(--text); font-weight:500; display:flex; justify-content:space-between;">Crecimiento terminal <b id="lbl-terminal">—</b></label>
-                <input type="range" id="sl-terminal" min="1" max="4" step="0.25" style="width:100%; margin-top:4px;">
+              <div class="slider-row u-my12" >
+                <label class="u-flex-between" >Crecimiento terminal <b id="lbl-terminal">—</b></label>
+                <input class="u-w100-mt4" type="range" id="sl-terminal" min="1" max="4" step="0.25" >
               </div>
               <button id="btn-reset-dcf" class="btn btn-sm">Restaurar supuestos</button>
             </div>
             
-            <div id="implied-growth" class="yield-compare hidden" style="margin-top:16px; font-size:13px; padding:10px; background:var(--bg); border-radius:6px; border:1px solid var(--border); color:var(--text);"></div>
+            <div id="implied-growth" class="yield-compare hidden u-note-box" ></div>
             
-            <div id="sensitivity" class="sensitivity hidden" style="margin-top:16px;">
-              <p class="card-sub" style="margin:16px 0 8px; font-size:13px; font-weight:600; color:var(--text);">Matriz de sensibilidad — valor justo según crecimiento × tasa de descuento</p>
-              <div id="sensitivity-table" style="overflow-x:auto;"></div>
+            <div id="sensitivity" class="sensitivity hidden u-mt16" >
+              <p class="card-sub u-section-label" >Matriz de sensibilidad — valor justo según crecimiento × tasa de descuento</p>
+              <div class="u-overflow-x" id="sensitivity-table" ></div>
             </div>
           </div>
         </details>
@@ -1063,13 +1063,13 @@
       <section class="card">
         <h2>👔 Estructura de Propiedad Accionaria</h2>
         <div class="ratios-checks-grid grid-2col">
-          <div style="padding:16px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); text-align:center;">
-            <span style="font-size:12px; color:var(--muted); font-weight:600;">% Propiedad de Directivos (Insiders)</span>
-            <div id="ins-pct-val" style="font-size:28px; font-weight:800; color:var(--primary); margin-top:4px;">—</div>
+          <div class="u-empty-card" >
+            <span class="u-label-xs" >% Propiedad de Directivos (Insiders)</span>
+            <div class="u-h-28-primary" id="ins-pct-val" >—</div>
           </div>
-          <div style="padding:16px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); text-align:center;">
-            <span style="font-size:12px; color:var(--muted); font-weight:600;">% Propiedad de Fondos Institucionales</span>
-            <div id="inst-pct-val" style="font-size:28px; font-weight:800; color:var(--cyan); margin-top:4px;">—</div>
+          <div class="u-empty-card" >
+            <span class="u-label-xs" >% Propiedad de Fondos Institucionales</span>
+            <div class="u-h-28-cyan" id="inst-pct-val" >—</div>
           </div>
         </div>
       </section>
@@ -1112,7 +1112,7 @@
 
       <section class="card">
         <h2>📋 Perfil Corporativo y Enlaces Oficiales SEC EDGAR</h2>
-        <div id="additional-details" style="margin-top:16px;">—</div>
+        <div class="u-mt16" id="additional-details" >—</div>
       </section>
     </div>
 
@@ -1171,31 +1171,31 @@
       </div>
       <div class="control">
         <label>MoS mín. %</label>
-        <input type="number" id="f-min-mos" placeholder="Ej: 20" style="width:75px">
+        <input class="u-w75" type="number" id="f-min-mos" placeholder="Ej: 20" >
       </div>
       <div class="control">
         <label>PE máx.</label>
-        <input type="number" id="f-max-pe" placeholder="Ej: 25" style="width:68px">
+        <input class="u-w68" type="number" id="f-max-pe" placeholder="Ej: 25" >
       </div>
       <div class="control">
         <label>PE fwd máx.</label>
-        <input type="number" id="f-max-fwdpe" placeholder="Ej: 20" style="width:75px">
+        <input class="u-w75" type="number" id="f-max-fwdpe" placeholder="Ej: 20" >
       </div>
       <div class="control">
         <label>ROE mín. %</label>
-        <input type="number" id="f-min-roe" placeholder="Ej: 15" style="width:75px">
+        <input class="u-w75" type="number" id="f-min-roe" placeholder="Ej: 15" >
       </div>
       <div class="control">
         <label>Mg. Neto mín. %</label>
-        <input type="number" id="f-min-netmargin" placeholder="Ej: 10" style="width:80px">
+        <input class="u-w80" type="number" id="f-min-netmargin" placeholder="Ej: 10" >
       </div>
       <div class="control">
         <label>FCF Yield mín. %</label>
-        <input type="number" id="f-min-fcfyield" placeholder="Ej: 3" style="width:80px">
+        <input class="u-w80" type="number" id="f-min-fcfyield" placeholder="Ej: 3" >
       </div>
       <div class="control">
         <label>D/E máx.</label>
-        <input type="number" id="f-max-de" placeholder="Ej: 1" step="0.1" style="width:68px">
+        <input class="u-w68" type="number" id="f-max-de" placeholder="Ej: 1" step="0.1" >
       </div>
       <div class="control" id="ctl-view">
         <label>Vista</label>
@@ -1239,7 +1239,7 @@
       <div class="table-wrap"><table id="cmp-table"></table></div>
     </div>
   </section>
-  <section class="charts-grid" id="cmp-charts" style="display:none">
+  <section class="charts-grid d-none" id="cmp-charts" >
     <div class="card chart-card wide">
       <h3>Retorno total normalizado <span class="chart-tag">base 100</span></h3>
       <div class="chart" id="cmp-price"></div>
@@ -1289,17 +1289,17 @@
       <table id="wl-table" class="data-table hidden">
         <thead>
           <tr>
-            <th class="sortable" onclick="wlSort('symbol')" style="cursor:pointer; user-select:none;">Empresa <span id="sort-symbol"></span></th>
-            <th class="num sortable" onclick="wlSort('price')" style="cursor:pointer; user-select:none;">Precio <span id="sort-price"></span></th>
-            <th class="num sortable" style="min-width:70px; cursor:pointer; user-select:none;" onclick="wlSort('perf')">Cambio % <span id="sort-perf"></span></th>
-            <th class="num sortable" onclick="wlSort('marketCap')" style="cursor:pointer; user-select:none;">Market Cap <span id="sort-marketCap"></span></th>
-            <th class="num sortable" title="Índice de Fuerza Relativa (14d)" onclick="wlSort('rsi')" style="cursor:pointer; user-select:none;">RSI <span id="sort-rsi"></span></th>
-            <th class="num sortable" onclick="wlSort('pe')" style="cursor:pointer; user-select:none;">PE <span id="sort-pe"></span></th>
-            <th class="num sortable" onclick="wlSort('forwardPe')" style="cursor:pointer; user-select:none;">FWD PE <span id="sort-forwardPe"></span></th>
-            <th class="num sortable" style="color:var(--primary); cursor:pointer; user-select:none;" title="Precio objetivo esperado según PE histórico" onclick="wlSort('targetBase')">★ Obj. Base <span id="sort-targetBase"></span></th>
-            <th class="num sortable" title="Precio objetivo conservador (PE -20%)" onclick="wlSort('targetPessimistic')" style="cursor:pointer; user-select:none;">Obj. Pesimista <span id="sort-targetPessimistic"></span></th>
-            <th class="num sortable" title="Precio objetivo optimista (PE +20%)" onclick="wlSort('targetOpt')" style="cursor:pointer; user-select:none;">Obj. Optimista <span id="sort-targetOpt"></span></th>
-            <th class="center sortable" style="width:120px; cursor:pointer; user-select:none;" onclick="wlSort('inBuyZone')">Estado <span id="sort-inBuyZone"></span></th>
+            <th class="sortable u-cpo" data-k="symbol" >Empresa <span id="sort-symbol"></span></th>
+            <th class="num sortable u-cpo" data-k="price" >Precio <span id="sort-price"></span></th>
+            <th class="num sortable u-minw70-cpo"  data-k="perf">Cambio % <span id="sort-perf"></span></th>
+            <th class="num sortable u-cpo" data-k="marketCap" >Market Cap <span id="sort-marketCap"></span></th>
+            <th class="num sortable u-cpo" title="Índice de Fuerza Relativa (14d)" data-k="rsi" >RSI <span id="sort-rsi"></span></th>
+            <th class="num sortable u-cpo" data-k="pe" >PE <span id="sort-pe"></span></th>
+            <th class="num sortable u-cpo" data-k="forwardPe" >FWD PE <span id="sort-forwardPe"></span></th>
+            <th class="num sortable u-primary-cpo"  title="Precio objetivo esperado según PE histórico" data-k="targetBase">★ Obj. Base <span id="sort-targetBase"></span></th>
+            <th class="num sortable u-cpo" title="Precio objetivo conservador (PE -20%)" data-k="targetPessimistic" >Obj. Pesimista <span id="sort-targetPessimistic"></span></th>
+            <th class="num sortable u-cpo" title="Precio objetivo optimista (PE +20%)" data-k="targetOpt" >Obj. Optimista <span id="sort-targetOpt"></span></th>
+            <th class="center sortable u-w120-cpo"  data-k="inBuyZone">Estado <span id="sort-inBuyZone"></span></th>
             <th></th>
           </tr>
         </thead>
@@ -1312,7 +1312,7 @@
 <!-- ============================ VISTA PORTAFOLIO ============================ -->
 <div id="view-portafolio" class="view hidden">
   <!-- Tarjetas resumen del portafolio -->
-  <div id="pf-summary-grid" class="summary-cards-grid hidden" style="margin-bottom:16px;">
+  <div id="pf-summary-grid" class="summary-cards-grid hidden u-mb16" >
     <div class="summary-card-item">
       <div class="card-header">Valor Total</div>
       <div class="card-value" id="pf-sum-val">—</div>
@@ -1341,13 +1341,13 @@
   </div>
 
   <!-- Layout principal del portafolio con gráfico de sectores -->
-  <div class="summary-bottom-layout" id="pf-analytics-layout" style="margin-bottom:16px;">
+  <div class="summary-bottom-layout u-mb16" id="pf-analytics-layout" >
     <div class="summary-chart-card hidden" id="pf-sector-card">
       <div class="chart-header-row">
         <h3>Distribución por Sector del Portafolio</h3>
         <span class="chart-tag">Ponderación de Capital</span>
       </div>
-      <div id="pf-sector-chart" style="width:100%; height:240px;"></div>
+      <div class="u-chart-h240" id="pf-sector-chart" ></div>
     </div>
   </div>
 
@@ -1380,7 +1380,7 @@
       <p>Aún no registras compras.</p>
       <p class="muted">Anota cada compra real con su tesis — tu yo del futuro te lo agradecerá.</p>
     </div>
-    <div id="pf-concentration-alert" class="hidden" style="margin:8px 0; padding:10px 16px; background:var(--gold-soft); border:1px solid var(--gold-border); border-radius:8px; font-size:12.5px;"></div>
+    <div id="pf-concentration-alert" class="hidden u-gold-banner" ></div>
     <div class="table-wrap">
       <table id="pf-table" class="hidden">
         <thead>
@@ -1421,28 +1421,28 @@
       <button id="modal-cagr-close" class="btn-x">✕</button>
     </div>
     <div class="modal-body">
-      <p class="card-sub" style="margin-bottom:16px;">Simula la tasa de crecimiento anual compuesto (CAGR) o proyecta el valor futuro de tu inversión.</p>
+      <p class="card-sub u-mb16" >Simula la tasa de crecimiento anual compuesto (CAGR) o proyecta el valor futuro de tu inversión.</p>
       
       <div class="cagr-inputs-grid grid-2col">
-        <label style="font-size:12.5px; font-weight:600; color:var(--text);">Monto Inicial ($)
-          <input type="number" id="cagr-in-principal" value="1000" step="100" style="width:100%; margin-top:4px; padding:8px; border:1px solid var(--border-dark); border-radius:6px; background:var(--panel); color:var(--text);">
+        <label class="u-text-12-5-600" >Monto Inicial ($)
+          <input class="u-input-lg" type="number" id="cagr-in-principal" value="1000" step="100" >
         </label>
-        <label style="font-size:12.5px; font-weight:600; color:var(--text);">Tasa CAGR Anual (%)
-          <input type="number" id="cagr-in-rate" value="12.5" step="0.5" style="width:100%; margin-top:4px; padding:8px; border:1px solid var(--border-dark); border-radius:6px; background:var(--panel); color:var(--text);">
+        <label class="u-text-12-5-600" >Tasa CAGR Anual (%)
+          <input class="u-input-lg" type="number" id="cagr-in-rate" value="12.5" step="0.5" >
         </label>
-        <label style="font-size:12.5px; font-weight:600; color:var(--text); grid-column:span 2;">Años de Proyección (<b id="cagr-lbl-years">5</b> años)
-          <input type="range" id="cagr-in-years" min="1" max="30" value="5" step="1" style="width:100%; margin-top:4px;">
+        <label class="u-span2" >Años de Proyección (<b id="cagr-lbl-years">5</b> años)
+          <input class="u-w100-mt4" type="range" id="cagr-in-years" min="1" max="30" value="5" step="1" >
         </label>
       </div>
 
-      <div class="cagr-result-box" style="padding:16px; background:var(--panel-2); border-radius:8px; border:1px solid var(--border-dark); display:flex; justify-content:space-between; align-items:center;">
+      <div class="cagr-result-box u-panel-row" >
         <div>
-          <span style="font-size:12px; color:var(--muted); font-weight:600;">Valor Futuro Estimado</span>
-          <div id="cagr-res-future" style="font-size:24px; font-weight:800; color:var(--green);">$1,802 USD</div>
+          <span class="u-label-xs" >Valor Futuro Estimado</span>
+          <div class="u-h-24-green" id="cagr-res-future" >$1,802 USD</div>
         </div>
-        <div style="text-align:right;">
-          <span style="font-size:12px; color:var(--muted); font-weight:600;">Ganancia Total / Multiplicador</span>
-          <div id="cagr-res-gain" style="font-size:14px; font-weight:700; color:var(--text);">+$802 (1.80x)</div>
+        <div class="u-tr" >
+          <span class="u-label-xs" >Ganancia Total / Multiplicador</span>
+          <div class="u-fs14-bold" id="cagr-res-gain" >+$802 (1.80x)</div>
         </div>
       </div>
     </div>
@@ -1457,29 +1457,29 @@
       <button id="modal-alerts-close" class="btn-x">✕</button>
     </div>
     <div class="modal-body">
-      <p class="card-sub" style="margin-bottom:16px;">Recibe un aviso visual cuando la acción alcance tu objetivo de precio o margen de seguridad.</p>
+      <p class="card-sub u-mb16" >Recibe un aviso visual cuando la acción alcance tu objetivo de precio o margen de seguridad.</p>
       
       <form id="form-alert-add" class="flex-col-gap-12">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-          <label style="font-size:12px; font-weight:600; color:var(--text);">Símbolo
-            <input type="text" id="alert-in-sym" style="width:100%; margin-top:4px; padding:6px 8px; border:1px solid var(--border-dark); border-radius:6px; background:var(--panel); color:var(--text);" readonly>
+        <div class="u-grid-2-gap12" >
+          <label class="u-text-12-600" >Símbolo
+            <input class="u-input" type="text" id="alert-in-sym"  readonly>
           </label>
-          <label style="font-size:12px; font-weight:600; color:var(--text);">Tipo de Alerta
-            <select id="alert-in-type" style="width:100%; margin-top:4px; padding:6px 8px; border:1px solid var(--border-dark); border-radius:6px; background:var(--panel); color:var(--text);">
+          <label class="u-text-12-600" >Tipo de Alerta
+            <select class="u-input" id="alert-in-type" >
               <option value="price_below">Precio cae por debajo de ($)</option>
               <option value="price_above">Precio sube por encima de ($)</option>
               <option value="mos_above">Margen de Seguridad supera (%)</option>
             </select>
           </label>
         </div>
-        <label style="font-size:12px; font-weight:600; color:var(--text);">Valor Objetivo ($ o %)
-          <input type="number" id="alert-in-target" step="0.1" placeholder="Ej: 150.0" style="width:100%; margin-top:4px; padding:6px 8px; border:1px solid var(--border-dark); border-radius:6px; background:var(--panel); color:var(--text);" required>
+        <label class="u-text-12-600" >Valor Objetivo ($ o %)
+          <input class="u-input" type="number" id="alert-in-target" step="0.1" placeholder="Ej: 150.0"  required>
         </label>
-        <button type="submit" class="btn" style="align-self:flex-start;">+ Guardar Alerta</button>
+        <button type="submit" class="btn u-self-start" >+ Guardar Alerta</button>
       </form>
 
-      <h4 style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:8px;">Mis Alertas Activas</h4>
-      <div id="alerts-list" style="display:flex; flex-direction:column; gap:8px; max-height:200px; overflow-y:auto;">
+      <h4 class="u-fs13-bold-mb8" >Mis Alertas Activas</h4>
+      <div class="u-flex-col-scroll" id="alerts-list" >
         <!-- Las alertas se listan dinámicamente aquí -->
       </div>
     </div>
@@ -1488,15 +1488,6 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script src="js/format.js?v=25.0"></script>
-  <script src="js/glossary.js?v=25.0"></script>
-  <script src="js/charts.js?v=25.0"></script>
-  <script src="js/screener.js?v=25.0"></script>
-  <script src="js/compare.js?v=25.0"></script>
-  <script src="js/watchlist.js?v=25.0"></script>
-  <script src="js/portfolio.js?v=25.0"></script>
-  <script src="js/dashboard.js?v=25.0"></script>
-  <script src="js/app.js?v=25.0"></script>
-  <script src="js/mobile-nav.js?v=25.0"></script>
+<script type="module" src="js/init.js?v=26.0"></script>
 </body>
 </html>

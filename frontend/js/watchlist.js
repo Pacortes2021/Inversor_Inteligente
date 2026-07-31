@@ -1,10 +1,15 @@
 /* Watchlist: acciones seguidas con margen de seguridad objetivo. */
 
-let wlLoaded = false;
+import { $, toast, apiFetch } from "./dom.js";
+import { state } from "./state.js";
+import { setStarState } from "./analysis.js";
+import { fmtBig, fmtPrice, fmtPct, escHtml } from "./format.js";
+
+export let wlLoaded = false;
 let wlItems = [];
 let wlPeriod = '1D';
 
-async function loadWatchlist(refresh = false) {
+export async function loadWatchlist(refresh = false) {
   if (wlLoaded && !refresh) return;
   document.getElementById("wl-loading").classList.remove("hidden");
   document.getElementById("wl-table").classList.add("hidden");
@@ -25,7 +30,7 @@ async function loadWatchlist(refresh = false) {
 let wlSortCol = 'inBuyZone';
 let wlSortAsc = false;
 
-function wlSort(col) {
+export function wlSort(col) {
   if (wlSortCol === col) {
     wlSortAsc = !wlSortAsc;
   } else {
@@ -161,9 +166,9 @@ document.querySelectorAll('#wl-perf-toggles .tg-btn').forEach(btn => {
     });
 });
 
-async function wlAdd(symbol, targetMos = 25) {
+export async function wlAdd(symbol, targetMos = 25) {
   try {
-    const r = await fetch("/api/watchlist", {
+    const r = await apiFetch("/api/watchlist", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ symbol, targetMos }),
     });
@@ -175,9 +180,9 @@ async function wlAdd(symbol, targetMos = 25) {
   }
 }
 
-async function wlRemove(symbol) {
+export async function wlRemove(symbol) {
   try {
-    const r = await fetch(`/api/watchlist/${encodeURIComponent(symbol)}`, { method: "DELETE" });
+    const r = await apiFetch(`/api/watchlist/${encodeURIComponent(symbol)}`, { method: "DELETE" });
     if (!r.ok) throw new Error(`Error ${r.status}`);
     wlLoaded = false;
     toast(`${symbol} eliminada de la watchlist`);
@@ -188,11 +193,11 @@ async function wlRemove(symbol) {
   loadWatchlist(true);
 }
 
-async function wlSetTarget(symbol, value) {
+export async function wlSetTarget(symbol, value) {
   const t = parseFloat(value);
   if (!isFinite(t)) return;
   try {
-    const r = await fetch("/api/watchlist", {
+    const r = await apiFetch("/api/watchlist", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ symbol, targetMos: t }),
     });
@@ -204,6 +209,9 @@ async function wlSetTarget(symbol, value) {
   }
   // loadWatchlist(true); // Omitimos recarga forzada para no perder el foco
 }
+
+/* Permite a otros módulos invalidar la caché de la watchlist. */
+export function wlInvalidate() { wlLoaded = false; }
 
 document.getElementById("wl-refresh").addEventListener("click", () => loadWatchlist(true));
 
@@ -234,4 +242,10 @@ document.getElementById("wl-csv").addEventListener("click", async () => {
 document.addEventListener("click", e => {
   const rm = e.target.closest("[data-wl-remove]");
   if (rm) wlRemove(rm.getAttribute("data-wl-remove"));
+});
+
+/* Orden de columnas: los <th> de la tabla estática llevan data-k="col". */
+document.getElementById("wl-table")?.querySelector("thead").addEventListener("click", e => {
+  const th = e.target.closest("th[data-k]");
+  if (th) wlSort(th.dataset.k);
 });

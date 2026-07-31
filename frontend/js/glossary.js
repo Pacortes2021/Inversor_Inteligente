@@ -46,7 +46,7 @@ const GLOSSARY = {
 };
 
 /* ------------------------------------------------------------- popover */
-function termify(label, key) {
+export function termify(label, key) {
   return GLOSSARY[key] ? `<span class="term" data-term="${key}">${label}</span>` : label;
 }
 

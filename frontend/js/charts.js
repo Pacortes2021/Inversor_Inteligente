@@ -1,7 +1,10 @@
 /* Gráficos ECharts con tema propio — El Inversor Inteligente */
 
+import { fmtBig, fmtPrice, fmtPct, fmtRatio, fmtNum } from "./format.js";
+import { state } from "./state.js";
+
 /** Colores que se adaptan al tema claro/oscuro en tiempo de ejecución */
-function getChartColors() {
+export function getChartColors() {
   const dark = document.documentElement.getAttribute('data-theme') === 'dark';
   return {
     gold:   '#d97706', green:  '#10b981', red:    '#ef4444',
@@ -15,15 +18,15 @@ function getChartColors() {
 }
 
 /* Alias estático C mantenido para compat. con referencias en makeChart/hideCard */
-const C = {
+export const C = {
   gold: '#d97706', green: '#10b981', red: '#ef4444', blue: '#3b82f6',
   cyan: '#0ea5e9', violet: '#8b5cf6', amber: '#d97706',
   text: '#1e293b', muted: '#64748b', border: '#e2e8f0', grid: '#f1f5f9',
 };
 
-const charts = {};
+export const charts = {};;
 
-function makeChart(id, option) {
+export function makeChart(id, option) {
   const el = document.getElementById(id);
   if (!el) return null;
   if (charts[id]) charts[id].dispose();
@@ -35,32 +38,14 @@ function makeChart(id, option) {
 
 window.addEventListener('resize', () => Object.values(charts).forEach(c => c.resize()));
 
-/* Cuando cambie el tema, re-renderizar todos los gráficos activos */
-window.addEventListener('DOMContentLoaded', () => {
-  const btn = document.getElementById('theme-toggle');
-  if (btn) {
-    btn.addEventListener('click', () => {
-      setTimeout(() => {
-        if (window.state && window.state.data) {
-          const activePane = document.querySelector('.a-tab.active');
-          const pane = activePane ? activePane.dataset.pane : null;
-          if (pane === 'financials') renderAllCharts(window.state.data);
-          else if (pane === 'ratios') renderRatiosCharts(window.state.data, window.currentMultiplesRange || 'all');
-          else if (pane === 'summary') chartPriceSummary(window.state.data);
-        }
-      }, 80);
-    });
-  }
-});
-
-function hideCard(id) {
+export function hideCard(id) {
   const el = document.getElementById(id);
   if (el) {
     const card = el.closest('.chart-card') || el.closest('.card');
     if (card) card.classList.add('hidden');
   }
 }
-function showCard(id) {
+export function showCard(id) {
   const el = document.getElementById(id);
   if (el) {
     const card = el.closest('.chart-card') || el.closest('.card');
@@ -69,7 +54,7 @@ function showCard(id) {
 }
 
 /* ---------------------------------------------------------- base común */
-function baseAxisStyle(cc) {
+export function baseAxisStyle(cc) {
   return {
     axisLine: { lineStyle: { color: cc.border } },
     axisLabel: { color: cc.muted, fontSize: 10, fontFamily: 'Inter, sans-serif' },
@@ -78,13 +63,13 @@ function baseAxisStyle(cc) {
 }
 
 /* Retro-compatibilidad: baseAxis legacy (usa colores estáticos) */
-const baseAxis = {
+export const baseAxis = {
   axisLine: { lineStyle: { color: C.border } },
   axisLabel: { color: C.muted, fontSize: 10, fontFamily: 'Inter, sans-serif' },
   splitLine: { lineStyle: { color: C.grid } },
 };
 
-function timeOption(extra) {
+export function timeOption(extra) {
   const cc = getChartColors();
   const ba = baseAxisStyle(cc);
   return Object.assign({
@@ -102,7 +87,7 @@ function timeOption(extra) {
   }, extra);
 }
 
-function yearsOption(years, extra) {
+export function yearsOption(years, extra) {
   const cc = getChartColors();
   const ba = baseAxisStyle(cc);
   return Object.assign({
@@ -122,9 +107,9 @@ function yearsOption(years, extra) {
 }
 
 /* ------------------------------------------------------------- precio */
-const priceView = { log: false, sma: false, type: 'area' };
+export const priceView = { log: false, sma: false, type: 'area' };
 
-function sma(pts, n) {
+export function sma(pts, n) {
   const out = [];
   let sum = 0;
   for (let i = 0; i < pts.length; i++) {
@@ -135,7 +120,7 @@ function sma(pts, n) {
   return out;
 }
 
-function calculateEMA(pts, period) {
+export function calculateEMA(pts, period) {
   const out = [];
   const k = 2 / (period + 1);
   let ema = pts[0][1];
@@ -147,7 +132,7 @@ function calculateEMA(pts, period) {
   return out;
 }
 
-function calculateMACD(pts, shortP = 12, longP = 26, sigP = 9) {
+export function calculateMACD(pts, shortP = 12, longP = 26, sigP = 9) {
   const macdLine = [];
   const signalLine = [];
   const histogram = [];
@@ -174,7 +159,7 @@ function calculateMACD(pts, shortP = 12, longP = 26, sigP = 9) {
   return { macdLine, signalLine, histogram };
 }
 
-function calculateRSI(pts, period = 14) {
+export function calculateRSI(pts, period = 14) {
   const out = [];
   if (pts.length < period) return out;
   
@@ -201,7 +186,7 @@ function calculateRSI(pts, period = 14) {
   return out;
 }
 
-function chartPrice(data, id = 'ch-price', customPts = null) {
+export function chartPrice(data, id = 'ch-price', customPts = null) {
   const pts = customPts || data.history.price;
   if (!pts || pts.length < 5) return hideCard(id);
   showCard(id);
@@ -381,7 +366,7 @@ function chartPrice(data, id = 'ch-price', customPts = null) {
 }
 
 /* ----------------------------------------------- ratios PE / PS / PB */
-function chartRatio(id, pairs, stats, color, name) {
+export function chartRatio(id, pairs, stats, color, name) {
   if (!pairs || pairs.length < 6) return hideCard(id);
   showCard(id);
   const cc = getChartColors();
@@ -414,7 +399,7 @@ function chartRatio(id, pairs, stats, color, name) {
 
 
 /* --------------------------------------------- fundamentales anuales */
-function chartIncome(data) {
+export function chartIncome(data) {
   const a = data.annuals.filter(x => x.revenue != null);
   if (a.length < 2) return hideCard('ch-income');
   showCard('ch-income');
@@ -435,7 +420,7 @@ function chartIncome(data) {
   }));
 }
 
-function chartMargins(data) {
+export function chartMargins(data) {
   const a = data.annuals.filter(x => x.netMargin != null || x.grossMargin != null);
   if (a.length < 2) return hideCard('ch-margins');
   showCard('ch-margins');
@@ -457,7 +442,7 @@ function chartMargins(data) {
   }));
 }
 
-function chartFcf(data) {
+export function chartFcf(data) {
   const a = data.annuals.filter(x => x.fcf != null);
   if (a.length < 2) return hideCard('ch-fcf');
   showCard('ch-fcf');
@@ -479,7 +464,7 @@ function chartFcf(data) {
   }));
 }
 
-function chartReturns(data) {
+export function chartReturns(data) {
   const a = data.annuals.filter(x => x.roe != null || x.roic != null);
   if (a.length < 2) return hideCard('ch-returns');
   showCard('ch-returns');
@@ -495,7 +480,7 @@ function chartReturns(data) {
   }));
 }
 
-function chartDebt(data) {
+export function chartDebt(data) {
   const a = data.annuals.filter(x => x.totalDebt != null || x.cash != null);
   if (a.length < 2) return hideCard('ch-debt');
   showCard('ch-debt');
@@ -516,7 +501,7 @@ function chartDebt(data) {
   }));
 }
 
-function chartShares(data) {
+export function chartShares(data) {
   const pts = data.history.shares;
   if (!pts || pts.length < 4) return hideCard('ch-shares');
   showCard('ch-shares');
@@ -533,7 +518,7 @@ function chartShares(data) {
   }));
 }
 
-function chartEps(data) {
+export function chartEps(data) {
   const a = data.annuals.filter(x => x.eps != null);
   if (a.length < 2) return hideCard('ch-eps');
   showCard('ch-eps');
@@ -548,7 +533,7 @@ function chartEps(data) {
   }));
 }
 
-function chartDividends(data) {
+export function chartDividends(data) {
   const d = data.history.dividends;
   if (!d || d.length < 3) return hideCard('ch-divs');
   showCard('ch-divs');
@@ -564,7 +549,7 @@ function chartDividends(data) {
 }
 
 /* ------------------------------------------- historial de margen seg. */
-function chartMos(data) {
+export function chartMos(data) {
   const pts = (data.history.mos || []).map(p => [p[0], p[1]]);
   if (pts.length < 2) return hideCard('ch-mos');
   showCard('ch-mos');
@@ -590,7 +575,7 @@ function chartMos(data) {
 }
 
 /* -------------------------------------------------- gauge de margen */
-function renderGauge(mos) {
+export function renderGauge(mos) {
   const val = mos == null ? 0 : Math.max(-50, Math.min(100, mos));
   makeChart("gauge-mos", {
     series: [{
@@ -614,7 +599,7 @@ function renderGauge(mos) {
 }
 
 /* --------------------------------------------- heatmap del screener */
-function mosColor(mos) {
+export function mosColor(mos) {
   if (mos == null) return "#2a3348";
   const t = Math.max(-50, Math.min(60, mos));
   if (t >= 25) return "#15803d";
@@ -625,7 +610,7 @@ function mosColor(mos) {
   return "#b91c1c";
 }
 
-function chartEarningsSurprise(elemId, surprises) {
+export function chartEarningsSurprise(elemId, surprises) {
   if (!surprises || !surprises.length) return;
   const dates = surprises.map(s => s.date.substring(0,7)); // YYYY-MM
   const est = surprises.map(s => s.estimate);
@@ -713,7 +698,7 @@ function chartEarningsSurprise(elemId, surprises) {
   });
 }
 
-function renderHeatmap(rows) {
+export function renderHeatmap(rows, onOpen) {
   const bySector = {};
   for (const r of rows) {
     if (!r.marketCap) continue;
@@ -762,12 +747,12 @@ function renderHeatmap(rows) {
   });
   charts["screener-heatmap"].off("click");
   charts["screener-heatmap"].on("click", p => {
-    if (p.data && !p.data.children) go(p.name);
+    if (p.data && !p.data.children && onOpen) onOpen(p.name);
   });
 }
 
 /* ------------------------------------------------- descarga como PNG */
-function addChartDownloadButtons() {
+export function addChartDownloadButtons() {
   document.querySelectorAll('#view-analisis .chart-card').forEach(card => {
     const h3 = card.querySelector('h3');
     const div = card.querySelector('.chart');
@@ -783,7 +768,7 @@ function addChartDownloadButtons() {
       const bg = dark ? '#090d16' : '#ffffff';
       const a = document.createElement('a');
       a.href = ch.getDataURL({ pixelRatio: 2, backgroundColor: bg });
-      const sym = (window.state && state.symbol) || 'chart';
+      const sym = (state && state.symbol) || 'chart';
       a.download = `${sym}_${div.id.replace('ch-', '')}.png`;
       a.click();
     };
@@ -793,7 +778,7 @@ function addChartDownloadButtons() {
 
 
 /* ------------------------------------------------ comparador overlay */
-function renderCompareCharts(symbols, payloads, colors) {
+export function renderCompareCharts(symbols, payloads, colors) {
   const cc = getChartColors();
   const ba = baseAxisStyle(cc);
 
@@ -866,7 +851,7 @@ function renderCompareCharts(symbols, payloads, colors) {
 }
 
 /* ------------------------------------------------------- orquestador */
-function renderAllCharts(data) {
+export function renderAllCharts(data) {
   const cc = getChartColors();
   chartPrice(data);
   chartRatio('ch-pe',  data.history.peTtm,  data.history.peStats,  cc.blue,   'PE (TTM)');
