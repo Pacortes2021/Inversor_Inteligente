@@ -372,6 +372,7 @@ def build_payload(symbol: str, refresh: bool = False):
     info = raw.info
     prices = raw.prices
     monthly = M.monthly_prices(prices)
+    weekly = M.weekly_prices(prices)  # Para ratios más detallados
     price = M._f(info.get("currentPrice")) or float(prices["Close"].dropna().iloc[-1])
 
     # ------------------------------------------------ series históricas
@@ -380,6 +381,7 @@ def build_payload(symbol: str, refresh: bool = False):
     eps_ttm = M.ttm_from_statements(raw.inc_a, raw.inc_q, "Diluted EPS", "Basic EPS")
     rev_ttm = M.ttm_from_statements(raw.inc_a, raw.inc_q, "Total Revenue", "Operating Revenue")
     equity = M.step_series(raw.bs_a, raw.bs_q, "Stockholders Equity", "Common Stock Equity")
+    fcf_ttm = M.fcf_ttm_series(raw.cf_a, raw.cf_q)
 
     # EDGAR extiende la historia a 10-15+ años (solo empresas que reportan a la SEC).
     # Sus valores por acción vienen as-reported: hay que ajustarlos por splits
@@ -397,18 +399,25 @@ def build_payload(symbol: str, refresh: bool = False):
     rev_ttm = _cut(M.merge_series(rev_ttm, E.to_series(edgar_hist, "revenue")))
     equity = _cut(M.merge_series(equity, E.to_series(edgar_hist, "equity")))
     shares = _cut(M.merge_series(shares, edgar_shares))
+    fcf_ttm = _cut(fcf_ttm)
 
-    pe_hist = M.ratio_history(monthly, eps_ttm, "per_share")
+    # Usar precios semanales para charts más detallados
+    pe_hist = M.ratio_history(weekly, eps_ttm, "per_share")
     if pe_hist is not None:
         # PE > 200 no es una señal de valoración: utilidad casi nula distorsiona
         pe_hist = pe_hist[pe_hist <= 200]
-    ps_hist = M.ratio_history(monthly, rev_ttm, "total", shares)
-    pb_hist = M.ratio_history(monthly, equity, "total", shares)
+    ps_hist = M.ratio_history(weekly, rev_ttm, "total", shares)
+    pb_hist = M.ratio_history(weekly, equity, "total", shares)
+    pcf_hist = M.ratio_history(weekly, fcf_ttm, "total", shares)
+    if pcf_hist is not None:
+        pcf_hist = pcf_hist[pcf_hist <= 500]  # Filtrar valores extremos
 
     pe_pairs = M._pairs(pe_hist, 2) if pe_hist is not None else []
     ps_pairs = M._pairs(ps_hist, 2) if ps_hist is not None else []
     pb_pairs = M._pairs(pb_hist, 2) if pb_hist is not None else []
+    pcf_pairs = M._pairs(pcf_hist, 2) if pcf_hist is not None else []
     pe_stats = M.series_stats(pe_pairs)
+    pcf_stats = M.series_stats(pcf_pairs)
 
     price_10y = prices["Close"][prices.index >= min_date].dropna()
 
@@ -589,9 +598,11 @@ def build_payload(symbol: str, refresh: bool = False):
             "peTtm": pe_pairs,
             "psTtm": ps_pairs,
             "pbTtm": pb_pairs,
+            "pcfTtm": pcf_pairs,
             "peStats": pe_stats,
             "psStats": M.series_stats(ps_pairs),
             "pbStats": M.series_stats(pb_pairs),
+            "pcfStats": pcf_stats,
             "shares": M._pairs(shares.resample("QE").last().dropna(), 0) if shares is not None else [],
             "dividends": dividends_annual,
             "mos": S.history(symbol),

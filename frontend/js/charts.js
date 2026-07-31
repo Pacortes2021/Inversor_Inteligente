@@ -872,6 +872,7 @@ function renderAllCharts(data) {
   chartRatio('ch-pe',  data.history.peTtm,  data.history.peStats,  cc.blue,   'PE (TTM)');
   chartRatio('ch-ps',  data.history.psTtm,  data.history.psStats,  cc.violet, 'P/Ventas (TTM)');
   chartRatio('ch-pb',  data.history.pbTtm,  data.history.pbStats,  cc.cyan,   'P/Valor libro');
+  chartRatio('ch-pcf', data.history.pcfTtm, data.history.pcfStats, cc.amber,  'P/Cash Flow');
   chartIncome(data);
   chartMargins(data);
   chartFcf(data);

@@ -73,6 +73,35 @@ def ttm_from_statements(df_a, df_q, *names):
     return pd.Series(pts).sort_index()
 
 
+def fcf_ttm_series(cf_a, cf_q):
+    """Serie TTM de Free Cash Flow desde estados de flujos de caja."""
+    pts = {}
+    # Anuales
+    if cf_a is not None:
+        for col in cf_a.columns:
+            ocf = _f(cf_a.loc["Operating Cash Flow", col]) if "Operating Cash Flow" in cf_a.index else None
+            capex = _f(cf_a.loc["Capital Expenditure", col]) if "Capital Expenditure" in cf_a.index else None
+            fcf = _f(cf_a.loc["Free Cash Flow", col]) if "Free Cash Flow" in cf_a.index else None
+            if fcf is None and ocf is not None and capex is not None:
+                fcf = ocf + capex
+            if fcf is not None:
+                pts[pd.Timestamp(col)] = float(fcf)
+    # Trimestrales (TTM)
+    if cf_q is not None and len(cf_q.columns) >= 4:
+        for i in range(3, len(cf_q.columns)):
+            cols = cf_q.columns[i-3:i+1]
+            ocf_sum = sum(_f(cf_q.loc["Operating Cash Flow", c]) or 0 for c in cols if "Operating Cash Flow" in cf_q.index)
+            capex_sum = sum(_f(cf_q.loc["Capital Expenditure", c]) or 0 for c in cols if "Capital Expenditure" in cf_q.index)
+            fcf_sum = sum(_f(cf_q.loc["Free Cash Flow", c]) or 0 for c in cols if "Free Cash Flow" in cf_q.index)
+            if fcf_sum == 0 and ocf_sum != 0:
+                fcf_sum = ocf_sum + capex_sum
+            if fcf_sum > 0:
+                pts[pd.Timestamp(cf_q.columns[i])] = float(fcf_sum)
+    if not pts:
+        return None
+    return pd.Series(pts).sort_index()
+
+
 def step_series(df_a, df_q, *names):
     """Serie de saldos (balance): valor puntual en cada cierre disponible."""
     pts = {}
@@ -135,6 +164,16 @@ def monthly_prices(prices: pd.DataFrame) -> pd.Series:
         m = pd.concat([m, last.iloc[[-1]]])
         m = m[~m.index.duplicated(keep="last")].sort_index()
     return m
+
+
+def weekly_prices(prices: pd.DataFrame) -> pd.Series:
+    """Precios semanales para charts más detallados."""
+    w = prices["Close"].resample("W").last().dropna()
+    last = prices["Close"].dropna()
+    if not last.empty:
+        w = pd.concat([w, last.iloc[[-1]]])
+        w = w[~w.index.duplicated(keep="last")].sort_index()
+    return w
 
 
 def ratio_history(monthly: pd.Series, fundamental: pd.Series, kind: str,

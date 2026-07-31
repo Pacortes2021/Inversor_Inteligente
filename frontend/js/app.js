@@ -131,6 +131,7 @@ function renderRatiosCharts(d, range = "all") {
   const pePairs = filterPairs(d.history.peTtm);
   const psPairs = filterPairs(d.history.psTtm);
   const pbPairs = filterPairs(d.history.pbTtm);
+  const pcfPairs = filterPairs(d.history.pcfTtm);
 
   const getStats = (pairs) => {
     if (!pairs || pairs.length < 2) return null;
@@ -152,6 +153,7 @@ function renderRatiosCharts(d, range = "all") {
   chartRatio("ch-pe", pePairs, getStats(pePairs), C.blue, "PE (TTM)");
   chartRatio("ch-ps", psPairs, getStats(psPairs), C.violet, "P/Ventas (TTM)");
   chartRatio("ch-pb", pbPairs, getStats(pbPairs), C.cyan, "P/Valor libro");
+  chartRatio("ch-pcf", pcfPairs, getStats(pcfPairs), C.amber, "P/Cash Flow");
   requestAnimationFrame(() => Object.values(charts).forEach(ch => ch.resize()));
 }
 
