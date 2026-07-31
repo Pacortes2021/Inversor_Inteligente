@@ -11,6 +11,9 @@ from . import quality as Q
 from . import snapshots as S
 from . import valuation as V
 from .data import RawData, bond_yield_10y, cache_get, cache_set, jclean
+from .estimates import build_estimates_payload
+from .insiders import build_insiders_holders_payload
+from .ratios import calculate_ratios_payload
 
 MAX_HISTORY_YEARS = 16
 
@@ -371,7 +374,8 @@ def _calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps
 
 
 def build_payload(symbol: str, refresh: bool = False):
-    key = f"stock_{symbol.upper().replace('/', '_')}"
+    from .main import CACHE_VERSION
+    key = f"stock_{CACHE_VERSION}_{symbol.upper().replace('/', '_')}"
     if not refresh:
         cached = cache_get(key)
         if cached:
@@ -577,9 +581,9 @@ def build_payload(symbol: str, refresh: bool = False):
     # foto del día para el historial de margen de seguridad
     S.append(symbol, price, valuation["marginOfSafety"], valuation["consensus"])
 
-    ratios = _calculate_ratios_payload(price, info, annuals, raw.prices, pe_hist, pb_hist, ps_hist)
-    estimates = _build_estimates_payload(raw, info, annuals, price)
-    insiders_holders = _build_insiders_holders_payload(raw, info)
+    ratios = calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps_hist)
+    estimates = build_estimates_payload(raw, info, annuals, price)
+    insiders_holders = build_insiders_holders_payload(raw, info)
 
     payload = {
         "symbol": symbol.upper(),

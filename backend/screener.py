@@ -16,6 +16,7 @@ from . import edgar as E
 from . import metrics as M
 from . import valuation as V
 from .data import TTL_SCREENER, bond_yield_10y, cache_get, cache_set, jclean
+from .config import CACHE_VERSION
 
 # ------------------------------------------------------------------ universos
 
@@ -227,7 +228,7 @@ def scan_one(symbol):
 
 def run_screener(universe: str = "us", refresh: bool = False):
     universe = universe if universe in UNIVERSES else "us"
-    key = f"screener_{universe}"
+    key = f"screener_{CACHE_VERSION}_{universe}"
     if not refresh:
         cached = cache_get(key)
         if cached:
@@ -274,7 +275,7 @@ def _pe_stats_from_edgar(symbol, edgar_hist):
 
 
 def scan_one_deep(symbol, bond10y):
-    cached = cache_get(f"deep_{symbol.replace('/', '_').replace('.', '_')}")
+    cached = cache_get(f"deep_{CACHE_VERSION}_{symbol.replace('/', '_').replace('.', '_')}")
     if cached:
         return cached
     try:
@@ -334,7 +335,7 @@ def scan_one_deep(symbol, bond10y):
             "fScore": f_score,
         }
         row = jclean(row)
-        cache_set(f"deep_{symbol.replace('/', '_').replace('.', '_')}", row, ttl=TTL_SCREENER)
+        cache_set(f"deep_{CACHE_VERSION}_{symbol.replace('/', '_').replace('.', '_')}", row, ttl=TTL_SCREENER)
 
         # alimenta el historial de margen de seguridad (cálculo fresco del día)
         from . import snapshots as S
@@ -361,7 +362,7 @@ def _deep_worker(universe):
         results.sort(key=lambda r: (r["mos"] is None, -(r["mos"] or -999)))
         payload = jclean({"count": len(results), "universe": universe,
                           "updatedAt": int(time.time() * 1000), "results": results})
-        cache_set(f"deep_screener_{universe}", payload, ttl=TTL_SCREENER)
+        cache_set(f"deep_screener_{CACHE_VERSION}_{universe}", payload, ttl=TTL_SCREENER)
         with _deep_lock:
             if universe in _deep_states:
                 _deep_states[universe]["status"] = "done"
@@ -381,14 +382,14 @@ def run_deep_screener(universe: str = "us", refresh: bool = False):
             return {"status": "running", "done": state["done"], "total": state["total"], "universe": universe}
 
     if not refresh:
-        cached = cache_get(f"deep_screener_{universe}")
+        cached = cache_get(f"deep_screener_{CACHE_VERSION}_{universe}")
         if cached:
             return {"status": "done", **cached}
 
     if refresh:
         # invalida el caché por acción para recalcular de verdad
         for s in UNIVERSES[universe]:
-            cache_set(f"deep_{s.replace('/', '_').replace('.', '_')}", None, ttl=0)
+            cache_set(f"deep_{CACHE_VERSION}_{s.replace('/', '_').replace('.', '_')}", None, ttl=0)
 
     # Re-chequear estado bajo lock para evitar dos workers simultáneos
     with _deep_lock:

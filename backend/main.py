@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator, Field
 
@@ -15,8 +15,17 @@ from . import watchlist as WL
 from .data import atomic_write_json, clean_expired_cache
 from .market import get_indices, get_movers, get_oversold
 from .screener import run_deep_screener, run_screener
-
 from .stock import build_payload
+from .config import API_KEY, CACHE_VERSION
+
+
+# ─── Auth simple para endpoints mutantes ───
+
+
+def verify_api_key(x_api_key: str = Header(default=None, alias="X-API-Key")):
+    if x_api_key != API_KEY:
+        raise HTTPException(401, "API key inválida o faltante")
+    return True
 
 
 @asynccontextmanager
@@ -33,7 +42,6 @@ app = FastAPI(title="El Inversor Inteligente", lifespan=lifespan)
 FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
 
 _SYMBOL_RE = re.compile(r"^[A-Z0-9\.\-\/]{1,15}$")
-
 
 
 def _clean_symbol(symbol: str) -> str:
@@ -101,7 +109,7 @@ def api_quotes(symbols: str):
     syms = syms[:25]
     if not syms:
         return {"quotes": []}
-    key = "quotes_" + "_".join(sorted(syms)).replace("/", "_").replace(".", "_")
+    key = f"quotes_{CACHE_VERSION}_" + "_".join(sorted(syms)).replace("/", "_").replace(".", "_")
     cached = cache_get(key)
     if cached:
         return cached
@@ -154,13 +162,13 @@ def api_watchlist():
     return WL.get_watchlist()
 
 
-@app.post("/api/watchlist")
+@app.post("/api/watchlist", dependencies=[Depends(verify_api_key)])
 def api_watchlist_add(item: WatchItem):
     WL.add_symbol(item.symbol, item.targetMos)
     return {"ok": True}
 
 
-@app.delete("/api/watchlist/{symbol}")
+@app.delete("/api/watchlist/{symbol}", dependencies=[Depends(verify_api_key)])
 def api_watchlist_remove(symbol: str):
     WL.remove_symbol(_clean_symbol(symbol))
     return {"ok": True}
@@ -217,13 +225,13 @@ def api_portfolio():
     return PF.get_portfolio()
 
 
-@app.post("/api/portfolio")
+@app.post("/api/portfolio", dependencies=[Depends(verify_api_key)])
 def api_portfolio_add(p: Position):
     PF.add_position(p.symbol, p.date, p.price, p.shares, p.note)
     return {"ok": True}
 
 
-@app.delete("/api/portfolio/{pid}")
+@app.delete("/api/portfolio/{pid}", dependencies=[Depends(verify_api_key)])
 def api_portfolio_remove(pid: int):
     PF.remove_position(pid)
     return {"ok": True}
@@ -251,7 +259,7 @@ def api_notes_get(symbol: str):
     return NT.get_note(_clean_symbol(symbol))
 
 
-@app.post("/api/notes/{symbol}")
+@app.post("/api/notes/{symbol}", dependencies=[Depends(verify_api_key)])
 def api_notes_set(symbol: str, n: Note):
     return NT.set_note(_clean_symbol(symbol), n.thesis, n.risks, n.moats)
 
@@ -325,7 +333,7 @@ class Backup(BaseModel):
         return out
 
 
-@app.post("/api/restore")
+@app.post("/api/restore", dependencies=[Depends(verify_api_key)])
 def api_restore(b: Backup):
     # Validar notas antes de tocar disco (estructura estricta de dict[str, dict])
     notes = {}

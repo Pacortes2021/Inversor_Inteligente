@@ -6,7 +6,13 @@ import time
 from pathlib import Path
 
 import pandas as pd
-import yfinance as yf
+
+from .yfinance_wrapper import (
+    safe_ticker, safe_info, safe_history, safe_financials, safe_dividends,
+    safe_calendar, safe_shares, safe_recommendations, safe_earnings_estimate,
+    safe_revenue_estimate, safe_earnings_dates, safe_insider_transactions,
+    safe_institutional_holders, safe_news, safe_download, is_degraded,
+)
 
 CACHE_DIR = Path(__file__).resolve().parent.parent / "cache"
 CACHE_DIR.mkdir(exist_ok=True)
@@ -125,27 +131,27 @@ class RawData:
         # cada tarea usa su propio Ticker: yfinance no garantiza thread-safety
         # sobre la misma instancia
         def T():
-            return yf.Ticker(symbol)
+            return safe_ticker(symbol)
 
         tasks = {
-            "info": lambda: T().info or {},
-            "prices": lambda: T().history(period="max", interval="1d", auto_adjust=True),
-            "inc_a": lambda: T().income_stmt,
-            "inc_q": lambda: T().quarterly_income_stmt,
-            "bs_a": lambda: T().balance_sheet,
-            "bs_q": lambda: T().quarterly_balance_sheet,
-            "cf_a": lambda: T().cashflow,
-            "cf_q": lambda: T().quarterly_cashflow,
-            "dividends": lambda: T().dividends,
-            "calendar": lambda: T().calendar,
-            "shares": lambda: T().get_shares_full(start=start),
-            "recommendations": lambda: T().recommendations,
-            "earnings_estimate": lambda: T().earnings_estimate,
-            "revenue_estimate": lambda: T().revenue_estimate,
-            "earnings_dates": lambda: T().earnings_dates,
-            "insider_transactions": lambda: T().insider_transactions,
-            "institutional_holders": lambda: T().institutional_holders,
-            "news": lambda: T().news,
+            "info": lambda: safe_info(T()) or {},
+            "prices": lambda: safe_history(T(), period="max", interval="1d", auto_adjust=True),
+            "inc_a": lambda: safe_financials(T(), "income_stmt"),
+            "inc_q": lambda: safe_financials(T(), "quarterly_income_stmt"),
+            "bs_a": lambda: safe_financials(T(), "balance_sheet"),
+            "bs_q": lambda: safe_financials(T(), "quarterly_balance_sheet"),
+            "cf_a": lambda: safe_financials(T(), "cashflow"),
+            "cf_q": lambda: safe_financials(T(), "quarterly_cashflow"),
+            "dividends": lambda: safe_dividends(T()),
+            "calendar": lambda: safe_calendar(T()) or {},
+            "shares": lambda: safe_shares(T(), start=start),
+            "recommendations": lambda: safe_recommendations(T()),
+            "earnings_estimate": lambda: safe_earnings_estimate(T()),
+            "revenue_estimate": lambda: safe_revenue_estimate(T()),
+            "earnings_dates": lambda: safe_earnings_dates(T()),
+            "insider_transactions": lambda: safe_insider_transactions(T()),
+            "institutional_holders": lambda: safe_institutional_holders(T()),
+            "news": lambda: safe_news(T()),
         }
         with ThreadPoolExecutor(max_workers=8) as ex:
             futures = {name: ex.submit(self._safe, fn) for name, fn in tasks.items()}
@@ -206,9 +212,11 @@ def bond_yield_10y() -> float:
     if cached is not None:
         return cached
     try:
-        h = yf.Ticker("^TNX").history(period="5d")
-        y = float(h["Close"].dropna().iloc[-1])
-        cache_set("_bond10y", y, ttl=12 * 3600)
-        return y
+        h = safe_download("^TNX", period="5d", interval="1d", progress=False, auto_adjust=True)
+        if h is not None and not h.empty:
+            y = float(h["Close"].dropna().iloc[-1])
+            cache_set("_bond10y", y, ttl=12 * 3600)
+            return y
     except Exception:
-        return 4.3  # valor razonable de respaldo
+        pass
+    return 4.3  # valor razonable de respaldo
