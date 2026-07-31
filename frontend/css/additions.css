@@ -649,6 +649,26 @@
   margin-bottom: 6px;
 }
 
+/* ── SUMMARY SIDEBAR STICKY (desktop) ── */
+@media (min-width: 1025px) {
+  .summary-sidebar-card {
+    position: sticky;
+    top: 70px;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+  }
+  .summary-sidebar-card::-webkit-scrollbar { width: 4px; }
+}
+
+@media (min-width: 1400px) {
+  .charts-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .chart-card.wide {
+    grid-column: span 3;
+  }
+}
+
 /* ── EARNINGS INSIGHT WARNING ── */
 .earnings-warning {
   margin: 8px 0;

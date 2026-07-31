@@ -461,7 +461,6 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   transition: opacity 0.25s ease;
 }
 .card:hover {
-  transform: translateY(-3px);
   box-shadow: var(--shadow-hover);
   border-color: var(--border-glow);
 }
