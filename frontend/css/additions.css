@@ -606,6 +606,49 @@
   color: var(--red);
 }
 
+/* ── WATCHLIST HEADER ── */
+.wl-header-card {
+  padding: 24px;
+  box-shadow: var(--shadow-card);
+}
+.wl-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.wl-subtitle {
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 600px;
+}
+.wl-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.wl-loading {
+  padding: 40px 0;
+}
+.wl-loading p {
+  margin-top: 12px;
+  font-weight: 600;
+}
+.wl-empty {
+  padding: 60px 0;
+}
+.wl-empty-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+}
+.wl-empty-title {
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
 /* ── EARNINGS INSIGHT WARNING ── */
 .earnings-warning {
   margin: 8px 0;

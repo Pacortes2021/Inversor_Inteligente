@@ -3,8 +3,6 @@
    Design System: Financial Dashboard · Dark-first · Glassmorphic
    ===================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
 /* ── TOKENS DARK (default) ── */
 :root {
   /* Backgrounds */
@@ -118,6 +116,19 @@
   padding: 0;
 }
 
+/* ── FOCUS VISIBLE (accesibilidad teclado) ── */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 0;
+}
+
 /* ── BODY ── */
 body {
   background-color: var(--bg);
@@ -203,6 +214,9 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   cursor: not-allowed;
   filter: none;
 }
+[data-theme="light"] .btn:not(:disabled) {
+  color: #fff;
+}
 .btn-sm {
   padding: 4px 11px;
   font-size: 11.5px;
@@ -262,8 +276,12 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   align-items: center;
   justify-content: center;
   font-size: 15px;
+  color: #000;
   box-shadow: 0 4px 12px var(--primary-glow);
   animation: brandPulse 4s ease-in-out infinite;
+}
+[data-theme="light"] .brand-icon {
+  color: #fff;
 }
 @keyframes brandPulse {
   0%, 100% { box-shadow: 0 4px 12px var(--primary-glow); }
@@ -553,6 +571,9 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   border-color: transparent;
   color: #000;
   font-weight: 700;
+}
+[data-theme="light"] .btn-hdr-action.btn-green {
+  color: #fff;
 }
 .btn-hdr-action.btn-green:hover {
   filter: brightness(1.1);
@@ -1283,6 +1304,12 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   border-left: 3px solid var(--primary);
   cursor: pointer;
 }
+/* Solo filas realmente navegables muestran pointer */
+#wl-table tbody tr,
+#pf-table tbody tr,
+#screener-table tbody tr {
+  cursor: pointer;
+}
 
 /* Numeric column */
 .data-table th.num, .data-table td.num,
@@ -1530,6 +1557,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   justify-content: center;
   transition: all 0.2s ease;
 }
+[data-theme="light"] .sb-open { color: #fff; }
 .sb-open:hover { transform: scale(1.1); box-shadow: 0 6px 28px var(--primary-glow); }
 
 /* =====================================================================

@@ -8,11 +8,11 @@
   <!-- Fuentes Premium -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&family=Fraunces:ital,opsz,wght@1,9..144,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   
   <!-- CSS Principal -->
-  <link rel="stylesheet" href="css/style.css?v=23.0">
-  <link rel="stylesheet" href="css/additions.css?v=23.0">
+  <link rel="stylesheet" href="css/style.css?v=24.0">
+  <link rel="stylesheet" href="css/additions.css?v=24.0">
   
   <!-- ECharts CDN -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
@@ -221,7 +221,7 @@
           </div>
           <div class="card-value" id="fv-consensus-val">—</div>
           <div class="card-subtext" id="fv-mos-pct">—</div>
-          <div class="card-subtext" id="fv-analyst-target" style="font-size:10px; border-top:1px dashed #cbd5e1; margin-top:4px; padding-top:4px; font-weight:600">—</div>
+          <div class="card-subtext" id="fv-analyst-target" style="font-size:10px; border-:1px dashed var(--border-dark); margin-top:4px; padding-top:4px; font-weight:600">—</div>
         </div>
 
         <!-- Tarjeta 2: Graham Model -->
@@ -257,19 +257,19 @@
           </div>
           <div class="metrics-list-small">
             <div class="metric-list-row" title="Z > 2.9 (Zona Segura), Z < 1.1 (Zona de Quiebra). Mide solvencia financiera.">
-              <span class="k" style="border-bottom:1px dashed #cbd5e1; cursor:help">Altman Z-Score:</span>
+              <span class="k" style="border-:1px dashed var(--border-dark); cursor:help">Altman Z-Score:</span>
               <span class="v" id="ind-altman">—</span>
             </div>
             <div class="metric-list-row" title="Score (0-9): 7-9 es excelente, 0-3 es débil. Evalúa rentabilidad y liquidez histórica.">
-              <span class="k" style="border-bottom:1px dashed #cbd5e1; cursor:help">Piotroski Score:</span>
+              <span class="k" style="border-:1px dashed var(--border-dark); cursor:help">Piotroski Score:</span>
               <span class="v" id="ind-piotroski">—</span>
             </div>
             <div class="metric-list-row" title="Activos Corrientes - Pasivos Corrientes. Capacidad de pagar obligaciones a corto plazo.">
-              <span class="k" style="border-bottom:1px dashed #cbd5e1; cursor:help">Working Capital:</span>
+              <span class="k" style="border-:1px dashed var(--border-dark); cursor:help">Working Capital:</span>
               <span class="v" id="ind-wc">—</span>
             </div>
             <div class="metric-list-row" title="Porcentaje de la empresa que está en manos de directivos y ejecutivos.">
-              <span class="k" style="border-bottom:1px dashed #cbd5e1; cursor:help">Insiders Own:</span>
+              <span class="k" style="border-:1px dashed var(--border-dark); cursor:help">Insiders Own:</span>
               <span class="v" id="ind-insider" style="font-weight:700; color:var(--green)">—</span>
             </div>
           </div>
@@ -282,19 +282,19 @@
           </div>
           <div class="metrics-list-small">
             <div class="metric-list-row" title="RSI < 30 (Sobrevendido, potencial compra), RSI > 70 (Sobrecomprado, potencial venta).">
-              <span class="k" style="border-bottom:1px dashed #cbd5e1; cursor:help">RSI (14d):</span>
+              <span class="k" style="border-:1px dashed var(--border-dark); cursor:help">RSI (14d):</span>
               <span class="v" id="ind-rsi">—</span>
             </div>
             <div class="metric-list-row" title="Precio actual respecto a la media móvil simple de 50 días. Verde indica tendencia alcista.">
-              <span class="k" style="border-bottom:1px dashed #cbd5e1; cursor:help">vs MA50:</span>
+              <span class="k" style="border-:1px dashed var(--border-dark); cursor:help">vs MA50:</span>
               <span class="v" id="ind-ma50">—</span>
             </div>
             <div class="metric-list-row" title="Precio actual respecto a la media móvil de 200 días. Soporte o tendencia de largo plazo.">
-              <span class="k" style="border-bottom:1px dashed #cbd5e1; cursor:help">vs MA200:</span>
+              <span class="k" style="border-:1px dashed var(--border-dark); cursor:help">vs MA200:</span>
               <span class="v" id="ind-ma200">—</span>
             </div>
             <div class="metric-list-row" title="Porcentaje de flotación vendido en corto (Short float). Sentimiento bajista del mercado.">
-              <span class="k" style="border-bottom:1px dashed #cbd5e1; cursor:help">Short Float:</span>
+              <span class="k" style="border-:1px dashed var(--border-dark); cursor:help">Short Float:</span>
               <span class="v" id="ind-short" style="font-weight:700; color:var(--red)">—</span>
             </div>
           </div>
@@ -1257,15 +1257,15 @@
 
 <!-- ============================ VISTA WATCHLIST ============================ -->
 <div id="view-watchlist" class="view hidden">
-  <section class="card" style="padding:24px; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+  <section class="card wl-header-card">
     <div class="screener-head">
       <div>
-        <h2 style="font-family:'Outfit',sans-serif; font-size:24px; font-weight:800; color:var(--text); margin-bottom:8px;">⭐ Watchlist Premium</h2>
-        <p class="card-sub" style="font-size:13px; color:var(--muted); max-width:600px;">
+        <h2 class="wl-title">⭐ Watchlist Premium</h2>
+        <p class="card-sub wl-subtitle">
           Tus acciones seguidas de cerca con margen de seguridad objetivo. Evalúa métricas avanzadas y su comportamiento de mercado en tiempo real.
         </p>
       </div>
-      <div class="head-actions" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <div class="head-actions wl-actions">
         <div class="chart-toggles-style" id="wl-perf-toggles">
           <button class="tg-btn active" data-period="1D">1D</button>
           <button class="tg-btn" data-period="5D">1 Sem</button>
@@ -1277,11 +1277,11 @@
       </div>
     </div>
     
-    <div id="wl-loading" class="loading hidden" style="padding:40px 0;"><div class="spinner"></div><p style="margin-top:12px; font-weight:600;">Analizando fundamentales y mercado…</p></div>
+    <div id="wl-loading" class="loading hidden wl-loading"><div class="spinner"></div><p>Analizando fundamentales y mercado…</p></div>
     
-    <div id="wl-empty" class="empty-state hidden" style="padding:60px 0;">
-      <div style="font-size:40px; margin-bottom:12px;">⭐</div>
-      <p style="font-weight:600; font-size:16px; margin-bottom:6px;">Aún no sigues ninguna acción.</p>
+    <div id="wl-empty" class="empty-state hidden wl-empty">
+      <div class="wl-empty-icon">⭐</div>
+      <p class="wl-empty-title">Aún no sigues ninguna acción.</p>
       <p class="muted">Busca una empresa y presiona la estrella <b>Seguir</b> en su página de análisis para agregarla aquí.</p>
     </div>
     
@@ -1424,25 +1424,25 @@
       <p class="card-sub" style="margin-bottom:16px;">Simula la tasa de crecimiento anual compuesto (CAGR) o proyecta el valor futuro de tu inversión.</p>
       
       <div class="cagr-inputs-grid grid-2col">
-        <label style="font-size:12.5px; font-weight:600; color:#334155;">Monto Inicial ($)
-          <input type="number" id="cagr-in-principal" value="1000" step="100" style="width:100%; margin-top:4px; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+        <label style="font-size:12.5px; font-weight:600; color:var(--text);">Monto Inicial ($)
+          <input type="number" id="cagr-in-principal" value="1000" step="100" style="width:100%; margin-top:4px; padding:8px; border:1px solid var(--border-dark); border-radius:6px; background:var(--panel); color:var(--text);">
         </label>
-        <label style="font-size:12.5px; font-weight:600; color:#334155;">Tasa CAGR Anual (%)
-          <input type="number" id="cagr-in-rate" value="12.5" step="0.5" style="width:100%; margin-top:4px; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+        <label style="font-size:12.5px; font-weight:600; color:var(--text);">Tasa CAGR Anual (%)
+          <input type="number" id="cagr-in-rate" value="12.5" step="0.5" style="width:100%; margin-top:4px; padding:8px; border:1px solid var(--border-dark); border-radius:6px; background:var(--panel); color:var(--text);">
         </label>
-        <label style="font-size:12.5px; font-weight:600; color:#334155; grid-column:span 2;">Años de Proyección (<b id="cagr-lbl-years">5</b> años)
+        <label style="font-size:12.5px; font-weight:600; color:var(--text); grid-column:span 2;">Años de Proyección (<b id="cagr-lbl-years">5</b> años)
           <input type="range" id="cagr-in-years" min="1" max="30" value="5" step="1" style="width:100%; margin-top:4px;">
         </label>
       </div>
 
-      <div class="cagr-result-box" style="padding:16px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+      <div class="cagr-result-box" style="padding:16px; background:var(--panel-2); border-radius:8px; border:1px solid var(--border-dark); display:flex; justify-content:space-between; align-items:center;">
         <div>
-          <span style="font-size:12px; color:#64748b; font-weight:600;">Valor Futuro Estimado</span>
-          <div id="cagr-res-future" style="font-size:24px; font-weight:800; color:#10b981;">$1,802 USD</div>
+          <span style="font-size:12px; color:var(--muted); font-weight:600;">Valor Futuro Estimado</span>
+          <div id="cagr-res-future" style="font-size:24px; font-weight:800; color:var(--green);">$1,802 USD</div>
         </div>
         <div style="text-align:right;">
-          <span style="font-size:12px; color:#64748b; font-weight:600;">Ganancia Total / Multiplicador</span>
-          <div id="cagr-res-gain" style="font-size:14px; font-weight:700; color:#0f172a;">+$802 (1.80x)</div>
+          <span style="font-size:12px; color:var(--muted); font-weight:600;">Ganancia Total / Multiplicador</span>
+          <div id="cagr-res-gain" style="font-size:14px; font-weight:700; color:var(--text);">+$802 (1.80x)</div>
         </div>
       </div>
     </div>
@@ -1488,15 +1488,15 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script src="js/format.js?v=23.0"></script>
-  <script src="js/glossary.js?v=23.0"></script>
-  <script src="js/charts.js?v=23.0"></script>
-  <script src="js/screener.js?v=23.0"></script>
-  <script src="js/compare.js?v=23.0"></script>
-  <script src="js/watchlist.js?v=23.0"></script>
-  <script src="js/portfolio.js?v=23.0"></script>
-  <script src="js/dashboard.js?v=23.0"></script>
-  <script src="js/app.js?v=23.0"></script>
-  <script src="js/mobile-nav.js?v=23.0"></script>
+<script src="js/format.js?v=24.0"></script>
+  <script src="js/glossary.js?v=24.0"></script>
+  <script src="js/charts.js?v=24.0"></script>
+  <script src="js/screener.js?v=24.0"></script>
+  <script src="js/compare.js?v=24.0"></script>
+  <script src="js/watchlist.js?v=24.0"></script>
+  <script src="js/portfolio.js?v=24.0"></script>
+  <script src="js/dashboard.js?v=24.0"></script>
+  <script src="js/app.js?v=24.0"></script>
+  <script src="js/mobile-nav.js?v=24.0"></script>
 </body>
 </html>
