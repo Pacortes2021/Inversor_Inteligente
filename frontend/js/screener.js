@@ -123,7 +123,7 @@ function smaMatch(r) {
   const period = document.getElementById('f-sma-period')?.value;
   if (!period) return null;
   const side = document.getElementById('f-sma-side')?.value || 'near';
-  const band = Math.max(0.5, toNum(document.getElementById('f-sma-band')?.value) ?? 3);
+  const band = toNum(document.getElementById('f-sma-band')?.value) ?? 3;
   const inRange = d => {
     if (d == null) return false;
     if (side === 'below') return d <= 0 && d >= -band;
@@ -147,7 +147,6 @@ function filteredRows() {
   const maxDeVal        = document.getElementById('f-max-de')?.value;
   const smaPeriodVal    = document.getElementById('f-sma-period')?.value;
   const smaSideVal      = document.getElementById('f-sma-side')?.value;
-  const smaBandVal      = document.getElementById('f-sma-band')?.value;
 
   const minMos       = toNum(minMosVal);
   const maxPe        = toNum(maxPeVal);
@@ -156,7 +155,6 @@ function filteredRows() {
   const minNetMargin = toNum(minNetMarginVal);
   const minFcfYield  = toNum(minFcfYieldVal);
   const maxDe        = toNum(maxDeVal);
-  const smaBand      = Math.max(0.5, toNum(smaBandVal) ?? 3);
 
   let rows = [...(scr.data || [])];  if (sector)       rows = rows.filter(r => r.sector === sector);
   if (text)         rows = rows.filter(r =>
