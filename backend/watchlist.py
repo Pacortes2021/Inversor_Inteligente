@@ -6,7 +6,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from .data import atomic_write_json, bond_yield_10y, load_json
+from .data import atomic_write_json, bond_yield_10y, load_json, price_history
 from .screener import scan_one_deep
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
@@ -60,24 +60,36 @@ def get_watchlist():
             
         if d is not None and "Close" in d:
             closes = d["Close"].dropna()
-            if len(closes) >= 2:
-                current = closes.iloc[-1]
-                perf["1D"] = ((current / closes.iloc[-2]) - 1) * 100
-                if len(closes) >= 6: perf["5D"] = ((current / closes.iloc[-6]) - 1) * 100
-                if len(closes) >= 22: perf["1M"] = ((current / closes.iloc[-22]) - 1) * 100
-                if len(closes) >= 250: perf["1Y"] = ((current / closes.iloc[0]) - 1) * 100
-                
-                # RSI 14
-                if len(closes) >= 15:
-                    delta = closes.diff()
-                    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-                    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-                    rs = gain / loss
-                    rsi = 100 - (100 / (1 + rs))
-                    perf["RSI"] = rsi.iloc[-1]
-                
-                # Reemplazar precio cacheado por precio fresco
-                out["price"] = current
+            if len(closes) < 2:
+                closes = None
+        else:
+            closes = None
+        if closes is None:
+            try:
+                h = price_history(sym, period="1y", interval="1d")
+                if h is not None and not h.empty:
+                    closes = h["Close"].dropna()
+            except Exception:
+                closes = None
+
+        if closes is not None and len(closes) >= 2:
+            current = closes.iloc[-1]
+            perf["1D"] = ((current / closes.iloc[-2]) - 1) * 100
+            if len(closes) >= 6: perf["5D"] = ((current / closes.iloc[-6]) - 1) * 100
+            if len(closes) >= 22: perf["1M"] = ((current / closes.iloc[-22]) - 1) * 100
+            if len(closes) >= 250: perf["1Y"] = ((current / closes.iloc[0]) - 1) * 100
+
+            # RSI 14
+            if len(closes) >= 15:
+                delta = closes.diff()
+                gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+                loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+                rs = gain / loss
+                rsi = 100 - (100 / (1 + rs))
+                perf["RSI"] = rsi.iloc[-1]
+
+            # Reemplazar precio cacheado por precio fresco
+            out["price"] = current
         
         out["perf"] = perf
         

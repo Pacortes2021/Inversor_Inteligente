@@ -3,7 +3,7 @@
 import { $ } from "./dom.js";
 
 export function initTheme() {
-  const stored = localStorage.getItem("theme") || "dark";
+  const stored = localStorage.getItem("theme") || "light";
   setTheme(stored);
 }
 

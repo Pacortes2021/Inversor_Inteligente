@@ -32,7 +32,7 @@ const COLS_DEEP = [
 
 const COLS_TARGETS2030 = [
   ["symbol", "Símbolo"], ["name", "Empresa"],
-  ["price", "Precio Actual", "num"], ["basePe", "PER Mediana", "num"], ["eps2030", "EPS 2030E", "num"],
+  ["price", "Precio Actual", "num"], ["basePe", "PE Salida", "num"], ["eps2030", "EPS 2030E", "num"],
   ["targetCons", "Obj. Conservador (-20%)", "num"], ["cagrCons", "CAGR Cons.", "num"],
   ["targetBase", "★ Obj. Base (Mediana)", "num"], ["cagrBase", "★ CAGR Base", "num"],
   ["upsideBase", "Upside Base", "num"],

@@ -5,7 +5,7 @@ import { fmtPrice, fmtBig, fmtPct, fmtRatio, escHtml, pctClass } from "./format.
 import { renderCompareCharts, charts } from "./charts.js";
 
 const cmp = { symbols: [], payloads: {}, adding: false };
-const CMP_COLORS = ["#d4af37", "#3b82f6", "#22c55e", "#8b5cf6"];
+const CMP_COLORS = ["#d97706", "#0d9488", "#3b82f6", "#8b5cf6"];
 
 export async function cmpAdd(inputStr) {
   if (!inputStr) return;

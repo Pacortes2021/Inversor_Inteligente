@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 import yfinance as yf
 
-from .data import TTL_SCREENER, bond_yield_10y, cache_get, cache_set, jclean
+from .data import TTL_SCREENER, bond_yield_10y, cache_get, cache_set, jclean, price_history
 from .screener import UNIVERSE_US
 
 
@@ -31,9 +31,9 @@ def get_indices():
         return cached
 
     tickers = {
-        "^GSPC": {"name": "S&P 500", "icon": "📊"},
-        "^IXIC": {"name": "Nasdaq", "icon": "💻"},
-        "^VIX": {"name": "VIX", "icon": "⚠️"},
+        "^GSPC": {"name": "S&P 500", "icon": ""},
+        "^IXIC": {"name": "Nasdaq", "icon": ""},
+        "^VIX": {"name": "VIX", "icon": ""},
     }
     bond = bond_yield_10y()
 
@@ -61,7 +61,7 @@ def get_indices():
         out.append({
             "symbol": "^TNX",
             "name": "Bono 10Y",
-            "icon": "🏦",
+            "icon": "",
             "price": round(bond, 2),
             "changePct": None,
             "spark": [],
@@ -84,7 +84,14 @@ def get_oversold():
     def _scan(sym):
         try:
             t = yf.Ticker(sym)
-            h = t.history(period="3mo", interval="1d", auto_adjust=True)
+            try:
+                h = t.history(period="3mo", interval="1d", auto_adjust=True)
+                if h is None or h.empty:
+                    h = None
+            except Exception:
+                h = None
+            if h is None:
+                h = price_history(sym, period="3mo", interval="1d")
             if h is None or h.empty or len(h) < 20:
                 return None
             closes = h["Close"].dropna()

@@ -1,112 +1,115 @@
 /* =====================================================================
-   El Inversor Inteligente 2.0 — PREMIUM DARK TERMINAL EDITION
-   Design System: Financial Dashboard · Dark-first · Glassmorphic
+   El Inversor Inteligente 2.0 — DESIGN SYSTEM v2 (Light-first minimal)
+   Estética fintech moderna: superficies planas, bordes sutiles, sin neón
    ===================================================================== */
 
-/* ── TOKENS DARK (default) ── */
+/* ── TOKENS LIGHT (default) ── */
 :root {
   /* Backgrounds */
-  --bg:           #060a12;
-  --bg-2:         #0a101d;
-  --panel:        rgba(15, 23, 38, 0.88);
-  --panel-2:      #111c2e;
-  --glass:        rgba(10, 16, 29, 0.82);
+  --bg:           #f6f7f9;
+  --bg-2:         #eef0f3;
+  --panel:        #ffffff;
+  --panel-2:      #f8f9fb;
+  --glass:        rgba(255, 255, 255, 0.85);
 
   /* Borders */
-  --border:       rgba(255, 255, 255, 0.08);
-  --border-dark:  rgba(255, 255, 255, 0.14);
-  --border-glow:  rgba(0, 230, 153, 0.3);
+  --border:       #e4e7ec;
+  --border-dark:  #d0d5dd;
+  --border-glow:  transparent;
 
   /* Text */
-  --text:         #f1f5f9;
-  --text-2:       #cbd5e1;
-  --muted:        #64748b;
+  --text:         #101828;
+  --text-2:       #475467;
+  --muted:        #667085;
 
-  /* Brand / Primary — Neon Emerald */
-  --primary:        #00e699;
-  --primary-hover:  #00c784;
-  --primary-soft:   rgba(0, 230, 153, 0.12);
-  --primary-glow:   rgba(0, 230, 153, 0.25);
+  /* Brand / Primary — Teal sobrio */
+  --primary:        #0d9488;
+  --primary-hover:  #0f766e;
+  --primary-soft:   #f0fdfa;
+  --primary-glow:   transparent;
 
-  /* Accent — Electric Sapphire Blue */
-  --cyan:       #38bdf8;
-  --cyan-soft:  rgba(56, 189, 248, 0.14);
+  /* Accent */
+  --cyan:       #0284c7;
+  --cyan-soft:  #f0f9ff;
 
   /* Semantic Colors */
-  --green:        #00e699;
-  --green-soft:   rgba(0, 230, 153, 0.14);
-  --green-border: rgba(0, 230, 153, 0.35);
-  --green-text:   #00e699;
+  --green:        #059669;
+  --green-soft:   #ecfdf5;
+  --green-border: #a7f3d0;
+  --green-text:   #047857;
 
-  --red:        #ff4d6d;
-  --red-soft:   rgba(255, 77, 109, 0.14);
-  --red-border: rgba(255, 77, 109, 0.35);
-  --red-text:   #ff4d6d;
+  --red:        #e11d48;
+  --red-soft:   #fff1f2;
+  --red-border: #fecdd3;
+  --red-text:   #be123c;
 
-  --gold:        #ffb703;
-  --gold-soft:   rgba(255, 183, 3, 0.14);
-  --gold-border: rgba(255, 183, 3, 0.35);
-  --gold-text:   #ffb703;
+  --gold:        #d97706;
+  --gold-soft:   #fffbeb;
+  --gold-border: #fde68a;
+  --gold-text:   #b45309;
 
   /* Layout */
   --radius:     10px;
   --radius-lg:  14px;
   --radius-xl:  18px;
 
-  /* Shadows */
-  --shadow:       0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-hover: 0 16px 48px rgba(0, 0, 0, 0.65), 0 0 24px rgba(0, 230, 153, 0.2);
-  --shadow-card:  0 4px 20px rgba(0, 0, 0, 0.4);
-  --shadow-glow:  0 0 24px rgba(0, 230, 153, 0.2);
+  /* Shadows — planos y sutiles */
+  --shadow:       0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.04);
+  --shadow-hover: 0 4px 12px rgba(16, 24, 40, 0.09);
+  --shadow-card:  0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-glow:  none;
 }
 
-/* ── TOKENS LIGHT (toggle) ── */
-[data-theme="light"] {
-  --bg:           #f4f6f9;
-  --bg-2:         #e9ecef;
-  --panel:        #ffffff;
-  --panel-2:      #f8f9fa;
-  --glass:        rgba(255, 255, 255, 0.95);
+/* ── TOKENS DARK (secundario, sin neón) ── */
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg:           #0b0f14;
+  --bg-2:         #10161d;
+  --panel:        #131a22;
+  --panel-2:      #1a222c;
+  --glass:        rgba(11, 15, 20, 0.85);
 
-  --border:       #dee2e6;
-  --border-dark:  #ced4da;
-  --border-glow:  #adb5bd;
+  /* Borders */
+  --border:       rgba(255, 255, 255, 0.07);
+  --border-dark:  rgba(255, 255, 255, 0.12);
+  --border-glow:  transparent;
 
-  --text:         #111827;
-  --text-2:       #374151;
-  --muted:        #6b7280;
+  /* Text */
+  --text:         #e6edf3;
+  --text-2:       #b6c2cf;
+  --muted:        #7d8590;
 
-  /* Brand / Primary — Deep Teal/Blue for Light Mode */
-  --primary:        #0f766e;
-  --primary-hover:  #0d9488;
-  --primary-soft:   #f0fdfa;
-  --primary-glow:   rgba(15, 118, 110, 0.15);
+  /* Brand / Primary — Teal claro legible sobre dark */
+  --primary:        #2dd4bf;
+  --primary-hover:  #5eead4;
+  --primary-soft:   rgba(45, 212, 191, 0.10);
+  --primary-glow:   transparent;
 
   /* Accent */
-  --cyan:       #0369a1;
-  --cyan-soft:  #f0f9ff;
+  --cyan:       #38bdf8;
+  --cyan-soft:  rgba(56, 189, 248, 0.10);
 
-  /* Semantic Colors - High Contrast for White BG */
-  --green:        #15803d;
-  --green-soft:   #f0fdf4;
-  --green-border: #bbf7d0;
-  --green-text:   #166534;
+  /* Semantic Colors */
+  --green:        #34d399;
+  --green-soft:   rgba(52, 211, 153, 0.10);
+  --green-border: rgba(52, 211, 153, 0.35);
+  --green-text:   #6ee7b7;
 
-  --red:        #b91c1c;
-  --red-soft:   #fef2f2;
-  --red-border: #fecaca;
-  --red-text:   #991b1b;
+  --red:        #fb7185;
+  --red-soft:   rgba(251, 113, 133, 0.10);
+  --red-border: rgba(251, 113, 133, 0.35);
+  --red-text:   #fda4af;
 
-  --gold:        #b45309;
-  --gold-soft:   #fffbeb;
-  --gold-border: #fde68a;
-  --gold-text:   #92400e;
+  --gold:        #fbbf24;
+  --gold-soft:   rgba(251, 191, 36, 0.10);
+  --gold-border: rgba(251, 191, 36, 0.35);
+  --gold-text:   #fcd34d;
 
-  /* Shadows - Crisp, no neon */
-  --shadow:       0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
-  --shadow-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-  --shadow-card:  0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-glow:  0 4px 12px rgba(0, 0, 0, 0.05);
+  /* Shadows */
+  --shadow:       0 1px 3px rgba(0, 0, 0, 0.40);
+  --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.50);
+  --shadow-card:  0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-glow:  none;
 }
 
 /* ── RESET ── */
@@ -132,41 +135,33 @@ textarea:focus-visible {
 /* ── BODY ── */
 body {
   background-color: var(--bg);
-  background-image:
-    radial-gradient(ellipse at 20% 0%, rgba(0, 210, 140, 0.04) 0%, transparent 55%),
-    radial-gradient(ellipse at 80% 0%, rgba(59, 130, 246, 0.04) 0%, transparent 55%);
   color: var(--text);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 14px;
+  font-size: 14.5px;
   line-height: 1.55;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-[data-theme="light"] body {
-  background-image:
-    radial-gradient(ellipse at 20% 0%, rgba(5, 150, 105, 0.06) 0%, transparent 55%),
-    radial-gradient(ellipse at 80% 0%, rgba(2, 132, 199, 0.04) 0%, transparent 55%);
+  font-feature-settings: "cv11", "ss01";
 }
 
 h1, h2, h3, .brand-name {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 800;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
 h2 {
-  font-size: 17px;
+  font-size: 18px;
   color: var(--text);
   margin-bottom: 6px;
   font-weight: 700;
 }
 
 h3 {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text);
-  font-weight: 700;
+  font-weight: 650;
   letter-spacing: -0.01em;
 }
 
@@ -174,7 +169,7 @@ h3 {
 .hidden { display: none !important; }
 
 b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Inter', monospace;
+  font-family: inherit;
   font-variant-numeric: tabular-nums;
 }
 
@@ -399,7 +394,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   color: var(--primary);
   font-size: 12.5px;
   min-width: 52px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
 }
 .search-item .name {
   color: var(--text-2);
@@ -519,14 +514,14 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
 .price-value {
   font-size: 26px;
   font-weight: 900;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
   color: var(--text);
   letter-spacing: -0.02em;
 }
 .price-change-value {
   font-size: 13px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
 }
 .after-hours-lbl {
   font-size: 10.5px;
@@ -537,7 +532,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   font-size: 12.5px;
   font-weight: 700;
   color: var(--text-2);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
 }
 .after-hours-chg {
   font-size: 11px;
@@ -594,7 +589,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   font-size: 22px;
   font-weight: 900;
   color: var(--primary);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
   box-shadow: 0 4px 16px var(--primary-glow);
 }
 
@@ -704,7 +699,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
 .summary-card-item .card-value {
   font-size: 22px;
   font-weight: 800;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
   color: var(--text);
   margin-top: 6px;
   letter-spacing: -0.02em;
@@ -752,7 +747,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   padding: 2px 0;
 }
 .metric-list-row .k { color: var(--muted); font-weight: 500; }
-.metric-list-row .v { font-weight: 700; color: var(--text); font-family: 'JetBrains Mono', monospace; }
+.metric-list-row .v { font-weight: 700; color: var(--text); font-family: inherit; font-variant-numeric: tabular-nums; }
 .metric-list-row .v.green { color: var(--green); }
 .metric-list-row .v.red   { color: var(--red); }
 .metric-list-row .v.gold  { color: var(--gold); }
@@ -790,7 +785,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   padding: 2px 8px;
   border-radius: 5px;
   border: 1px solid var(--green-border);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
 }
 .chart-controls { display: flex; gap: 8px; align-items: center; }
 .chart-toggles-style, .chart-periods-style {
@@ -859,7 +854,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
 }
 .metrics-row-item:last-child { border-bottom: none; }
 .metrics-row-item .label { color: var(--muted); font-weight: 500; }
-.metrics-row-item .val   { font-weight: 700; color: var(--text); font-family: 'JetBrains Mono', monospace; }
+.metrics-row-item .val   { font-weight: 700; color: var(--text); font-family: inherit; font-variant-numeric: tabular-nums; }
 .val-spark-wrapper { display: flex; align-items: center; gap: 6px; }
 .sparkline-inline  { display: inline-flex; align-items: center; vertical-align: middle; }
 
@@ -870,7 +865,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   font-size: 10px;
   color: var(--muted);
   font-weight: 600;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
 }
 .range-progress-track {
   flex: 1;
@@ -927,7 +922,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
 }
 .perf-tag-col .dir { font-size: 10px; font-weight: 800; text-transform: uppercase; }
 .perf-tag-col .lbl { font-size: 9px; margin-top: 1px; }
-.perf-tag-col b    { display: block; font-size: 10.5px; font-family: 'JetBrains Mono', monospace; }
+.perf-tag-col b    { display: block; font-size: 10.5px; font-family: inherit; font-variant-numeric: tabular-nums; }
 
 /* =====================================================================
    VALUATION / MODELS TAB
@@ -969,7 +964,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
 }
 
 .sensitivity { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 14px; }
-.sens-table { width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'JetBrains Mono', monospace; }
+.sens-table { width: 100%; border-collapse: collapse; font-size: 11px; font-family: inherit; font-variant-numeric: tabular-nums; }
 .sens-table th, .sens-table td {
   padding: 5px 6px;
   text-align: center;
@@ -1006,8 +1001,8 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   font-size: 13px;
 }
 .models-table tr:last-child td { border-bottom: none; }
-.models-table .fair   { font-weight: 700; text-align: right; font-family: 'JetBrains Mono', monospace; }
-.models-table .upside { font-weight: 600; text-align: right; font-family: 'JetBrains Mono', monospace; }
+.models-table .fair   { font-weight: 700; text-align: right; font-family: inherit; font-variant-numeric: tabular-nums; }
+.models-table .upside { font-weight: 600; text-align: right; font-family: inherit; font-variant-numeric: tabular-nums; }
 .consensus-row td {
   font-weight: 700;
   color: var(--primary);
@@ -1030,7 +1025,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   border-bottom: 1px solid var(--border);
 }
 #growth-table th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
-#growth-table td.num { text-align: right; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+#growth-table td.num { text-align: right; font-weight: 700; font-family: inherit; font-variant-numeric: tabular-nums; }
 
 .charts-grid {
   display: grid;
@@ -1075,7 +1070,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
 }
 .ratios-grid .qstat:hover { border-color: var(--border-glow); }
 .ratios-grid .qstat .k { color: var(--muted); font-size: 11px; font-weight: 500; }
-.ratios-grid .qstat .v { font-weight: 700; font-size: 13.5px; color: var(--text); font-family: 'JetBrains Mono', monospace; }
+.ratios-grid .qstat .v { font-weight: 700; font-size: 13.5px; color: var(--text); font-family: inherit; font-variant-numeric: tabular-nums; }
 
 /* Dividends */
 .div-safety { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -1314,7 +1309,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
 .data-table th.num, .data-table td.num,
 #wl-table td.num, #pf-table td.num, #screener-table td.num {
   text-align: right;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
 }
@@ -1323,7 +1318,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
 #screener-table td.sym, #wl-table td.sym, #pf-table td.sym {
   font-weight: 800;
   color: var(--primary);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
   font-size: 13px;
 }
 
@@ -1357,7 +1352,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   border-radius: 6px;
   font-weight: 800;
   font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
 }
 .score-chip.hi  { background: var(--green-soft); color: var(--green-text); border: 1px solid var(--primary); box-shadow: 0 0 10px var(--primary-glow); }
@@ -1369,7 +1364,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   border-radius: 6px;
   font-weight: 700;
   font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
 }
 .verdict-chip.buy  { background: var(--green-soft); color: var(--green-text); border: 1px solid var(--primary); box-shadow: 0 0 10px var(--primary-glow); }
 .verdict-chip.hold { background: var(--gold-soft);  color: var(--gold-text);  border: 1px solid var(--gold);    box-shadow: 0 0 10px rgba(255, 183, 3, 0.2); }
@@ -1411,7 +1406,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   align-items: center;
   gap: 5px;
   font-size: 12px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
   box-shadow: 0 0 10px var(--primary-glow);
 }
 .cmp-chip .close { cursor: pointer; color: var(--muted); transition: color 0.12s; }
@@ -1427,7 +1422,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   text-align: left;
   border-bottom: 1px solid var(--border);
 }
-#cmp-table td.num { text-align: right; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+#cmp-table td.num { text-align: right; font-weight: 600; font-family: inherit; font-variant-numeric: tabular-nums; }
 #cmp-table tbody tr:first-child td { font-weight: 800; color: var(--primary); }
 
 /* =====================================================================
@@ -1487,7 +1482,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   font-weight: 800;
   font-size: 14px;
   color: var(--text);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
 }
@@ -1526,7 +1521,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
 .sb-item .sb-sym {
   font-weight: 800;
   color: var(--primary);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
   font-size: 13px;
 }
 .sb-item .sb-quote { text-align: right; }
@@ -1534,9 +1529,9 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   font-weight: 700;
   font-size: 12.5px;
   color: var(--text);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
 }
-.sb-item .sb-chg { font-size: 10.5px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.sb-item .sb-chg { font-size: 10.5px; font-weight: 600; font-family: inherit; font-variant-numeric: tabular-nums; }
 
 .sb-open {
   position: fixed;
@@ -1660,7 +1655,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
 }
 .check-row:last-child { border-bottom: none; }
 .check-row .lbl  { flex: 1; font-size: 12.5px; color: var(--text-2); }
-.check-row .val  { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; }
+.check-row .val  { font-family: inherit; font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 700; }
 .check-row .icon { font-size: 16px; width: 22px; text-align: center; }
 
 .ratios-tables-grid {
@@ -1745,14 +1740,14 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
 .donut-fill { fill: none !important; stroke: var(--primary); stroke-width: 8; stroke-linecap: round; }
 .donut-text {
   position: absolute;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
   font-size: 15px;
   font-weight: 800;
   color: var(--text);
   text-align: center;
 }
 .scorecard-info-box { display: flex; flex-direction: column; gap: 4px; }
-.scorecard-title    { font-size: 16px; font-weight: 800; color: var(--text); margin: 0; font-family: 'Outfit', sans-serif; }
+.scorecard-title    { font-size: 16px; font-weight: 800; color: var(--text); margin: 0; font-family: 'Space Grotesk', 'Inter', sans-serif; }
 .scorecard-desc-text{ font-size: 13px; color: var(--muted); margin: 0; }
 
 .scorecard-list-container { display: flex; flex-direction: column; gap: 4px; }
@@ -1788,7 +1783,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   padding: 3px 10px;
   border-radius: 6px;
   border: 1px solid var(--border);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
 }
 
 /* =====================================================================
@@ -1836,7 +1831,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   background: var(--panel-2);
 }
 .modal-header h3 {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
   font-size: 16px;
   font-weight: 800;
   color: var(--text);

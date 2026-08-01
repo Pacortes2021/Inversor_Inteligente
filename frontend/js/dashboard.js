@@ -4,6 +4,7 @@ import { $ } from "./dom.js";
 import { fmtPct, fmtNum, fmtPrice, fmtBig, escHtml } from "./format.js";
 
 const dash = { loaded: false };
+const IDX_ICONS = { "^GSPC": "i-trend-up", "^IXIC": "i-chart", "^DJI": "i-landmark", "^N225": "i-flag", "^VIX": "i-flame" };
 
 function dashRetry() { dash.loaded = false; }
 
@@ -36,7 +37,7 @@ async function loadIndices() {
       return `
         <div class="dash-index-card" data-symbol="${escHtml(idx.symbol)}">
           <div class="dash-index-head">
-            <span class="dash-index-icon">${idx.icon}</span>
+            <span class="dash-index-icon"><svg class="h-ico"><use href="#${IDX_ICONS[idx.symbol] || "i-chart"}"/></svg></span>
             <span class="dash-index-name">${escHtml(idx.name)}</span>
           </div>
           <div class="dash-index-price">${fmtNum(idx.price, 2)}</div>

@@ -1,10 +1,23 @@
-"""Proyecciones de analistas y Growth Grid (estimaciones a futuro)."""
+"""Proyecciones de analistas y Growth Grid (estimaciones a futuro).
 
-import math
+EPS: consenso de Yahoo (yfinance) como fuente primaria, con cross-check
+contra StockAnalysis.com (EPS del próximo año fiscal) y ajuste por splits
+cuando el histórico de EDGAR no refleja desdoblamientos recientes.
+"""
+
+import re
+import time
+
 import pandas as pd
 
 from . import metrics as M
-from .data import jclean
+from .data import cache_get, cache_set, jclean
+
+SA_TTL = 24 * 3600  # caché de StockAnalysis: 24 h
+G_EPS_LONG_CAP = 0.35  # techo defensivo para crecimiento EPS de largo plazo
+G_EPS_LONG_FLOOR = 0.03
+G_REV_LONG_CAP = 0.25
+G_REV_LONG_FLOOR = 0.02
 
 
 def _safe_int(v):
@@ -16,7 +29,125 @@ def _safe_int(v):
         return None
 
 
-def _build_growth_grid(raw, info, annuals=None, price=None):
+def _sa_url_symbol(symbol):
+    return re.sub(r"[^a-zA-Z0-9]", "-", symbol).lower()
+
+
+def _sa_eps_forecast(symbol):
+    """EPS estimado del próximo año fiscal (StockAnalysis.com) con caché 24h.
+
+    Devuelve {"eps": float|None, "growth": float|None (%), "year": str|None,
+    "analysts": int|None} o None si no hay datos libres.
+    """
+    key = f"sa_eps_{_sa_url_symbol(symbol)}"
+    cached = cache_get(key)
+    if cached is not None:
+        return cached
+
+    result = None
+    try:
+        import requests
+
+        url = f"https://stockanalysis.com/stocks/{_sa_url_symbol(symbol)}/forecast/"
+        r = requests.get(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml",
+            },
+            timeout=15,
+        )
+        if r.status_code == 200 and r.text:
+            result = _parse_sa_forecast(r.text)
+    except Exception:
+        result = None
+
+    cache_set(key, result, ttl=SA_TTL)
+    return result
+
+
+def _cell_value(text):
+    """Limpia una celda HTML ('$312.06', '17.38%', '1.02B') a float o None."""
+    t = re.sub(r"<[^>]+>", "", text or "")
+    t = re.sub(r"<!--.*?-->", "", t).strip()
+    t = re.sub(r"&nbsp;", " ", t)
+    if not t or t in ("-", "—", "N/A", "Upgrade"):
+        return None
+    m = re.match(r"^-?\$?\s?([\d.,]+)\s?%?$", t)
+    if not m:
+        return None
+    try:
+        return float(m.group(1).replace(",", ""))
+    except ValueError:
+        return None
+
+
+def _parse_sa_forecast(html):
+    """Extrae el EPS del próximo año fiscal y su crecimiento del HTML de SA."""
+    tables = re.findall(r"<table[^>]*>.*?</table>", html, re.S)
+    for t in tables:
+        text = re.sub(r"<[^>]+>", " ", t)
+        if "No. Analysts" not in text:
+            continue
+        rows = []
+        for row in re.findall(r"<tr[^>]*>(.*?)</tr>", t, re.S):
+            cells = re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", row, re.S)
+            if not cells:
+                continue
+            label = re.sub(r"<[^>]+>|<!--.*?-->", "", cells[0]).strip()
+            values = []
+            for c in cells[1:]:
+                raw = re.sub(r"<[^>]+>|<!--.*?-->", "", c).strip()
+                values.append(raw)
+            rows.append((label, values))
+
+        eps_row = next((r for r in rows if r[0] == "EPS"), None)
+        growth_row = next((r for r in rows if r[0] == "EPS Growth"), None)
+        analysts_row = next((r for r in rows if r[0] == "No. Analysts"), None)
+        header_row = next((r for r in rows if r[0] == "Fiscal Year"), None)
+        if not eps_row or not growth_row:
+            return None
+
+        eps, idx = None, None
+        for i in range(len(eps_row[1]) - 1, -1, -1):
+            v = _cell_value(eps_row[1][i])
+            if v is not None:
+                eps, idx = v, i
+                break
+        if eps is None or idx is None:
+            return None
+        # El último dato numérico debe estar en el bloque de proyecciones
+        # (últimas 3 columnas); si no, es un dato real, no una proyección.
+        if idx < len(eps_row[1]) - 3:
+            return None
+
+        growth = _cell_value(growth_row[1][idx]) if idx < len(growth_row[1]) else None
+        analysts = _cell_value(analysts_row[1][idx]) if analysts_row and idx < len(analysts_row[1]) else None
+        year = header_row[1][idx] if header_row and idx < len(header_row[1]) else None
+        return {
+            "eps": eps,
+            "growth": growth,          # en %
+            "year": year,
+            "analysts": int(analysts) if analysts else None,
+        }
+    return None
+
+
+def _growth_from_df(df, period):
+    """Crecimiento de una fila de earnings/revenue_estimate, o None."""
+    if df is None or df.empty or period not in df.index:
+        return None
+    try:
+        v = df.loc[period, "growth"]
+        if v is None or pd.isna(v):
+            return None
+        return float(v)
+    except Exception:
+        return None
+
+
+def _build_growth_grid(symbol, raw, info, annuals=None, price=None):
     """Construye la grilla de crecimiento histórico + proyecciones 5 años."""
     if not annuals:
         return None
@@ -42,15 +173,22 @@ def _build_growth_grid(raw, info, annuals=None, price=None):
     fcf_map = {a["year"]: a.get("fcf") for a in sorted_annuals}
     div_map = {a["year"]: a.get("dividendPS") for a in sorted_annuals}
 
-    last_y = max(hist_years)
     last_eps = eps_map.get(last_y)
     if last_eps and price_val and info.get("trailingPE"):
         expected_eps = price_val / info["trailingPE"]
-        if expected_eps > 0 and (expected_eps / last_eps) >= 5.0:
-            scale_factor = round(expected_eps / last_eps)
-            for y_k in eps_map:
-                if eps_map[y_k] is not None:
-                    eps_map[y_k] = round(eps_map[y_k] * scale_factor, 2)
+        if expected_eps > 0:
+            # Ajuste por splits mal reflejados en EDGAR: si el EPS histórico
+            # difiere >=5x del implícito en el precio (en cualquier sentido),
+            # re-escalar la serie completa al factor entero más cercano.
+            ratio = expected_eps / last_eps
+            if ratio >= 5.0 or ratio <= 0.2:
+                factor = round(ratio) if ratio >= 1.0 else round(1.0 / ratio)
+                factor = max(2, factor)
+                if ratio < 1.0:
+                    factor = 1.0 / factor
+                for y_k in eps_map:
+                    if eps_map[y_k] is not None:
+                        eps_map[y_k] = round(eps_map[y_k] * factor, 2)
 
     sh_out = info.get("sharesOutstanding") or 1
 
@@ -58,19 +196,45 @@ def _build_growth_grid(raw, info, annuals=None, price=None):
     eps_est_df = getattr(raw, "earnings_estimate", None)
 
     g_rev_1y = 0.08
-    if rev_est_df is not None and not rev_est_df.empty and "+1y" in rev_est_df.index:
-        v = rev_est_df.loc["+1y", "growth"]
-        if pd.notna(v) and v is not None:
-            g_rev_1y = float(v)
+    v = _growth_from_df(rev_est_df, "+1y")
+    if v is not None:
+        g_rev_1y = v
+    g_rev_2y = _growth_from_df(rev_est_df, "+2y")
 
     g_eps_1y = 0.10
-    if eps_est_df is not None and not eps_est_df.empty and "+1y" in eps_est_df.index:
-        v = eps_est_df.loc["+1y", "growth"]
-        if pd.notna(v) and v is not None:
-            g_eps_1y = float(v)
+    v = _growth_from_df(eps_est_df, "+1y")
+    if v is not None:
+        g_eps_1y = v
+    g_eps_2y = _growth_from_df(eps_est_df, "+2y")
 
-    g_rev_long = max(0.02, g_rev_1y * 0.85) if g_rev_1y > 0 else 0.03
-    g_eps_long = max(0.03, g_eps_1y * 0.85) if g_eps_1y > 0 else 0.04
+    # Cross-check del crecimiento del próximo año contra StockAnalysis.com.
+    # Si divergen >50% (relativo), preferir SA (más actualizado) y marcar.
+    eps_src = {"yahooGrowth": round(g_eps_1y * 100, 2), "saGrowth": None, "saYear": None, "conflict": False}
+    sa = _sa_eps_forecast(symbol) if symbol else None
+    if sa and sa.get("growth") is not None:
+        sa_g = sa["growth"] / 100.0
+        eps_src["saGrowth"] = round(sa_g * 100, 2)
+        eps_src["saYear"] = sa.get("year")
+        if abs(sa_g - g_eps_1y) > 0.50 * max(abs(sa_g), abs(g_eps_1y), 0.05):
+            eps_src["conflict"] = True
+            g_eps_1y = sa_g
+
+    # Largo plazo: media de +1y y +2y (si existe), decaída y con techo.
+    g_eps_long_raw = g_eps_1y
+    if g_eps_2y is not None:
+        g_eps_long_raw = (g_eps_1y + g_eps_2y) / 2.0
+    if g_eps_long_raw > 0:
+        g_eps_long = max(G_EPS_LONG_FLOOR, min(G_EPS_LONG_CAP, g_eps_long_raw * 0.85))
+    else:
+        g_eps_long = 0.04
+
+    g_rev_long_raw = g_rev_1y
+    if g_rev_2y is not None:
+        g_rev_long_raw = (g_rev_1y + g_rev_2y) / 2.0
+    if g_rev_long_raw > 0:
+        g_rev_long = max(G_REV_LONG_FLOOR, min(G_REV_LONG_CAP, g_rev_long_raw * 0.85))
+    else:
+        g_rev_long = 0.03
 
     cur_rev = rev_map.get(last_y) or 0
     cur_ebitda = ebitda_map.get(last_y) or (cur_rev * 0.25)
@@ -176,10 +340,11 @@ def _build_growth_grid(raw, info, annuals=None, price=None):
             build_metric_row("Free Cash Flow", fcf_all, in_millions=True),
             build_metric_row("Dividends", div_all, in_millions=False, is_per_share=True),
         ],
+        "epsSources": eps_src,
     })
 
 
-def build_estimates_payload(raw, info, annuals=None, price=None):
+def build_estimates_payload(raw, info, annuals=None, price=None, symbol=None):
     """Extrae proyecciones de analistas y estimaciones de EPS/Ingresos."""
     rec_dict = {}
     try:
@@ -254,7 +419,7 @@ def build_estimates_payload(raw, info, annuals=None, price=None):
         pass
 
     try:
-        growth_grid = _build_growth_grid(raw, info, annuals, price)
+        growth_grid = _build_growth_grid(symbol, raw, info, annuals, price)
     except Exception:
         growth_grid = None
 

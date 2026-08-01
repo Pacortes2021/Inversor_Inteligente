@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 import yfinance as yf
 
-from .data import atomic_write_json, cache_get, cache_set, load_json
+from .data import atomic_write_json, cache_get, cache_set, load_json, price_history
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
@@ -32,11 +32,18 @@ def _history(symbol, key, ttl=6 * 3600):
     cached = cache_get(key)
     if cached:
         return pd.Series({pd.Timestamp(d): v for d, v in cached})
-    h = yf.Ticker(symbol).history(period="12y", interval="1d", auto_adjust=True)
+    try:
+        h = yf.Ticker(symbol).history(period="12y", interval="1d", auto_adjust=True)
+        if h is None or h.empty:
+            h = None
+    except Exception:
+        h = None
+    if h is None:
+        h = price_history(symbol, period="12y", interval="1d")
     if h is None or h.empty:
         return None
     s = h["Close"].dropna()
-    s.index = s.index.tz_localize(None)
+    s.index = s.index.tz_localize(None) if getattr(s.index, "tz", None) is not None else s.index
     cache_set(key, [[str(i.date()), round(float(v), 4)] for i, v in s.items()], ttl=ttl)
     return s
 

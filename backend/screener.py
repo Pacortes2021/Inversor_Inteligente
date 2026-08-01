@@ -15,7 +15,7 @@ import yfinance as yf
 from . import edgar as E
 from . import metrics as M
 from . import valuation as V
-from .data import TTL_SCREENER, bond_yield_10y, cache_get, cache_set, jclean
+from .data import TTL_SCREENER, bond_yield_10y, cache_get, cache_set, jclean, price_history
 from .config import CACHE_VERSION
 
 # ------------------------------------------------------------------ universos
@@ -141,7 +141,13 @@ def _calc_target_scenarios(price, pe, fpe, pe_median, info, eps2030_override=Non
     clean_fpe = fpe if (fpe and 0 < fpe <= 80) else None
     clean_med = pe_median if (pe_median and 0 < pe_median <= 80) else None
     
-    base_pe = clean_med or clean_fpe or clean_pe or 20.0
+    # PE de salida: la mediana histórica (15a) incluye años de burbuja
+    # (PE 40-100x en tech de alto crecimiento); proyectarla a 2030 sobre el
+    # EPS ya crecido duplica el optimismo. Se limita al múltiplo vigente
+    # (forward, o trailing si no hay) — nunca por encima de lo que el
+    # mercado paga HOY por ese crecimiento.
+    current_pe = clean_fpe or clean_pe or 15.0
+    base_pe = min(clean_med or current_pe, current_pe)
     if base_pe <= 0: base_pe = 20.0
     
     cons_pe = max(5.0, base_pe * 0.80)
@@ -261,10 +267,17 @@ def _pe_stats_from_edgar(symbol, edgar_hist):
     eps = E.to_series(edgar_hist, "eps")
     if eps is None or len(eps) < 4:
         return None
-    h = yf.Ticker(symbol).history(period="15y", interval="1mo")
+    try:
+        h = yf.Ticker(symbol).history(period="15y", interval="1mo")
+        if h is None or h.empty:
+            h = None
+    except Exception:
+        h = None
+    if h is None:
+        h = price_history(symbol, period="15y", interval="1mo")
     if h is None or h.empty:
         return None
-    h.index = h.index.tz_localize(None)
+    h.index = h.index.tz_localize(None) if getattr(h.index, "tz", None) is not None else h.index
     eps = M.split_adjust(eps, M.splits_from_prices(h), "per_share")
     monthly = h["Close"].dropna()
     pe = M.ratio_history(monthly, eps, "per_share")
@@ -303,9 +316,9 @@ def scan_one_deep(symbol, bond10y):
         roc = V.greenblatt_roc(info, annuals)
         f_score = V.piotroski_f_score(annuals)
         
-        from .stock import _build_estimates_payload
+        from .estimates import build_estimates_payload
         raw = yf.Ticker(symbol)
-        est = _build_estimates_payload(raw, info, annuals, price)
+        est = build_estimates_payload(raw, info, annuals, price, symbol=symbol)
         eps_2030 = None
         grid = est.get("growthGrid", {}) if est else {}
         if grid and "rows" in grid:

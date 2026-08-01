@@ -474,6 +474,19 @@ export function renderGrowthEstimatesGrid(grid) {
     subtextEl.textContent = `Currency in ${curr}. All numbers in millions.`;
   }
 
+  const src = grid.epsSources;
+  const warnEl = $("est-growth-warning");
+  if (warnEl) {
+    if (src && src.conflict) {
+      const saPct = src.saGrowth != null ? fmtPct(src.saGrowth, 1) : "—";
+      const yfPct = src.yahooGrowth != null ? fmtPct(src.yahooGrowth, 1) : "—";
+      warnEl.innerHTML = `⚠️ Fuentes de EPS en conflicto: Yahoo ${yfPct} vs StockAnalysis ${saPct}${src.saYear ? ` (${escHtml(src.saYear)})` : ''}. Se usó StockAnalysis (más actualizado).`;
+      warnEl.style.display = "block";
+    } else {
+      warnEl.style.display = "none";
+    }
+  }
+
   // Header row
   let headHtml = `<tr>
     <th style="text-align:left; font-weight:700; min-width:140px; padding:12px 16px; background:var(--panel);">Year</th>`;
@@ -918,7 +931,7 @@ export function renderDcfFv(d) {
         <div style="font-size:22px; font-weight:800; color:${mos != null && mos >= 0 ? 'var(--green)' : 'var(--red)'}; margin-top:4px;">${mos != null ? fmtPct(mos, 1, true) : dcfVal == null ? 'No aplica' : '—'}</div>
       </div>
     </div>
-    ${dcfVal == null ? `<div style="padding:14px; background:var(--gold-soft); border:1px solid var(--gold-border); border-radius:var(--radius); font-size:12.5px; color:var(--gold-text);">ℹ️ El modelo DCF de FCF no aplica para esta empresa (puede ser financiera o tener FCF negativo). Se usa el modelo DDM para el consenso.</div>` : `<p class="muted" style="font-size:12.5px;">Supuestos usados: Crecimiento FCF base <b>${inputs.growth != null ? fmtPct(inputs.growth * 100, 1) : '—'}</b>, WACC <b>${inputs.discount != null ? fmtPct(inputs.discount * 100, 1) : '—'}</b>, Tasa terminal <b>${inputs.terminal != null ? fmtPct(inputs.terminal * 100, 1) : '—'}</b>. Puedes ajustarlos en la pestaña <b>⚖️ Ratios &amp; Growth</b>.</p>`}
+    ${dcfVal == null ? `<div style="padding:14px; background:var(--gold-soft); border:1px solid var(--gold-border); border-radius:var(--radius); font-size:12.5px; color:var(--gold-text);">ℹ️ El modelo DCF de FCF no aplica para esta empresa (puede ser financiera o tener FCF negativo). Se usa el modelo DDM para el consenso.</div>` : `<p class="muted" style="font-size:12.5px;">Supuestos usados: Crecimiento FCF base <b>${inputs.growth != null ? fmtPct(inputs.growth * 100, 1) : '—'}</b>, WACC <b>${inputs.discount != null ? fmtPct(inputs.discount * 100, 1) : '—'}</b>, Tasa terminal <b>${inputs.terminal != null ? fmtPct(inputs.terminal * 100, 1) : '—'}</b>. Puedes ajustarlos en la pestaña <b><svg class="h-ico" style="width:14px;height:14px;vertical-align:-2px"><use href="#i-calc"/></svg>Ratios &amp; Growth</b>.</p>`}
   `;
 }
 
@@ -1029,7 +1042,7 @@ export function renderAdditional(d) {
       filingsHtml = p.secFilings.map(f => `<a href="${safeUrl(f.url)}" target="_blank" rel="noopener" class="btn btn-sm">${escHtml(f.form)} (${escHtml(f.date)})</a>`).join('');
     } else if (typeof p.secFilings === 'object') {
       filingsHtml = Object.entries(p.secFilings).map(([type, url]) =>
-        `<a href="${safeUrl(url)}" target="_blank" rel="noopener" class="btn btn-sm">${type === 'annual' ? '📄 10-K Anual (SEC)' : '📄 10-Q Trimestral (SEC)'}</a>`
+        `<a href="${safeUrl(url)}" target="_blank" rel="noopener" class="btn btn-sm">${type === 'annual' ? '<svg class="h-ico" style="width:14px;height:14px;vertical-align:-2px"><use href="#i-doc"/></svg>10-K Anual (SEC)' : '<svg class="h-ico" style="width:14px;height:14px;vertical-align:-2px"><use href="#i-doc"/></svg>10-Q Trimestral (SEC)'}</a>`
       ).join('');
     }
   }

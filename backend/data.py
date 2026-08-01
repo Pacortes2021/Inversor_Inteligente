@@ -206,16 +206,117 @@ class RawData:
         return self.prices is not None and not self.prices.empty
 
 
+def nasdaq_history(symbol, start, end, interval="1d"):
+    """Histórico EOD de Nasdaq (ajustado por splits) como fallback de Yahoo.
+
+    Devuelve un DataFrame con Open/High/Low/Close/Volume (índice de fechas
+    tz-naive) o None. `interval="1mo"` resamplea el cierre mensual.
+    """
+    from .config import CACHE_VERSION
+
+    key = f"nq_{CACHE_VERSION}_{symbol.replace('/', '_').replace('.', '_')}_{start}_{end}"
+    cached = cache_get(key)
+    if cached:
+        rows = cached
+    else:
+        rows = None
+        try:
+            import requests
+
+            url = "https://api.nasdaq.com/api/quote/{}/historical".format(symbol)
+            r = requests.get(
+                url,
+                params={
+                    "assetclass": "stocks",
+                    "fromdate": start,
+                    "todate": end,
+                    "limit": 99999,
+                },
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+                    "Accept": "application/json",
+                    "Referer": "https://www.nasdaq.com/",
+                },
+                timeout=20,
+            )
+            if r.status_code == 200:
+                data = r.json()
+                table = ((data.get("data") or {}).get("tradesTable") or {})
+                rows = table.get("rows") or None
+        except Exception:
+            rows = None
+        if rows:
+            cache_set(key, rows, ttl=6 * 3600)
+
+    if not rows:
+        return None
+    out = []
+    for r in rows:
+        try:
+            d = pd.to_datetime(r.get("date"))
+            close = float((r.get("close") or "").replace("$", "").replace(",", ""))
+            o = float((r.get("open") or "").replace("$", "").replace(",", "")) or close
+            h = float((r.get("high") or "").replace("$", "").replace(",", "")) or close
+            l = float((r.get("low") or "").replace("$", "").replace(",", "")) or close
+            v = int((r.get("volume") or "0").replace(",", "")) or 0
+            out.append((d, o, h, l, close, v))
+        except Exception:
+            continue
+    if not out:
+        return None
+    df = pd.DataFrame(out, columns=["Date", "Open", "High", "Low", "Close", "Volume"])
+    df = df.set_index("Date").sort_index()
+    if interval == "1mo":
+        monthly = df["Close"].resample("ME").last().dropna()
+        df = pd.DataFrame({"Open": monthly, "High": monthly, "Low": monthly, "Close": monthly, "Volume": 0})
+    return df
+
+
+def price_history(symbol, period=None, start=None, end=None, interval="1d"):
+    """Serie de precios ajustada: Yahoo primero, fallback Nasdaq (US)."""
+    try:
+        if period:
+            h = safe_download(symbol, period=period, interval=interval, progress=False, auto_adjust=True)
+        else:
+            h = safe_download(symbol, start=start, end=end, interval=interval, progress=False, auto_adjust=True)
+        if h is not None and not h.empty:
+            return h
+    except Exception:
+        pass
+    if not start:
+        days = {"1mo": 30, "3mo": 90, "6mo": 180, "1y": 365, "5y": 1825, "10y": 3650, "12y": 4380, "15y": 5480}.get(period, 365)
+        start = (pd.Timestamp.now() - pd.DateOffset(days=days)).strftime("%Y-%m-%d")
+    end = end or pd.Timestamp.now().strftime("%Y-%m-%d")
+    h = nasdaq_history(symbol, start, end, interval=interval)
+    if h is not None:
+        return h
+    return None
+
+
 def bond_yield_10y() -> float:
-    """Rendimiento del bono del Tesoro EE.UU. a 10 años (en %), con caché."""
-    cached = cache_get("_bond10y")
+    """Rendimiento del bono del Tesoro EE.UU. a 10 años (en %), con caché.
+
+    Fuente primaria: FRED (DGS10, CSV sin API key). Fallback: ^TNX vía Yahoo.
+    """
+    cached = cache_get("_bond10y_v4")
     if cached is not None:
         return cached
+    try:
+        df = pd.read_csv("https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS10")
+        if df is not None and len(df) >= 1:
+            col = df.columns[-1]
+            y = float(pd.to_numeric(df[col], errors="coerce").dropna().iloc[-1])
+            if y > 0:
+                cache_set("_bond10y_v4", round(y, 2), ttl=12 * 3600)
+                return round(y, 2)
+    except Exception:
+        pass
     try:
         h = safe_download("^TNX", period="5d", interval="1d", progress=False, auto_adjust=True)
         if h is not None and not h.empty:
             y = float(h["Close"].dropna().iloc[-1])
-            cache_set("_bond10y", y, ttl=12 * 3600)
+            cache_set("_bond10y_v4", y, ttl=12 * 3600)
             return y
     except Exception:
         pass

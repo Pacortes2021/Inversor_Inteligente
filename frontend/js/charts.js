@@ -7,13 +7,13 @@ import { state } from "./state.js";
 export function getChartColors() {
   const dark = document.documentElement.getAttribute('data-theme') === 'dark';
   return {
-    gold:   '#d97706', green:  '#10b981', red:    '#ef4444',
+    gold:   '#d97706', green:  '#0d9488', red:    '#e11d48',
     blue:   '#3b82f6', cyan:   '#0ea5e9', violet: '#8b5cf6', amber: '#d97706',
-    text:   dark ? '#f8fafc'  : '#1e293b',
+    text:   dark ? '#f1f5f9'  : '#0f172a',
     muted:  dark ? '#94a3b8'  : '#64748b',
     border: dark ? '#1e293b'  : '#e2e8f0',
-    grid:   dark ? '#1a2236'  : '#f1f5f9',
-    panel:  dark ? 'rgba(17,24,39,0.96)' : 'rgba(255,255,255,0.98)',
+    grid:   dark ? '#1a2236'  : '#eef1f5',
+    panel:  dark ? '#131a22'  : '#ffffff',
   };
 }
 
@@ -57,7 +57,7 @@ export function showCard(id) {
 export function baseAxisStyle(cc) {
   return {
     axisLine: { lineStyle: { color: cc.border } },
-    axisLabel: { color: cc.muted, fontSize: 10, fontFamily: 'Inter, sans-serif' },
+    axisLabel: { color: cc.muted, fontSize: 11, fontFamily: 'Inter, sans-serif' },
     splitLine: { lineStyle: { color: cc.grid } },
   };
 }
@@ -65,7 +65,7 @@ export function baseAxisStyle(cc) {
 /* Retro-compatibilidad: baseAxis legacy (usa colores estáticos) */
 export const baseAxis = {
   axisLine: { lineStyle: { color: C.border } },
-  axisLabel: { color: C.muted, fontSize: 10, fontFamily: 'Inter, sans-serif' },
+  axisLabel: { color: C.muted, fontSize: 11, fontFamily: 'Inter, sans-serif' },
   splitLine: { lineStyle: { color: C.grid } },
 };
 

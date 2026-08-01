@@ -581,7 +581,8 @@ export function renderGrowthTable(d) {
 export function setStarState(inWatchlist) {
   const b = $("btn-watch");
   b.classList.toggle("active", !!inWatchlist);
-  b.innerHTML = inWatchlist ? "★ Siguiendo" : "☆ Seguir";
+  b.classList.toggle("starred", !!inWatchlist);
+  b.innerHTML = `<svg class="h-ico "><use href="#i-star"/></svg>${inWatchlist ? "Siguiendo" : "Seguir"}`;
   b.title = inWatchlist ? "Quitar de la watchlist" : "Agregar a watchlist (objetivo: MoS ≥ 25%)";
 }
 

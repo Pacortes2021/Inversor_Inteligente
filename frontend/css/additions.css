@@ -64,14 +64,14 @@
 
 /* ── SECTION HEADINGS ── */
 .section-heading {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
   font-size: 18px;
   font-weight: 700;
   color: var(--text);
   margin-bottom: 8px;
 }
 .section-heading-lg {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
   font-size: 20px;
   font-weight: 800;
   color: var(--text);
@@ -612,7 +612,7 @@
   box-shadow: var(--shadow-card);
 }
 .wl-title {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
   font-size: 24px;
   font-weight: 800;
   color: var(--text);
@@ -643,6 +643,7 @@
   font-size: 40px;
   margin-bottom: 12px;
 }
+.wl-empty-icon svg { width: 40px; height: 40px; color: var(--muted); margin: 0; }
 .wl-empty-title {
   font-weight: 600;
   font-size: 16px;
@@ -681,7 +682,7 @@
 
 /* ── OWNERSHIP SECTION ── */
 .ownership-header {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
   font-size: 18px;
   font-weight: 700;
   color: var(--text);
@@ -1146,7 +1147,7 @@
 .u-fs16 { font-size: 16px; }
 .u-eyebrow { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 12px; }
 .u-section-label { margin: 16px 0 8px; font-size: 13px; font-weight: 600; color: var(--text); }
-.u-title-card { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
+.u-title-card { font-family: 'Space Grotesk', 'Inter', sans-serif; font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
 .u-red-bold { font-weight: 700; color: var(--red); }
 .u-green-bold { font-weight: 700; color: var(--green); }
 .u-h-24-green { font-size: 24px; font-weight: 800; color: var(--green); }
@@ -1168,3 +1169,514 @@
 .u-chart-h220 { height: 220px; width: 100%; }
 .u-chart-h240 { width: 100%; height: 240px; }
 .u-range-full { width: 100%; cursor: pointer; accent-color: var(--primary); }
+.warning-chip { margin: 0 0 8px; padding: 8px 12px; border-radius: 6px; background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.4); color: #f59e0b; font-size: 12px; font-weight: 600; }
+
+/* =====================================================================
+   DESIGN v2 — Light-first minimal (overrides sobre style.css)
+   ===================================================================== */
+
+/* ── Iconos SVG sprite ── */
+.h-ico {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+  vertical-align: -3px;
+  margin-right: 6px;
+  color: var(--primary);
+}
+.h-ico-lg { width: 22px; height: 22px; }
+.h-ico-muted { color: var(--muted); }
+
+/* ── Buttons ── */
+.btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+  letter-spacing: 0.01em;
+}
+.btn:hover {
+  transform: none;
+  filter: none;
+  background: var(--primary-hover);
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.10);
+}
+.btn:active { filter: none; transform: scale(0.98); }
+
+/* ── Topbar / brand ── */
+.topbar {
+  height: 58px;
+  box-shadow: 0 1px 0 var(--border);
+}
+.brand-icon {
+  animation: none;
+  box-shadow: none;
+  border-radius: 9px;
+  color: #fff;
+}
+[data-theme="light"] .brand-icon { color: #fff; }
+.brand-name { font-size: 15.5px; font-weight: 700; }
+.brand-name em {
+  background: none;
+  -webkit-text-fill-color: var(--primary);
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+}
+.card::before { display: none; }
+.card:hover {
+  border-color: var(--border-dark);
+  box-shadow: var(--shadow-hover);
+  transform: none;
+}
+
+/* ── Analysis header ── */
+.analysis-header { background: var(--panel); }
+.analysis-header::after { background: var(--primary); }
+.company-title-row h1 { font-weight: 800; letter-spacing: -0.025em; }
+
+/* ── Summary cards ── */
+.summary-card-item {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: none;
+}
+.summary-card-item::after { display: none; }
+.summary-card-item:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-dark);
+  box-shadow: var(--shadow-hover);
+}
+.summary-card-item .card-header { font-size: 11.5px; }
+.summary-card-item .card-value {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* ── Tablas ── */
+.data-table th, #wl-table th, #pf-table th, #screener-table th {
+  background: var(--panel-2);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.data-table td, #wl-table td, #pf-table td, #screener-table td { font-size: 13px; }
+.data-table tbody tr:nth-child(even),
+#wl-table tbody tr:nth-child(even),
+#pf-table tbody tr:nth-child(even),
+#screener-table tbody tr:nth-child(even) {
+  background: rgba(16, 24, 40, 0.02);
+}
+[data-theme="dark"] .data-table tbody tr:nth-child(even),
+[data-theme="dark"] #wl-table tbody tr:nth-child(even),
+[data-theme="dark"] #pf-table tbody tr:nth-child(even),
+[data-theme="dark"] #screener-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+.data-table tbody tr:hover,
+#wl-table tbody tr:hover,
+#pf-table tbody tr:hover,
+#screener-table tbody tr:hover {
+  border-left: none;
+}
+.growth-estimates-table td { font-size: 12.5px; }
+.growth-estimates-table th { font-size: 11.5px; }
+
+/* ── Chips y badges: sin glow ── */
+.verdict-chip, .score-chip, .ds-chip, .verdict-badge-new {
+  box-shadow: none !important;
+  border-radius: 6px;
+  font-weight: 600;
+  font-family: inherit;
+}
+.ds-chip.ds-hi { border-color: var(--green-border); }
+.ds-chip.ds-mid { border-color: var(--gold-border); }
+.ds-chip.ds-lo { border-color: var(--red-border); }
+
+/* ── Botones secundarios / tabs / presets ── */
+.btn-hdr-action, .tg-btn, .period-btn, .preset-btn {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-weight: 600;
+  font-family: inherit;
+  box-shadow: none;
+}
+.btn-hdr-action:hover, .tg-btn:hover, .period-btn:hover, .preset-btn:hover {
+  border-color: var(--border-dark);
+  background: var(--panel-2);
+  color: var(--text);
+  filter: none;
+  transform: none;
+}
+.tg-btn.active, .period-btn.active {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.preset-btn.active { border-color: var(--primary); }
+.tab { font-weight: 600; }
+.tab.active::after { background: var(--primary); }
+
+/* ── Inputs y selects ── */
+.control select, .control input,
+.compare-controls input,
+.notes-grid textarea,
+.search-box,
+input[type="text"], input[type="number"], input[type="search"], select, textarea {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: inherit;
+}
+.control select:focus, .control input:focus,
+.compare-controls input:focus,
+.search-box:focus-within,
+input:focus, select:focus, textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+  outline: none;
+}
+.search-box::before { color: var(--muted); }
+.search-results {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-hover);
+  overflow: hidden;
+  background: var(--panel);
+}
+
+/* ── Otros detalles ── */
+.ratios-grid .qstat { background: var(--panel); border: 1px solid var(--border); }
+.ratios-grid .qstat:hover { border-color: var(--border-dark); }
+.ratios-grid .qstat .v { font-family: inherit; font-variant-numeric: tabular-nums; }
+.metrics-row-item .val { font-family: inherit; font-variant-numeric: tabular-nums; }
+.perf-tag-col b { font-family: inherit; font-variant-numeric: tabular-nums; }
+.models-table .fair, .models-table .upside { font-family: inherit; font-variant-numeric: tabular-nums; }
+.sens-table { font-family: inherit; font-variant-numeric: tabular-nums; }
+.slider-row label b { color: var(--primary); }
+.chart-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.heatmap { border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.sidebar { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.warning-chip {
+  background: var(--gold-soft);
+  border: 1px solid var(--gold-border);
+  color: var(--gold-text);
+}
+.verdict-badge-new.buy, .verdict-badge-new.hold, .verdict-badge-new.warn {
+  box-shadow: none !important;
+}
+
+/* =====================================================================
+   DESIGN v3 — Pase estructural (composición, espaciado, jerarquía)
+   ===================================================================== */
+
+/* ── Layout general ── */
+.view {
+  padding: 28px 32px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  max-width: 1440px;
+}
+.card {
+  margin-bottom: 0;
+  padding: 26px 28px;
+  border-radius: 14px;
+  backdrop-filter: none;
+}
+.section-heading {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.section-heading .h-ico { width: 20px; height: 20px; }
+
+/* ── Topbar ── */
+.topbar {
+  height: 64px;
+  gap: 24px;
+  padding: 0 32px;
+  background: var(--panel);
+}
+.brand-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+.brand-name { font-size: 16px; }
+.tabs { gap: 6px; }
+.tab {
+  font-size: 13.5px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  color: var(--text-2);
+  transition: background 0.15s, color 0.15s;
+}
+.tab:hover { background: var(--panel-2); color: var(--text); }
+.tab.active { background: var(--primary-soft); color: var(--primary); }
+.tab.active::after { display: none; }
+.search-box { margin-left: auto; }
+.search-box input { font-size: 13px; }
+.theme-toggle-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 15px;
+  border-radius: 9px;
+}
+
+/* ── Dashboard hero ── */
+.hero-card { padding: 26px 28px 30px; }
+.dash-indices-grid {
+  grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+  gap: 14px;
+}
+.dash-index-card {
+  padding: 18px 20px;
+  border-radius: 12px;
+  background: var(--panel);
+}
+.dash-index-name { font-size: 12.5px; }
+.dash-index-price { font-size: 27px; font-weight: 800; letter-spacing: -0.02em; }
+.dash-index-chg { font-size: 13.5px; }
+
+/* ── Dashboard grid (watchlist + sobrevendidas) ── */
+.dash-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 22px;
+  align-items: stretch;
+}
+.dash-mover-card { padding: 14px 12px; }
+.dash-mover-sym { font-size: 15px; }
+.dash-mover-rsi { font-size: 20px; }
+.dash-wl-table th { padding: 9px 10px; font-size: 10.5px; letter-spacing: 0.05em; }
+.dash-wl-table td { padding: 9px 10px; }
+.dash-subtitle { font-size: 12.5px; display: flex; align-items: center; }
+.dash-subtitle .h-ico { width: 14px; height: 14px; }
+.dash-movers-split { gap: 24px; }
+.dash-mover-row { padding: 9px 12px; }
+
+@media (max-width: 1100px) {
+  .dash-row { grid-template-columns: 1fr; }
+  .view { padding: 20px 16px 40px; }
+  .topbar { padding: 0 16px; }
+}
+
+/* ── Jerarquía de precios (análisis) ── */
+.analysis-header { padding: 24px 28px; }
+.company-title-row h1 { font-size: 24px; font-weight: 800; }
+.price-row { gap: 12px; margin-top: 8px; }
+.price-value { font-size: 42px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+.price-change-value { font-size: 16px; font-weight: 700; }
+.verdict-badge-new { font-size: 12.5px; padding: 6px 14px; border-radius: 999px; }
+.summary-card-item { padding: 18px 20px; }
+.summary-card-item .card-value { font-size: 24px; letter-spacing: -0.02em; }
+
+/* ── Celdas y cabeceras más aireadas ── */
+.data-table th, #wl-table th, #pf-table th, #screener-table th { padding: 12px 16px; }
+.data-table td, #wl-table td, #pf-table td, #screener-table td { padding: 12px 16px; }
+.table-overflow { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.growth-estimates-table { margin: 0; }
+
+/* ── Ajuste icono h4 del dashboard ── */
+.dash-subtitle .h-ico { vertical-align: -2px; }
+
+/* =====================================================================
+   DESIGN v4 — Signature: tipografía display, hero índices, detalles
+   ===================================================================== */
+
+/* ── Tipografía display (Space Grotesk) ── */
+.section-heading,
+.company-title-row h1,
+.price-value,
+.summary-card-item .card-value,
+.dash-index-price,
+.dash-mover-sym,
+.dash-mover-rsi,
+.brand-name,
+.score-chip,
+.verdict-chip,
+.verdict-badge-new {
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* ── Hero índices (panel navy con glass tiles) ── */
+.hero-card {
+  background:
+    radial-gradient(1100px 420px at 88% -30%, rgba(45, 212, 191, 0.22), transparent 62%),
+    radial-gradient(800px 380px at -10% 120%, rgba(56, 130, 246, 0.16), transparent 60%),
+    linear-gradient(135deg, #0a1322 0%, #0d2631 55%, #0c3a31 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 28px 30px 32px;
+}
+.hero-card .section-heading { color: #f8fafc; }
+.hero-card .section-heading .h-ico { color: #2dd4bf; }
+.hero-card #market-updated { color: rgba(248, 250, 252, 0.55); }
+.hero-card .dash-loading { color: rgba(248, 250, 252, 0.7); }
+.dash-index-card {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.dash-index-card:hover {
+  border-color: rgba(45, 212, 191, 0.65);
+  background: rgba(255, 255, 255, 0.11);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.5);
+}
+.dash-index-name { color: rgba(248, 250, 252, 0.68); }
+.dash-index-price { color: #ffffff; font-size: 28px; }
+.dash-index-chg.up { color: #34d399; }
+.dash-index-chg.down { color: #fb7185; }
+
+/* ── Botones con gradiente sutil ── */
+.btn {
+  background: linear-gradient(135deg, #0d9488 0%, #059669 100%);
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.30);
+}
+.btn:hover { background: linear-gradient(135deg, #0f766e 0%, #047857 100%); }
+.btn-primary, .btn-cta { background: linear-gradient(135deg, #0d9488 0%, #059669 100%); }
+
+/* ── Brand ── */
+.brand-icon {
+  background: linear-gradient(135deg, #0d9488 0%, #059669 100%);
+  box-shadow: 0 4px 12px -4px rgba(13, 148, 136, 0.5);
+}
+.brand-name em {
+  background: linear-gradient(90deg, var(--primary) 0%, var(--cyan) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* ── Cards y sombras por capas ── */
+.card {
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 12px 32px -16px rgba(16, 24, 40, 0.14);
+}
+.analysis-header { border-radius: 16px; }
+
+/* ── Pills ── */
+.verdict-chip, .score-chip, .verdict-badge-new, .ds-chip { border-radius: 999px; }
+.verdict-badge-new { padding: 6px 16px; font-weight: 700; }
+
+/* ── Números del análisis más presentes ── */
+.price-value { font-size: 46px; }
+.summary-card-item .card-value { font-size: 26px; }
+.summary-cards-grid { gap: 14px; }
+
+/* ── Acento superior de las cards (detalle sutil) ── */
+.chart-card { position: relative; }
+.chart-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 24px; right: 24px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--primary-soft), transparent);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.chart-card:hover::before { opacity: 1; }
+
+/* =====================================================================
+   DESIGN v5 — Coherencia de pestañas: iconos SVG, empty states,
+   botones con icono, chips comparador
+   ===================================================================== */
+
+/* ── Botones con icono inline ── */
+.btn-hdr-action, .btn-add-note, .btn, .a-tab, .preset-btn, .sb-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-hdr-action .h-ico, .btn-add-note .h-ico, .preset-btn .h-ico { width: 15px; height: 15px; }
+.a-tab .h-ico { width: 16px; height: 16px; }
+
+/* ── Estrella "Seguir" activa (rellena dorada) ── */
+.btn-hdr-action.starred {
+  color: #d97706;
+  border-color: rgba(217, 119, 6, 0.45);
+  background: rgba(217, 119, 6, 0.08);
+}
+.btn-hdr-action.starred .h-ico { fill: currentColor; }
+.btn-hdr-action.starred:hover { color: #b45309; background: rgba(217, 119, 6, 0.14); }
+
+/* ── Sidebar favoritos ── */
+#sb-title .h-ico, .sb-fav-row .h-ico { width: 15px; height: 15px; vertical-align: -2px; }
+.sb-open { color: #fff; }
+.sb-open .h-ico { width: 20px; height: 20px; color: #fff; }
+
+/* ── Mobile nav con iconos ── */
+.mobile-nav-link .h-ico { width: 16px; height: 16px; }
+
+/* ── Empty states (caja punteada, sin emoji 📭) ── */
+.empty-state {
+  border: 1.5px dashed var(--border-dark);
+  border-radius: 16px;
+  background: var(--panel-2);
+  padding: 40px 24px;
+}
+.empty-state::before { content: ''; display: none; }
+.wl-empty-title { font-family: 'Space Grotesk', 'Inter', sans-serif; font-weight: 700; font-size: 17px; color: var(--text); margin: 8px 0 4px; }
+.wl-empty-icon {
+  width: 56px; height: 56px;
+  margin: 0 auto;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--primary-soft), rgba(13, 148, 136, 0.05));
+  display: flex; align-items: center; justify-content: center;
+}
+.wl-empty-icon svg { width: 26px; height: 26px; color: var(--primary); margin: 0; }
+
+/* ── Chips del comparador (píldoras con punto de color) ── */
+.cmp-chips { gap: 8px; }
+.cmp-chip {
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-weight: 600;
+  background: var(--panel-2);
+  box-shadow: none;
+}
+.cmp-chip .close { margin-left: 4px; }
+
+/* ── Títulos de sección con icono: alineación ── */
+h2 .h-ico, h3 .h-ico, .u-title-card .h-ico, .section-heading .h-ico, .section-heading-lg .h-ico, summary .h-ico {
+  vertical-align: -3px;
+  margin-right: 6px;
+}
+summary .h-ico { width: 16px; height: 16px; color: var(--muted); }
+
+/* ── Reset tipográfico de controles (UA usa Arial) ── */
+button, input, select, textarea { font-family: inherit; }
+.btn { font-family: inherit; color: #fff; box-shadow: 0 2px 8px rgba(13, 148, 136, 0.30); }
+
+/* ── Iconos de índices en hero ── */
+.dash-index-icon { display: inline-flex; }
+.dash-index-icon .h-ico { width: 15px; height: 15px; color: rgba(248, 250, 252, 0.75); }

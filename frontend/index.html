@@ -8,23 +8,54 @@
   <!-- Fuentes Premium -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   
   <!-- CSS Principal -->
-  <link rel="stylesheet" href="css/style.css?v=26.0">
-  <link rel="stylesheet" href="css/additions.css?v=26.0">
+  <link rel="stylesheet" href="css/style.css?v=32.0">
+  <link rel="stylesheet" href="css/additions.css?v=32.0">
   
   <!-- ECharts CDN -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 </head>
 <body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></symbol>
+  <symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01z"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+  <symbol id="i-trend-up" viewBox="0 0 24 24"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></symbol>
+  <symbol id="i-trend-down" viewBox="0 0 24 24"><path d="m22 17-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/></symbol>
+  <symbol id="i-calc" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h.01M12 19h.01"/></symbol>
+  <symbol id="i-cash" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></symbol>
+  <symbol id="i-clipboard" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h4"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M17 4H7v6a5 5 0 0 0 10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/></symbol>
+  <symbol id="i-diamond" viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9l4-6zM2 9h20M9 3l3 6 3-6"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 13h6M9 17h6"/></symbol>
+  <symbol id="i-scroll" viewBox="0 0 24 24"><path d="M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM9 8h6M9 12h4"/></symbol>
+  <symbol id="i-money" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></symbol>
+  <symbol id="i-news" viewBox="0 0 24 24"><path d="M6 3h14v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V3zM6 7H4v12a2 2 0 0 0 2 2h11M10 7h6M10 11h6M10 15h4"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M20.59 13.41 12 22l-9-9V3h10l7.59 7.59a2 2 0 0 1 0 2.82zM7 7h.01"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+  <symbol id="i-pie" viewBox="0 0 24 24"><path d="M21.21 15.89A10 10 0 1 1 8 2.83M22 12A10 10 0 0 0 12 2v10z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4 12 14.01l-3-3"/></symbol>
+  <symbol id="i-landmark" viewBox="0 0 24 24"><path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7M12 2 3 7h18"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></symbol>
+</svg>
 
 <a href="#view-analisis" class="skip-nav">Saltar al contenido principal</a>
 
 <!-- ============================ TOP BAR / NAV GLOBAL ============================ -->
 <header class="topbar" role="banner">
   <div class="brand" data-go-home>
-    <span class="brand-icon" aria-hidden="true">◆</span>
+    <span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg></span>
     <span class="brand-name">El Inversor <em>Inteligente</em></span>
   </div>
   <nav class="tabs" role="navigation" aria-label="Navegación principal">
@@ -47,12 +78,12 @@
 
 <!-- MOBILE NAV OVERLAY -->
 <div id="mobile-nav" class="mobile-nav-overlay" role="dialog" aria-label="Menú de navegación">
-  <a href="#/inicio" class="mobile-nav-link" data-nav="inicio">🏠 Inicio</a>
-  <a href="#/analisis" class="mobile-nav-link" data-nav="analisis">📊 Análisis</a>
-  <a href="#/screener" class="mobile-nav-link" data-nav="screener">🔍 Screener</a>
+  <a href="#/inicio" class="mobile-nav-link" data-nav="inicio"><svg class="h-ico "><use href="#i-home"/></svg>Inicio</a>
+  <a href="#/analisis" class="mobile-nav-link" data-nav="analisis"><svg class="h-ico "><use href="#i-chart"/></svg>Análisis</a>
+  <a href="#/screener" class="mobile-nav-link" data-nav="screener"><svg class="h-ico "><use href="#i-search"/></svg>Screener</a>
   <a href="#/comparar" class="mobile-nav-link" data-nav="comparar">⇄ Comparar</a>
-  <a href="#/watchlist" class="mobile-nav-link" data-nav="watchlist">☆ Watchlist</a>
-  <a href="#/portafolio" class="mobile-nav-link" data-nav="portafolio">💼 Portafolio</a>
+  <a href="#/watchlist" class="mobile-nav-link" data-nav="watchlist"><svg class="h-ico "><use href="#i-star"/></svg>Watchlist</a>
+  <a href="#/portafolio" class="mobile-nav-link" data-nav="portafolio"><svg class="h-ico "><use href="#i-briefcase"/></svg>Portafolio</a>
   <input id="mobile-search-input" class="mobile-nav-search" type="text" placeholder="Buscar acción…" autocomplete="off" spellcheck="false" aria-label="Buscar acción">
   <button id="mobile-nav-close" class="mobile-nav-close">Cerrar</button>
 </div>
@@ -60,10 +91,10 @@
 <!-- ============================ VISTA INICIO / DASHBOARD ============================ -->
 <div id="view-inicio" class="view hidden">
 
-  <!-- Bloque 1: Mercado Hoy -->
-  <section class="card">
+  <!-- Bloque 1: Mercado Hoy (hero) -->
+  <section class="card hero-card">
     <div class="flex-between-baseline u-mb14" >
-      <h2 class="section-heading">📊 Mercado Hoy</h2>
+      <h2 class="section-heading"><svg class="h-ico "><use href="#i-chart"/></svg>Mercado Hoy</h2>
       <span id="market-updated" class="muted u-fs11" ></span>
     </div>
     <div id="dash-indices" class="dash-indices-grid">
@@ -71,43 +102,44 @@
     </div>
   </section>
 
-  <!-- Bloque 2: Mi Watchlist -->
-  <section class="card" id="dash-watchlist-section">
-    <div class="flex-between-baseline u-mb14" >
-      <h2 class="section-heading">⭐ Mi Watchlist</h2>
-      <a href="#/watchlist" class="dash-see-all">Ver todo →</a>
-    </div>
-    <div id="dash-watchlist">
-      <div class="dash-loading"><div class="spinner"></div><p>Cargando watchlist…</p></div>
-    </div>
-  </section>
+  <!-- Bloque 2+3: Watchlist + Sobrevendidas en grid -->
+  <div class="dash-row">
+    <section class="card" id="dash-watchlist-section">
+      <div class="flex-between-baseline u-mb14" >
+        <h2 class="section-heading"><svg class="h-ico "><use href="#i-star"/></svg>Mi Watchlist</h2>
+        <a href="#/watchlist" class="dash-see-all">Ver todo →</a>
+      </div>
+      <div id="dash-watchlist">
+        <div class="dash-loading"><div class="spinner"></div><p>Cargando watchlist…</p></div>
+      </div>
+    </section>
 
-  <!-- Bloque 3: Sobrevendidas -->
-  <section class="card">
-    <div class="flex-between-baseline u-mb14" >
-      <h2 class="section-heading">🔥 Sobrevendidas (RSI &lt; 30)</h2>
-      <a href="#/screener" class="dash-see-all">Ver screener →</a>
-    </div>
-    <div id="dash-oversold" class="dash-movers-grid">
-      <div class="dash-loading"><div class="spinner"></div><p>Escaneando universo…</p></div>
-    </div>
-  </section>
+    <section class="card">
+      <div class="flex-between-baseline u-mb14" >
+        <h2 class="section-heading"><svg class="h-ico "><use href="#i-flame"/></svg>Sobrevendidas</h2>
+        <a href="#/screener" class="dash-see-all">Ver screener →</a>
+      </div>
+      <div id="dash-oversold" class="dash-movers-grid">
+        <div class="dash-loading"><div class="spinner"></div><p>Escaneando universo…</p></div>
+      </div>
+    </section>
+  </div>
 
   <!-- Bloque 4: Top Ganadores / Perdedores -->
   <section class="card">
     <div class="flex-between-baseline u-mb14" >
-      <h2 class="section-heading">📈 Top Movers del Día</h2>
+      <h2 class="section-heading"><svg class="h-ico "><use href="#i-trend-up"/></svg>Top Movers del Día</h2>
       <a href="#/screener" class="dash-see-all">Ver screener →</a>
     </div>
     <div class="dash-movers-split">
       <div>
-        <h4 class="dash-subtitle">🚀 Ganadores</h4>
+        <h4 class="dash-subtitle"><svg class="h-ico h-ico-muted"><use href="#i-trend-up"/></svg>Ganadores</h4>
         <div id="dash-gainers" class="dash-movers-list">
           <div class="dash-loading-sm">Cargando…</div>
         </div>
       </div>
       <div>
-        <h4 class="dash-subtitle">📉 Perdedores</h4>
+        <h4 class="dash-subtitle"><svg class="h-ico h-ico-muted"><use href="#i-trend-down"/></svg>Perdedores</h4>
         <div id="dash-losers" class="dash-movers-list">
           <div class="dash-loading-sm">Cargando…</div>
         </div>
@@ -118,7 +150,7 @@
   <!-- Bloque 5: Portafolio -->
   <section class="card" id="dash-portfolio-section">
     <div class="flex-between-baseline u-mb14" >
-      <h2 class="section-heading">💼 Mi Portafolio</h2>
+      <h2 class="section-heading"><svg class="h-ico "><use href="#i-briefcase"/></svg>Mi Portafolio</h2>
       <a href="#/portafolio" class="dash-see-all">Ver portafolio →</a>
     </div>
     <div id="dash-portfolio">
@@ -128,7 +160,7 @@
 
   <!-- Bloque 6: Buscar -->
   <section class="card">
-    <h2 class="section-heading u-mb12" >🔍 Buscar Acción</h2>
+    <h2 class="section-heading u-mb12" ><svg class="h-ico "><use href="#i-search"/></svg>Buscar Acción</h2>
     <p class="card-sub u-mb12" >Escribe un símbolo o nombre para analizar cualquier empresa.</p>
     <div class="dash-search-wrap">
       <input type="text" id="dash-search-input" class="dash-search-input" placeholder="Ej: AAPL, Tesla, Coca-Cola…" autocomplete="off" spellcheck="false">
@@ -181,11 +213,11 @@
           </span>
         </div>
         <div class="header-actions">
-          <button id="btn-watch" class="btn-hdr-action">☆ Seguir</button>
-          <button id="btn-alerts" class="btn-hdr-action">🔔 Alertas</button>
+          <button id="btn-watch" class="btn-hdr-action"><svg class="h-ico "><use href="#i-star"/></svg>Seguir</button>
+          <button id="btn-alerts" class="btn-hdr-action"><svg class="h-ico "><use href="#i-bell"/></svg>Alertas</button>
           <button id="btn-compare" class="btn-hdr-action">⇄ Comparar</button>
-          <button id="btn-cagr-nav" class="btn-hdr-action">🧮 Calculadora CAGR</button>
-          <button id="btn-export-pdf" class="btn-hdr-action">📥 Exportar Reporte</button>
+          <button id="btn-cagr-nav" class="btn-hdr-action"><svg class="h-ico "><use href="#i-calc"/></svg>Calculadora CAGR</button>
+          <button id="btn-export-pdf" class="btn-hdr-action"><svg class="h-ico "><use href="#i-download"/></svg>Exportar Reporte</button>
         </div>
       </div>
       <div class="header-right">
@@ -194,10 +226,10 @@
     </div>
 
     <nav class="action-tabs" aria-label="Sub-navegación del análisis">
-      <button class="a-tab active" data-pane="summary" role="tab" aria-selected="true" aria-controls="pane-summary">📊 Resumen Ejecutivo</button>
-      <button class="a-tab" data-pane="valuation" role="tab" aria-selected="false" aria-controls="pane-valuation">💎 Centro de Valoración & Proyecciones</button>
-      <button class="a-tab" data-pane="financials-hub" role="tab" aria-selected="false" aria-controls="pane-financials-hub">📈 Financieros & Métricas</button>
-      <button class="a-tab" data-pane="ownership" role="tab" aria-selected="false" aria-controls="pane-ownership">👔 Propietarios & Datos Corporativos</button>
+      <button class="a-tab active" data-pane="summary" role="tab" aria-selected="true" aria-controls="pane-summary"><svg class="h-ico "><use href="#i-chart"/></svg>Resumen Ejecutivo</button>
+      <button class="a-tab" data-pane="valuation" role="tab" aria-selected="false" aria-controls="pane-valuation"><svg class="h-ico "><use href="#i-diamond"/></svg>Centro de Valoración & Proyecciones</button>
+      <button class="a-tab" data-pane="financials-hub" role="tab" aria-selected="false" aria-controls="pane-financials-hub"><svg class="h-ico "><use href="#i-trend-up"/></svg>Financieros & Métricas</button>
+      <button class="a-tab" data-pane="ownership" role="tab" aria-selected="false" aria-controls="pane-ownership"><svg class="h-ico "><use href="#i-briefcase"/></svg>Propietarios & Datos Corporativos</button>
     </nav>
 
     <!-- AVISOS DE CALIDAD DE DATOS (colapsable) -->
@@ -337,7 +369,7 @@
         <div class="summary-sidebar-card card">
           <div class="sidebar-header-row">
             <h3>Summary</h3>
-            <button id="btn-add-note" class="btn-add-note">✏️ Nota de Tesis</button>
+            <button id="btn-add-note" class="btn-add-note"><svg class="h-ico "><use href="#i-pencil"/></svg>Nota de Tesis</button>
           </div>
           
           <div class="summary-metrics-list">
@@ -403,7 +435,7 @@
               <span class="val" id="sum-fcf-yield">—</span>
             </div>
             <div class="metrics-row-item" title="Fecha estimada de publicación de los próximos resultados trimestrales.">
-              <span class="label u-help" >📅 Next Earnings</span>
+              <span class="label u-help" ><svg class="h-ico "><use href="#i-calendar"/></svg>Next Earnings</span>
               <span class="val u-fs11-700" id="sum-next-earnings" >—</span>
             </div>
           </div>
@@ -427,7 +459,7 @@
 
       <!-- EVALUADOR DE CALIDAD (BUFFETT SCORECARD) -->
       <section class="card u-mt20" >
-        <h2 class="section-heading">🏆 Evaluador de Calidad & Solidez Financiera</h2>
+        <h2 class="section-heading"><svg class="h-ico "><use href="#i-trophy"/></svg>Evaluador de Calidad & Solidez Financiera</h2>
         <p class="card-sub section-sub">
           Evaluación de 9 puntos cuantitativos inspirados en la filosofía de Warren Buffett y Piotroski F-Score.
         </p>
@@ -453,7 +485,7 @@
 
       <!-- TESIS DE INVERSIÓN & ANÁLISIS CUALITATIVO -->
       <section class="card" id="notes-card">
-        <h2>📝 Tesis de Inversión, Ventajas Competitivas (Moats) & Notas <span id="note-status" class="note-status">se guarda automáticamente</span></h2>
+        <h2><svg class="h-ico "><use href="#i-doc"/></svg>Tesis de Inversión, Ventajas Competitivas (Moats) & Notas <span id="note-status" class="note-status">se guarda automáticamente</span></h2>
         <p class="card-sub">La mitad que los números no capturan. Selecciona los fosos competitivos y registra tu tesis personal.</p>
         <div id="moat-checks" class="moats moat-grid"></div>
         <div class="notes-grid">
@@ -470,7 +502,7 @@
       <section class="card d-none" id="earnings-section" >
         <div class="flex-between-baseline u-mb14" >
           <h2 class="section-heading-lg">
-            📅 Reportes de Ganancias (Earnings) y Sorpresas EPS
+            <svg class="h-ico "><use href="#i-calendar"/></svg>Reportes de Ganancias (Earnings) y Sorpresas EPS
           </h2>
         </div>
         <div class="earnings-grid">
@@ -498,7 +530,7 @@
 
       <!-- RATIOS CHECKS & COMPARISON TABLES (migrado desde pane-ratios) -->
       <section class="card">
-        <h2 class="section-heading">🧮 Chequeos de Solvencia, Valoración y Retorno</h2>
+        <h2 class="section-heading"><svg class="h-ico "><use href="#i-calc"/></svg>Chequeos de Solvencia, Valoración y Retorno</h2>
         <p class="card-sub section-sub">Reglas cuantitativas de inversión valor basadas en la filosofía Graham–Buffett.</p>
 
         <!-- GRID DE CHECKS DE RATIOS (SUPERIOR) -->
@@ -724,7 +756,7 @@
 
       <!-- ESTADOS FINANCIEROS Y CAGR -->
       <section class="card" id="growth-card">
-        <h2>📈 Crecimiento Compuesto <span class="chart-tag">CAGR por período</span></h2>
+        <h2><svg class="h-ico "><use href="#i-trend-up"/></svg>Crecimiento Compuesto <span class="chart-tag">CAGR por período</span></h2>
         <p class="card-sub">Tasas de crecimiento compuesto anualizadas para el último año fiscal.</p>
         <div class="table-wrap"><table id="growth-table" class="data-table"></table></div>
       </section>
@@ -788,7 +820,7 @@
       <section class="card">
         <div class="hist-header">
           <div>
-            <h2 class="section-heading-lg u-m0" >📜 Histórico de Ratios Financieros (SEC EDGAR)</h2>
+            <h2 class="section-heading-lg u-m0" ><svg class="h-ico "><use href="#i-scroll"/></svg>Histórico de Ratios Financieros (SEC EDGAR)</h2>
             <p class="card-sub hist-sub">Evolución año a año de la rentabilidad, estructura de capital y múltiplos.</p>
           </div>
           <div id="hist-ratios-csv-wrap"></div>
@@ -804,7 +836,7 @@
       <!-- GRÁFICOS DE MÚLTIPLOS HISTÓRICOS CON MEDIANA -->
       <section class="card">
         <div class="multiples-header">
-          <h2 class="section-heading u-m0" >📊 Gráficos de Múltiplos Históricos (15 Años)</h2>
+          <h2 class="section-heading u-m0" ><svg class="h-ico "><use href="#i-chart"/></svg>Gráficos de Múltiplos Históricos (15 Años)</h2>
           <div class="chart-range-controls u-flex-gap4" id="multiples-range-controls" >
             <button class="period-btn-mult" data-range="ytd">YTD</button>
             <button class="period-btn-mult" data-range="1">1 Year</button>
@@ -838,20 +870,20 @@
       <!-- EARNINGS & DIVIDENDOS -->
       <div class="grid-2col">
         <section class="card">
-          <h2>💰 Seguridad del Dividendo</h2>
+          <h2><svg class="h-ico "><use href="#i-cash"/></svg>Seguridad del Dividendo</h2>
           <div id="div-safety" class="div-safety hidden"></div>
           <div class="chart" id="ch-divs"></div>
         </section>
 
         <section class="card">
-          <h2>💵 Historico de Beneficio Por Acción (EPS)</h2>
+          <h2><svg class="h-ico "><use href="#i-money"/></svg>Histórico de Beneficio Por Acción (EPS)</h2>
           <div class="chart" id="ch-eps"></div>
         </section>
       </div>
     
 
       <section class="card" id="news-section">
-        <h2 class="u-title-card" >📰 Noticias Recientes</h2>
+        <h2 class="u-title-card" ><svg class="h-ico "><use href="#i-news"/></svg>Noticias Recientes</h2>
         <div class="u-flex-col" id="news-container" >
           <!-- Las tarjetas de noticias se inyectarán aquí -->
         </div>
@@ -863,7 +895,7 @@
       <!-- MATRIZ COMPARATIVA DE MODELOS DE VALORACIÓN -->
       <section class="card">
         <h2 class="section-heading-lg">
-          💎 Consenso & Matriz Comparativa de Valor Intrínseco
+          <svg class="h-ico "><use href="#i-diamond"/></svg>Consenso & Matriz Comparativa de Valor Intrínseco
         </h2>
         <p class="card-sub section-sub">
           Comparación directa del precio actual vs los modelos DCF, PER Mediano Histórico, Dividendos (DDM) y Graham.
@@ -875,10 +907,11 @@
       <section class="card">
         <div class="chart-title-row">
           <h2 class="section-heading-lg">
-            📊 Matriz de Crecimiento & Estimaciones (Growth Estimates Grid)
+            <svg class="h-ico "><use href="#i-chart"/></svg>Matriz de Crecimiento & Estimaciones (Growth Estimates Grid)
           </h2>
           <span id="est-growth-subtext" class="growth-subtext">Currency in USD. All numbers in millions.</span>
         </div>
+        <div id="est-growth-warning" class="warning-chip" style="display:none;"></div>
         <div class="table-overflow">
           <table class="data-table growth-estimates-table" id="est-growth-table">
             <thead id="est-growth-thead"></thead>
@@ -892,7 +925,7 @@
         <div class="est-header">
           <div>
             <h2 class="section-heading-lg">
-              🧮 Calculadora de Precio Objetivo 2030E (EPS × PER)
+              <svg class="h-ico "><use href="#i-calc"/></svg>Calculadora de Precio Objetivo 2030E (EPS × PER)
             </h2>
             <p class="card-sub est-subtitle">
               Proyección de precio futuro multiplicando el EPS 2030E por múltiplos PER históricos.
@@ -1012,14 +1045,14 @@
         <h3 class="section-heading">Desglose Detallado de Modelos</h3>
         
         <details class="premium-accordion">
-          <summary>🏷️ Modelo PER Histórico Detallado</summary>
+          <summary><svg class="h-ico "><use href="#i-tag"/></svg>Modelo PER Histórico Detallado</summary>
           <div class="accordion-content">
             <div id="eps-fv-details">—</div>
           </div>
         </details>
 
         <details class="premium-accordion">
-          <summary>💎 Modelo DCF (Descuento de Flujos) & Supuestos Interactivas</summary>
+          <summary><svg class="h-ico "><use href="#i-diamond"/></svg>Modelo DCF (Descuento de Flujos) & Supuestos Interactivas</summary>
           <div class="accordion-content">
             <div id="dcf-fv-details">—</div>
             <div class="u-divider-top" >
@@ -1050,7 +1083,7 @@
         </details>
 
         <details class="premium-accordion">
-          <summary>💵 Modelo DDM (Descuento de Dividendos / Gordon Growth)</summary>
+          <summary><svg class="h-ico "><use href="#i-money"/></svg>Modelo DDM (Descuento de Dividendos / Gordon Growth)</summary>
           <div class="accordion-content">
             <div id="ddm-fv-details">—</div>
           </div>
@@ -1061,7 +1094,7 @@
     <!-- 4. MASTER PANE: PROPIETARIOS & DATOS CORPORATIVOS -->
     <div id="pane-ownership" class="tab-pane hidden" role="tabpanel" aria-labelledby="tab-ownership">
       <section class="card">
-        <h2>👔 Estructura de Propiedad Accionaria</h2>
+        <h2><svg class="h-ico "><use href="#i-briefcase"/></svg>Estructura de Propiedad Accionaria</h2>
         <div class="ratios-checks-grid grid-2col">
           <div class="u-empty-card" >
             <span class="u-label-xs" >% Propiedad de Directivos (Insiders)</span>
@@ -1075,7 +1108,7 @@
       </section>
 
       <section class="card">
-        <h2>📝 Últimas Transacciones de Directivos (Insiders)</h2>
+        <h2><svg class="h-ico "><use href="#i-doc"/></svg>Últimas Transacciones de Directivos (Insiders)</h2>
         <div class="table-wrap">
           <table class="data-table" id="ins-table">
             <thead>
@@ -1111,7 +1144,7 @@
       </section>
 
       <section class="card">
-        <h2>📋 Perfil Corporativo y Enlaces Oficiales SEC EDGAR</h2>
+        <h2><svg class="h-ico "><use href="#i-clipboard"/></svg>Perfil Corporativo y Enlaces Oficiales SEC EDGAR</h2>
         <div class="u-mt16" id="additional-details" >—</div>
       </section>
     </div>
@@ -1137,12 +1170,12 @@
     <!-- Presets de inversión -->
     <div class="presets-row" id="presets-row">
       <span class="presets-label">Presets:</span>
-      <button class="preset-btn" data-preset="quality" title="ROE > 15% · Margen neto > 10% · FCF Yield > 3% · D/E < 1">🏆 Calidad Total</button>
-      <button class="preset-btn" data-preset="buffett" title="ROE > 15% · Margen neto > 10% · PE < 25 · D/E < 0.5">💎 Buffett</button>
-      <button class="preset-btn" data-preset="deep"    title="Margen de seguridad > 20% · PE < 20 (usa modo profundo)">🔥 Valor Profundo</button>
-      <button class="preset-btn" data-preset="growth"  title="ROE > 20% · FCF Yield > 4% · PE Forward < PE TTM">📈 Crecimiento</button>
-      <button class="preset-btn" data-preset="targets2030" title="Matriz de Precios Objetivos a 2030E en 3 escenarios PER">🎯 Objetivos 2030</button>
-      <button class="preset-btn" data-preset="clean"   title="FCF Yield > 0% · D/E < 1.5 · No sobrevendido">🚩 Sin Red Flags</button>
+      <button class="preset-btn" data-preset="quality" title="ROE > 15% · Margen neto > 10% · FCF Yield > 3% · D/E < 1"><svg class="h-ico "><use href="#i-trophy"/></svg>Calidad Total</button>
+      <button class="preset-btn" data-preset="buffett" title="ROE > 15% · Margen neto > 10% · PE < 25 · D/E < 0.5"><svg class="h-ico "><use href="#i-diamond"/></svg>Buffett</button>
+      <button class="preset-btn" data-preset="deep"    title="Margen de seguridad > 20% · PE < 20 (usa modo profundo)"><svg class="h-ico "><use href="#i-flame"/></svg>Valor Profundo</button>
+      <button class="preset-btn" data-preset="growth"  title="ROE > 20% · FCF Yield > 4% · PE Forward < PE TTM"><svg class="h-ico "><use href="#i-trend-up"/></svg>Crecimiento</button>
+      <button class="preset-btn" data-preset="targets2030" title="Matriz de Precios Objetivos a 2030E en 3 escenarios PER"><svg class="h-ico "><use href="#i-target"/></svg>Objetivos 2030</button>
+      <button class="preset-btn" data-preset="clean"   title="FCF Yield > 0% · D/E < 1.5 · No sobrevendido"><svg class="h-ico "><use href="#i-flag"/></svg>Sin Red Flags</button>
       <button class="preset-btn clear" data-preset="clear">✕ Limpiar</button>
     </div>
 
@@ -1201,7 +1234,7 @@
         <label>Vista</label>
         <select id="f-view">
           <option value="table">Tabla General</option>
-          <option value="targets2030">🎯 Precios Objetivos 2030 (Escenarios PER)</option>
+          <option value="targets2030"><svg class="h-ico "><use href="#i-target"/></svg>Precios Objetivos 2030 (Escenarios PER)</option>
           <option value="map">Mapa de calor</option>
         </select>
       </div>
@@ -1260,7 +1293,7 @@
   <section class="card wl-header-card">
     <div class="screener-head">
       <div>
-        <h2 class="wl-title">⭐ Watchlist Premium</h2>
+        <h2 class="wl-title"><svg class="h-ico "><use href="#i-star"/></svg>Watchlist Premium</h2>
         <p class="card-sub wl-subtitle">
           Tus acciones seguidas de cerca con margen de seguridad objetivo. Evalúa métricas avanzadas y su comportamiento de mercado en tiempo real.
         </p>
@@ -1280,7 +1313,7 @@
     <div id="wl-loading" class="loading hidden wl-loading"><div class="spinner"></div><p>Analizando fundamentales y mercado…</p></div>
     
     <div id="wl-empty" class="empty-state hidden wl-empty">
-      <div class="wl-empty-icon">⭐</div>
+      <div class="wl-empty-icon"><svg class="h-ico h-ico-lg"><use href="#i-star"/></svg></div>
       <p class="wl-empty-title">Aún no sigues ninguna acción.</p>
       <p class="muted">Busca una empresa y presiona la estrella <b>Seguir</b> en su página de análisis para agregarla aquí.</p>
     </div>
@@ -1296,9 +1329,9 @@
             <th class="num sortable u-cpo" title="Índice de Fuerza Relativa (14d)" data-k="rsi" >RSI <span id="sort-rsi"></span></th>
             <th class="num sortable u-cpo" data-k="pe" >PE <span id="sort-pe"></span></th>
             <th class="num sortable u-cpo" data-k="forwardPe" >FWD PE <span id="sort-forwardPe"></span></th>
-            <th class="num sortable u-primary-cpo"  title="Precio objetivo esperado según PE histórico" data-k="targetBase">★ Obj. Base <span id="sort-targetBase"></span></th>
-            <th class="num sortable u-cpo" title="Precio objetivo conservador (PE -20%)" data-k="targetPessimistic" >Obj. Pesimista <span id="sort-targetPessimistic"></span></th>
-            <th class="num sortable u-cpo" title="Precio objetivo optimista (PE +20%)" data-k="targetOpt" >Obj. Optimista <span id="sort-targetOpt"></span></th>
+            <th class="num sortable u-primary-cpo"  title="Precio objetivo 2030E base (EPS proyectado × PE vigente)" data-k="targetBase">★ Obj. 2030 <span id="sort-targetBase"></span></th>
+            <th class="num sortable u-cpo" title="Precio objetivo 2030E conservador (PE -20%)" data-k="targetPessimistic" >Obj. 2030 Pesim. <span id="sort-targetPessimistic"></span></th>
+            <th class="num sortable u-cpo" title="Precio objetivo 2030E optimista (PE +20%)" data-k="targetOpt" >Obj. 2030 Optim. <span id="sort-targetOpt"></span></th>
             <th class="center sortable u-w120-cpo"  data-k="inBuyZone">Estado <span id="sort-inBuyZone"></span></th>
             <th></th>
           </tr>
@@ -1377,7 +1410,8 @@
 
     <div id="pf-loading" class="loading hidden"><div class="spinner"></div><p>Calculando rendimientos vs S&P 500…</p></div>
     <div id="pf-empty" class="empty-state hidden">
-      <p>Aún no registras compras.</p>
+      <div class="wl-empty-icon"><svg class="h-ico h-ico-lg"><use href="#i-pie"/></svg></div>
+      <p class="wl-empty-title">Aún no registras compras.</p>
       <p class="muted">Anota cada compra real con su tesis — tu yo del futuro te lo agradecerá.</p>
     </div>
     <div id="pf-concentration-alert" class="hidden u-gold-banner" ></div>
@@ -1400,13 +1434,13 @@
 <!-- ============================ SIDEBAR FAVORITOS ============================ -->
 <aside id="sidebar" class="sidebar hidden">
   <div class="sidebar-head">
-    <span>☆ Favoritos</span>
+    <span><svg class="h-ico "><use href="#i-star"/></svg>Favoritos</span>
     <button id="sb-close" class="btn-x" title="Ocultar">✕</button>
   </div>
   <div id="sb-list" class="sb-list"></div>
   <p class="sb-hint muted">Se sincroniza con tu watchlist (botón ☆ Seguir)</p>
 </aside>
-<button id="sb-open" class="sb-open" title="Mostrar favoritos">☆</button>
+<button id="sb-open" class="sb-open" title="Mostrar favoritos"><svg class="h-ico "><use href="#i-star"/></svg></button>
 
 <footer class="footer">
   <p>Datos: Yahoo Finance + SEC EDGAR. Esta herramienta es de uso personal y educativo — <b>no constituye asesoría financiera</b>.</p>
@@ -1417,7 +1451,7 @@
 <div id="modal-cagr" class="modal-overlay hidden">
   <div class="modal-card">
     <div class="modal-header">
-      <h3>🧮 Calculadora de CAGR y Retorno Proyectado</h3>
+      <h3><svg class="h-ico "><use href="#i-calc"/></svg>Calculadora de CAGR y Retorno Proyectado</h3>
       <button id="modal-cagr-close" class="btn-x">✕</button>
     </div>
     <div class="modal-body">
@@ -1453,7 +1487,7 @@
 <div id="modal-alerts" class="modal-overlay hidden">
   <div class="modal-card">
     <div class="modal-header">
-      <h3>🔔 Alertas Inteligentes de Precio y Valoración</h3>
+      <h3><svg class="h-ico "><use href="#i-bell"/></svg>Alertas Inteligentes de Precio y Valoración</h3>
       <button id="modal-alerts-close" class="btn-x">✕</button>
     </div>
     <div class="modal-body">
@@ -1488,6 +1522,6 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script type="module" src="js/init.js?v=26.0"></script>
+<script type="module" src="js/init.js?v=32.0"></script>
 </body>
 </html>
