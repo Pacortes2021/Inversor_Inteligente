@@ -11,8 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   
   <!-- CSS Principal -->
-  <link rel="stylesheet" href="css/style.css?v=32.0">
-  <link rel="stylesheet" href="css/additions.css?v=32.0">
+  <link rel="stylesheet" href="css/style.css?v=35.0">
+  <link rel="stylesheet" href="css/additions.css?v=35.0">
   
   <!-- ECharts CDN -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
@@ -1176,6 +1176,7 @@
       <button class="preset-btn" data-preset="growth"  title="ROE > 20% · FCF Yield > 4% · PE Forward < PE TTM"><svg class="h-ico "><use href="#i-trend-up"/></svg>Crecimiento</button>
       <button class="preset-btn" data-preset="targets2030" title="Matriz de Precios Objetivos a 2030E en 3 escenarios PER"><svg class="h-ico "><use href="#i-target"/></svg>Objetivos 2030</button>
       <button class="preset-btn" data-preset="clean"   title="FCF Yield > 0% · D/E < 1.5 · No sobrevendido"><svg class="h-ico "><use href="#i-flag"/></svg>Sin Red Flags</button>
+      <button class="preset-btn" data-preset="sma200"  title="Calidad (ROE > 15% · Mg. neto > 10% · D/E < 1) + precio en o bajo su SMA 200 (diaria o semanal, banda 3%)"><svg class="h-ico "><use href="#i-trend-down"/></svg>Compra SMA 200</button>
       <button class="preset-btn clear" data-preset="clear">✕ Limpiar</button>
     </div>
 
@@ -1229,6 +1230,27 @@
       <div class="control">
         <label>D/E máx.</label>
         <input class="u-w68" type="number" id="f-max-de" placeholder="Ej: 1" step="0.1" >
+      </div>
+      <div class="control" title="Filtra acciones cuyo precio está cerca de su promedio móvil de 200 periodos (diario o semanal)">
+        <label>Cerca de SMA 200</label>
+        <select id="f-sma-period">
+          <option value="">Apagado</option>
+          <option value="d">Diaria</option>
+          <option value="w">Semanal</option>
+          <option value="any">Diaria o semanal</option>
+        </select>
+      </div>
+      <div class="control hidden" id="ctl-sma-side">
+        <label>Posición vs SMA</label>
+        <select id="f-sma-side">
+          <option value="near">± banda</option>
+          <option value="below">En o bajo</option>
+          <option value="above">En o sobre</option>
+        </select>
+      </div>
+      <div class="control hidden" id="ctl-sma-band">
+        <label>Banda %</label>
+        <input class="u-w60" type="number" id="f-sma-band" value="3" min="0.5" step="0.5" >
       </div>
       <div class="control" id="ctl-view">
         <label>Vista</label>
@@ -1522,6 +1544,6 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script type="module" src="js/init.js?v=32.0"></script>
+<script type="module" src="js/init.js?v=35.0"></script>
 </body>
 </html>

@@ -10,6 +10,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+import pandas as pd
 import yfinance as yf
 
 from . import edgar as E
@@ -76,6 +77,94 @@ def _retry(fn, tries=3, wait=1.5):
             last = e
             time.sleep(wait * (i + 1))
     raise last
+
+
+def _sma_last(values, n):
+    """SMA de los últimos n valores; None si faltan datos."""
+    if not values:
+        return None
+    values = [v for v in values if v is not None and v == v]  # descarta NaN
+    if len(values) < n:
+        return None
+    return round(sum(values[-n:]) / n, 2)
+
+
+def _fetch_sma_batch(symbols):
+    """SMA200 diaria (1 año) y semanal (5 años) para un lote de símbolos en una
+    sola descarga de Yahoo por intervalo. Devuelve {symbol: {...}}."""
+    out = {}
+    syms = [s for s in symbols if s]
+    if not syms:
+        return out
+
+    daily = None
+    try:
+        daily = yf.download(syms, period="1y", interval="1d", progress=False,
+                            auto_adjust=True, threads=False)
+    except Exception:
+        pass
+    weekly = None
+    try:
+        weekly = yf.download(syms, period="5y", interval="1wk", progress=False,
+                             auto_adjust=True, threads=False)
+    except Exception:
+        pass
+
+    def _close_series(df, symbol):
+        if df is None or df.empty:
+            return None
+        if isinstance(df.columns, pd.MultiIndex):
+            if symbol not in df.columns.get_level_values(1):
+                return None
+            s = df["Close"][symbol]
+        else:
+            if "Close" not in df.columns:
+                return None
+            s = df["Close"]
+        s = pd.Series(s).dropna()
+        return s if len(s) >= 50 else None
+
+    for symbol in syms:
+        d = _close_series(daily, symbol)
+        w = _close_series(weekly, symbol)
+        sma200d = _sma_last(list(d), 200) if d is not None else None
+        sma200w = _sma_last(list(w), 200) if w is not None else None
+        if sma200d is None and sma200w is None:
+            continue
+        last_idx = None
+        if d is not None:
+            last_idx = d.index[-1]
+        elif w is not None:
+            last_idx = w.index[-1]
+        entry = {}
+        if sma200d is not None:
+            entry["sma200d"] = sma200d
+        if sma200w is not None:
+            entry["sma200w"] = sma200w
+        if last_idx is not None:
+            entry["date"] = pd.Timestamp(last_idx).strftime("%Y-%m-%d")
+        out[symbol] = entry
+    return out
+
+
+def _inject_sma(results):
+    """Añade a cada fila sma200d/sma200w y la distancia % del precio a cada SMA."""
+    if not results:
+        return
+    sma_map = _fetch_sma_batch([r.get("symbol") for r in results])
+    for r in results:
+        entry = sma_map.get(r.get("symbol"))
+        if not entry:
+            continue
+        r["sma200d"] = entry.get("sma200d")
+        r["sma200w"] = entry.get("sma200w")
+        r["smaDate"] = entry.get("date")
+        price = r.get("price")
+        if price and price > 0:
+            if entry.get("sma200d"):
+                r["distSma200d"] = round((price / entry["sma200d"] - 1) * 100, 2)
+            if entry.get("sma200w"):
+                r["distSma200w"] = round((price / entry["sma200w"] - 1) * 100, 2)
 
 
 def _clip(x, lo, hi):
@@ -249,6 +338,7 @@ def run_screener(universe: str = "us", refresh: bool = False):
                 results.append(r)
 
     results.sort(key=lambda r: r["score"], reverse=True)
+    _inject_sma(results)
     payload = jclean({"count": len(results), "universe": universe,
                       "updatedAt": int(time.time() * 1000), "results": results})
     cache_set(key, payload, ttl=TTL_SCREENER)
@@ -373,6 +463,7 @@ def _deep_worker(universe):
                     if universe in _deep_states:
                         _deep_states[universe]["done"] += 1
         results.sort(key=lambda r: (r["mos"] is None, -(r["mos"] or -999)))
+        _inject_sma(results)
         payload = jclean({"count": len(results), "universe": universe,
                           "updatedAt": int(time.time() * 1000), "results": results})
         cache_set(f"deep_screener_{CACHE_VERSION}_{universe}", payload, ttl=TTL_SCREENER)

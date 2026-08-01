@@ -1680,3 +1680,34 @@ button, input, select, textarea { font-family: inherit; }
 /* ── Iconos de índices en hero ── */
 .dash-index-icon { display: inline-flex; }
 .dash-index-icon .h-ico { width: 15px; height: 15px; color: rgba(248, 250, 252, 0.75); }
+
+/* ── Chip "≈SMA" y resaltado de coincidencia en el screener ── */
+.sma-match-chip {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #0d9488;
+  background: rgba(13, 148, 136, 0.12);
+  border: 1px solid rgba(13, 148, 136, 0.35);
+  vertical-align: 1px;
+}
+[data-theme="dark"] .sma-match-chip {
+  color: #2dd4bf;
+  background: rgba(45, 212, 191, 0.14);
+  border-color: rgba(45, 212, 191, 0.4);
+}
+td.sma-hit {
+  background: rgba(13, 148, 136, 0.14);
+  font-weight: 800;
+  box-shadow: inset 0 0 0 1px rgba(13, 148, 136, 0.35);
+  border-radius: 6px;
+}
+[data-theme="dark"] td.sma-hit {
+  background: rgba(45, 212, 191, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.4);
+}

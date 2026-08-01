@@ -18,6 +18,7 @@ const COLS_QUICK = [
   ["price", "Precio", "num"], ["pe", "PE", "num"], ["forwardPe", "PE fwd", "num"],
   ["fcfYield", "FCF yield", "num"], ["roe", "ROE", "num"],
   ["debtToEquity", "D/P", "num"], ["drawdown", "vs 52s máx", "num"],
+  ["distSma200d", "vs SMA200d", "num"], ["distSma200w", "vs SMA200w", "num"],
   ["score", "Puntaje", "num"],
 ];
 
@@ -26,6 +27,7 @@ const COLS_DEEP = [
   ["price", "Precio", "num"], ["pe", "PE", "num"], ["peMedian", "PE med 15a", "num"],
   ["vsMedian", "vs mediana", "num"], ["fairValue", "Valor justo", "num"],
   ["mos", "Margen seg.", "num"], ["verdict", "Veredicto"],
+  ["distSma200d", "vs SMA200d", "num"], ["distSma200w", "vs SMA200w", "num"],
   ["roc", "ROC", "num"], ["fScore", "F-Score", "num"],
   ["score", "Puntaje", "num"],
 ];
@@ -113,6 +115,26 @@ function fillSectorFilter() {
   sel.value = sectors.includes(cur) ? cur : "";
 }
 
+const toNum = v => (v != null && v !== '' && !isNaN(v)) ? parseFloat(v) : null;
+
+function smaMatch(r) {
+  /* Devuelve {kind:'d'|'w', dist} si la fila cumple el filtro SMA activo, o null.
+     Comparte la semántica con filteredRows(). */
+  const period = document.getElementById('f-sma-period')?.value;
+  if (!period) return null;
+  const side = document.getElementById('f-sma-side')?.value || 'near';
+  const band = Math.max(0.5, toNum(document.getElementById('f-sma-band')?.value) ?? 3);
+  const inRange = d => {
+    if (d == null) return false;
+    if (side === 'below') return d <= 0 && d >= -band;
+    if (side === 'above') return d >= 0 && d <= band;
+    return Math.abs(d) <= band;
+  };
+  if (period !== 'w' && inRange(r.distSma200d)) return { kind: 'd', dist: r.distSma200d };
+  if (period !== 'd' && inRange(r.distSma200w)) return { kind: 'w', dist: r.distSma200w };
+  return null;
+}
+
 function filteredRows() {
   const sector       = document.getElementById('f-sector').value;
   const text         = document.getElementById('f-text').value.trim().toLowerCase();
@@ -123,8 +145,10 @@ function filteredRows() {
   const minNetMarginVal = document.getElementById('f-min-netmargin')?.value;
   const minFcfYieldVal  = document.getElementById('f-min-fcfyield')?.value;
   const maxDeVal        = document.getElementById('f-max-de')?.value;
+  const smaPeriodVal    = document.getElementById('f-sma-period')?.value;
+  const smaSideVal      = document.getElementById('f-sma-side')?.value;
+  const smaBandVal      = document.getElementById('f-sma-band')?.value;
 
-  const toNum = v => (v != null && v !== '' && !isNaN(v)) ? parseFloat(v) : null;
   const minMos       = toNum(minMosVal);
   const maxPe        = toNum(maxPeVal);
   const maxFwdPe     = toNum(maxFwdPeVal);
@@ -132,9 +156,9 @@ function filteredRows() {
   const minNetMargin = toNum(minNetMarginVal);
   const minFcfYield  = toNum(minFcfYieldVal);
   const maxDe        = toNum(maxDeVal);
+  const smaBand      = Math.max(0.5, toNum(smaBandVal) ?? 3);
 
-  let rows = [...(scr.data || [])];
-  if (sector)       rows = rows.filter(r => r.sector === sector);
+  let rows = [...(scr.data || [])];  if (sector)       rows = rows.filter(r => r.sector === sector);
   if (text)         rows = rows.filter(r =>
     r.symbol.toLowerCase().includes(text) || (r.name || '').toLowerCase().includes(text));
   if (minMos       != null) rows = rows.filter(r => r.mos        != null && r.mos        >= minMos);
@@ -144,6 +168,10 @@ function filteredRows() {
   if (minNetMargin != null) rows = rows.filter(r => r.netMargin  != null && r.netMargin  >= minNetMargin);
   if (minFcfYield  != null) rows = rows.filter(r => r.fcfYield   != null && r.fcfYield   >= minFcfYield);
   if (maxDe        != null) rows = rows.filter(r => r.debtToEquity != null && r.debtToEquity <= maxDe);
+
+  if (smaPeriodVal) {
+    rows = rows.filter(r => smaMatch(r) !== null);
+  }
 
   const naVerdict = r => r.verdict && r.verdict.level === "na";
   rows.sort((a, b) => {
@@ -240,9 +268,13 @@ function renderScreener() {
     const cells = cols.map(([k, , cls]) => {
       let v;
       switch (k) {
-        case 'symbol': return `<td class="sym" style="cursor:pointer;">${escHtml(r.symbol)}</td>`;
+        case 'symbol': {
+          const m = smaMatch(r);
+          const chip = m ? `<span class="sma-match-chip" title="Pasa el filtro SMA200: ${m.kind === 'd' ? 'diaria' : 'semanal'} a ${fmtPct(m.dist, 1, true)}">≈SMA</span>` : '';
+          return `<td class="sym" style="cursor:pointer;">${escHtml(r.symbol)}${chip}</td>`;
+        }
         case 'name': return `<td><div style="font-weight:600; font-size:12.5px; line-height:1.3;">${escHtml(r.name || '—')}</div><div style="font-size:10px; color:var(--muted); margin-top:1px;">${escHtml(r.sector || '')}</div></td>`;
-        case 'sector': return ''; /* sector ahora va dentro de name */
+        case 'sector': return `<td></td>`; /* sector va dentro de name; celda vacía para mantener la alineación */
         case "price": v = fmtPrice(r.price, r.currency); break;
         case "pe": v = r.pe != null ? fmtNum(r.pe, 1) : "—"; break;
         case "forwardPe": v = r.forwardPe != null ? fmtNum(r.forwardPe, 1) : "—"; break;
@@ -261,6 +293,16 @@ function renderScreener() {
         case "fScore": v = r.fScore != null ? r.fScore + " / 9" : "—"; break;
         case "debtToEquity": v = r.debtToEquity != null ? fmtNum(r.debtToEquity, 2) : "—"; break;
         case "drawdown": return `<td class="num ${pctClass(r.drawdown)}">${fmtPct(r.drawdown, 1)}</td>`;
+        case "distSma200d": {
+          const m = smaMatch(r);
+          const hit = m && m.kind === 'd' ? ' sma-hit' : '';
+          return `<td class="num ${pctClass(r.distSma200d)}${hit}" title="Precio vs SMA 200 diaria${r.sma200d ? ' (' + fmtPrice(r.sma200d, r.currency) + ')' : ''} · ${r.smaDate || '—'}">${r.distSma200d != null ? fmtPct(r.distSma200d, 1, true) : '—'}</td>`;
+        }
+        case "distSma200w": {
+          const m = smaMatch(r);
+          const hit = m && m.kind === 'w' ? ' sma-hit' : '';
+          return `<td class="num ${pctClass(r.distSma200w)}${hit}" title="Precio vs SMA 200 semanal${r.sma200w ? ' (' + fmtPrice(r.sma200w, r.currency) + ')' : ''} · ${r.smaDate || '—'}">${r.distSma200w != null ? fmtPct(r.distSma200w, 1, true) : '—'}</td>`;
+        }
         case 'eps2030': v = r.eps2030 != null ? fmtPrice(r.eps2030, r.currency) : "—"; break;
         case 'basePe': v = r.basePe != null ? fmtNum(r.basePe, 1) + "x" : "—"; break;
         case 'targetCons': v = r.targetCons != null ? fmtPrice(r.targetCons, r.currency) : "—"; break;
@@ -347,10 +389,16 @@ const PRESETS = {
     label: 'Sin Red Flags',
     filters: { 'f-min-fcfyield': 0, 'f-max-de': 1.5 },
     desc: 'FCF Yield ≥ 0% · D/E < 1.5'
+  },
+  sma200: {
+    label: 'Compra SMA 200',
+    filters: { 'f-min-roe': 15, 'f-min-netmargin': 10, 'f-max-de': 1,
+               'f-sma-period': 'any', 'f-sma-side': 'below', 'f-sma-band': 3 },
+    desc: 'Calidad (ROE > 15% · Mg. neto > 10% · D/E < 1) y precio en o hasta 3% bajo su SMA 200 (diaria o semanal).'
   }
 };
 
-const FILTER_IDS = ['f-min-mos','f-max-pe','f-max-fwdpe','f-min-roe','f-min-netmargin','f-min-fcfyield','f-max-de','f-text','f-sector'];
+const FILTER_IDS = ['f-min-mos','f-max-pe','f-max-fwdpe','f-min-roe','f-min-netmargin','f-min-fcfyield','f-max-de','f-text','f-sector','f-sma-period','f-sma-side','f-sma-band'];
 
 let activePreset = null;
 
@@ -358,9 +406,9 @@ function clearFilters() {
   FILTER_IDS.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    if (el.tagName === 'SELECT') el.value = '';
-    else el.value = '';
+    el.value = '';
   });
+  syncSmaControls();
   document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
   activePreset = null;
   renderScreener();
@@ -370,11 +418,13 @@ function applyPreset(name) {
   const preset = PRESETS[name];
   if (!preset) return clearFilters();
 
-  // Limpiar todos los filtros primero
+  // Limpiar todos los filtros primero (incluye selects del SMA: no deben
+  // arrastrarse de un preset al siguiente)
   FILTER_IDS.forEach(id => {
     const el = document.getElementById(id);
-    if (el && el.tagName !== 'SELECT') el.value = '';
+    if (el) el.value = '';
   });
+  syncSmaControls();
 
   // Aplicar filtros del preset
   Object.entries(preset.filters).forEach(([id, val]) => {
@@ -402,6 +452,7 @@ function applyPreset(name) {
       document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
       document.querySelector(`.preset-btn[data-preset="${name}"]`)?.classList.add('active');
       activePreset = name;
+      syncSmaControls();
       loadScreener();
       return;
     }
@@ -411,6 +462,7 @@ function applyPreset(name) {
   document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
   document.querySelector(`.preset-btn[data-preset="${name}"]`)?.classList.add('active');
   activePreset = name;
+  syncSmaControls();
 
   // Mostrar descripción del preset
   const sub = document.getElementById('screener-sub');
@@ -425,6 +477,11 @@ document.querySelectorAll('.preset-btn').forEach(btn => {
 });
 
 /* Eventos filtros */
+function syncSmaControls() {
+  const on = !!document.getElementById('f-sma-period').value;
+  document.getElementById('ctl-sma-side')?.classList.toggle('hidden', !on);
+  document.getElementById('ctl-sma-band')?.classList.toggle('hidden', !on);
+}
 document.getElementById('btn-refresh').addEventListener('click', () => loadScreener(true));
 document.getElementById('btn-csv').addEventListener('click', exportCsv);
 document.getElementById('f-universe').addEventListener('change', e => {
@@ -437,15 +494,17 @@ document.getElementById('f-mode').addEventListener('change', e => {
 });
 document.getElementById('f-sector').addEventListener('change', renderScreener);
 document.getElementById('f-text').addEventListener('input', () => { activePreset = null; document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active')); renderScreener(); });
-['f-min-mos','f-max-pe','f-max-fwdpe','f-min-roe','f-min-netmargin','f-min-fcfyield','f-max-de'].forEach(id => {
+  ['f-min-mos','f-max-pe','f-max-fwdpe','f-min-roe','f-min-netmargin','f-min-fcfyield','f-max-de','f-sma-period','f-sma-side','f-sma-band'].forEach(id => {
   const el = document.getElementById(id);
   if (el) el.addEventListener('input', () => {
     /* Si el usuario toca un filtro manualmente, deseleccionar preset */
     document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
     activePreset = null;
+    syncSmaControls();
     renderScreener();
   });
 });
+document.addEventListener('DOMContentLoaded', syncSmaControls);
 document.getElementById('f-view').addEventListener('change', e => {
   scr.view = e.target.value; renderScreener();
 });
