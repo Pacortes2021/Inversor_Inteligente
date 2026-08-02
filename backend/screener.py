@@ -56,12 +56,22 @@ UNIVERSE_US = [
 ]
 
 UNIVERSE_CL = [
+    # IPSA (índice selectivo)
     "SQM-B.SN", "COPEC.SN", "CENCOSUD.SN", "FALABELLA.SN", "BSANTANDER.SN",
     "CHILE.SN", "BCI.SN", "ENELCHILE.SN", "ENELAM.SN", "COLBUN.SN", "CCU.SN",
     "ANDINA-B.SN", "CMPC.SN", "VAPORES.SN", "LTM.SN", "PARAUCO.SN",
     "RIPLEY.SN", "SMU.SN", "AGUAS-A.SN", "CAP.SN", "ENTEL.SN", "SONDA.SN",
     "QUINENCO.SN", "CONCHATORO.SN", "IAM.SN", "ECL.SN", "SECURITY.SN",
     "MALLPLAZA.SN", "CENCOSHOPP.SN", "ITAUCL.SN",
+    # holdings e inversiones
+    "ANTARCHILE.SN", "ILC.SN", "PAZ.SN",
+    # industriales y construcción
+    "SK.SN", "BESALCO.SN", "SALFACORP.SN", "CGE.SN", "POLPAICO.SN", "MELON.SN",
+    # minería y materiales
+    "MOLYMET.SN", "ENAEX.SN", "MASISA.SN",
+    # consumo y retail
+    "GASCO.SN", "FORUS.SN", "HITES.SN", "EMBONOR-B.SN", "ANDINA-A.SN",
+    "SQM-A.SN", "VSPT.SN", "IANSA.SN", "CRISTALES.SN", "BLUMAR.SN",
 ]
 
 UNIVERSES = {"us": UNIVERSE_US, "cl": UNIVERSE_CL}

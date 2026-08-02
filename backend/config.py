@@ -6,7 +6,7 @@ import os
 API_KEY = os.getenv("INVERSOR_API_KEY", "dev-secret-change-me")
 
 # ─── Cache versioning (bump al cambiar esquema de payload) ───
-CACHE_VERSION = "v5"
+CACHE_VERSION = "v6"
 
 # ─── yfinance wrapper ───
 YF_MAX_RETRIES = int(os.getenv("YF_MAX_RETRIES", "3"))
