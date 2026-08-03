@@ -107,7 +107,7 @@ export function yearsOption(years, extra) {
 }
 
 /* ------------------------------------------------------------- precio */
-export const priceView = { log: false, sma: false, type: 'area' };
+export const priceView = { log: false, sma: false, trend: false, type: 'area' };
 
 export function sma(pts, n) {
   const out = [];
@@ -118,6 +118,23 @@ export function sma(pts, n) {
     if (i >= n - 1) out.push([pts[i][0], +(sum / n).toFixed(2)]);
   }
   return out;
+}
+
+export function linreg(pts) {
+  /* Regresión lineal de mínimos cuadrados sobre el precio: devuelve el valor
+     de la recta en el primer y último punto y su retorno % en el período. */
+  const n = pts.length;
+  if (n < 3) return null;
+  let sx = 0, sy = 0, sxy = 0, sxx = 0;
+  for (let i = 0; i < n; i++) {
+    sx += i; sy += pts[i][1]; sxy += i * pts[i][1]; sxx += i * i;
+  }
+  const den = n * sxx - sx * sx;
+  if (den === 0) return null;
+  const slope = (n * sxy - sx * sy) / den;
+  const intercept = (sy - slope * sx) / n;
+  const y0 = intercept, y1 = intercept + slope * (n - 1);
+  return { y0, y1, pct: y0 > 0 ? (y1 / y0 - 1) * 100 : null };
 }
 
 export function calculateEMA(pts, period) {
@@ -280,6 +297,28 @@ export function chartPrice(data, id = 'ch-price', customPts = null) {
     series.push({ type: 'line', name: 'SMA 200', data: sma(pts, 200), showSymbol: false, xAxisIndex: 0, yAxisIndex: 0,
       lineStyle: { color: cc.gold, width: 1.5 }, itemStyle: { color: cc.gold },
       tooltip: { valueFormatter: v => fmtPrice(v, cur) } });
+  }
+
+  if (priceView.trend && pts.length > 10) {
+    const tr = linreg(pts);
+    if (tr) {
+      const pct = tr.pct;
+      const lbl = pct != null ? `Tendencia ${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%` : "Tendencia";
+      series.push({
+        type: 'line', name: 'Tendencia (regresión)', xAxisIndex: 0, yAxisIndex: 0,
+        data: [
+          [pts[0][0], tr.y0, { label: { show: false } }],
+          [pts[pts.length - 1][0], tr.y1, {
+            label: { show: true, position: 'end', color: cc.violet, fontSize: 10, fontWeight: 'bold',
+                     padding: [3, 5], borderRadius: 3, backgroundColor: cc.panel, formatter: lbl },
+          }],
+        ],
+        showSymbol: false,
+        lineStyle: { color: cc.violet, width: 1.5, type: 'dashed' },
+        itemStyle: { color: cc.violet },
+        tooltip: { valueFormatter: v => fmtPrice(v, cur) },
+      });
+    }
   }
 
   // 2. MACD Series

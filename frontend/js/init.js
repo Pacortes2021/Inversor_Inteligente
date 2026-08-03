@@ -52,6 +52,11 @@ if ($("tg-area")) {
     $("tg-sma-summary").classList.toggle("active", priceView.sma);
     chartPriceSummary(state.data);
   };
+  $("tg-trend").onclick = () => {
+    priceView.trend = !priceView.trend;
+    $("tg-trend").classList.toggle("active", priceView.trend);
+    chartPriceSummary(state.data);
+  };
   $("tg-log-summary").onclick = () => {
     priceView.log = !priceView.log;
     $("tg-log-summary").classList.toggle("active", priceView.log);
