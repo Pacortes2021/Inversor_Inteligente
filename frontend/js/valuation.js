@@ -54,6 +54,8 @@ export function renderValuationCard(d) {
     $("lbl-terminal").textContent = fmtPct(t * 100, 2);
     renderModels(d, dcfJs(inp, g, r, t));
     renderSensitivity(d, g, r, t);
+    renderScenarios(d, g, r, t);
+    renderFcfHistory(d);
     if (save) localStorage.setItem(lsKey, JSON.stringify({ g, r, t }));
   };
   Object.values(sliders).forEach(s => s.oninput = () => update(true));
@@ -70,6 +72,8 @@ export function renderValuationCard(d) {
   const slidersEl = document.querySelector(".sliders");
   if (slidersEl) slidersEl.style.display = hasDcf ? "" : "none";
   if ($("sensitivity")) $("sensitivity").classList.toggle("hidden", !hasDcf);
+  if ($("dcf-scenarios")) $("dcf-scenarios").classList.toggle("hidden", !hasDcf);
+  if ($("fcf-history")) $("fcf-history").classList.toggle("hidden", !hasDcf);
   if ($("implied-growth")) $("implied-growth").classList.toggle("hidden", !hasDcf || d.valuation.impliedGrowth == null);
   if (!hasDcf && d.valuation.models.length && $("models-table")) {
     $("models-table").insertAdjacentHTML("beforeend",
@@ -141,9 +145,16 @@ export function renderModels(d, dcfLive) {
           <td class="fair">${fmtPrice(consensus, cur)}</td>
           <td class="upside ${pctClass(mos)}">${fmtPct(mos, 1, true)}</td>
         </tr>
+        <tr class="buy-price-row">
+          <td>Precio de compra aceptable <span class="muted" style="font-weight:400">(MoS 25%)</span></td>
+          <td class="fair">${fmtPrice(consensus / 1.25, cur)}</td>
+          <td class="upside ${pctClass(consensus / 1.25 / price * 100 - 100)}">${fmtPct(consensus / 1.25 / price * 100 - 100, 1, true)}</td>
+        </tr>
         <tr><td class="muted">Precio actual</td><td class="fair muted">${fmtPrice(price, cur)}</td><td></td></tr>
       </tbody>
-    </table>` : `<p class="muted">No hay datos suficientes para los modelos de valoración (EPS o FCF negativos).</p>`;
+    </table>
+    ${price > 0 && price <= consensus / 1.25 ? `<p class="u-note-box" style="margin-top:8px">✔ El precio actual está <b class="up">en zona de compra</b> (≤ precio de compra aceptable con 25% de margen).</p>` : ""}
+    ` : `<p class="muted">No hay datos suficientes para los modelos de valoración (EPS o FCF negativos).</p>`;
 
   if (mos != null) {
     renderGauge(mos);
@@ -161,6 +172,86 @@ export function renderModels(d, dcfLive) {
 // Conservamos una función renderGauge simulada/vacía por compatibilidad con código existente si fuese necesario
 function renderGauge(mos) {
   // En el nuevo Summary el progreso se muestra mediante textos y el veredicto badge, no requiere canvas gauge circular
+}
+
+/* ------------------------------------------------- escenarios DCF Low/Med/High */
+export function renderScenarios(d, g, r, t) {
+  const wrap = $("dcf-scenario-cards");
+  const container = $("dcf-scenarios");
+  if (!wrap || !container) return;
+  const inp = d.valuation.dcfInputs;
+  const price = d.quote.price;
+  const cur = d.profile.currency;
+  if (!inp || !inp.baseFcf || !price) { container.classList.add("hidden"); return; }
+  if (g == null) g = inp.growth;
+  if (r == null) r = inp.discount;
+  if (t == null) t = inp.terminal;
+
+  const scenarios = [
+    { key: "low",  label: "Conservador", growth: Math.max(-0.05, g - 0.05) },
+    { key: "med",  label: "Base",         growth: g },
+    { key: "high", label: "Optimista",    growth: Math.min(0.40, g + 0.05) },
+  ];
+  const cards = scenarios.map(s => {
+    const fv = dcfJs(inp, s.growth, r, t);
+    if (fv == null) return null;
+    const up = (fv / price - 1) * 100;
+    const badge = s.key === "low" ? "badge-cons" : s.key === "med" ? "badge-base" : "badge-opt";
+    return `
+      <div class="scenario-card ${s.key === "med" ? "active" : ""}">
+        <span class="badge ${badge}">${s.label} (${fmtPct(s.growth * 100, 1)})</span>
+        <div class="${s.key === "med" ? "scenario-price-xl" : "scenario-price-lg"}">${fmtPrice(fv, cur)}</div>
+        <div class="scenario-ret"><span class="${pctClass(up)}">${fmtPct(up, 1, true)}</span> vs precio</div>
+      </div>`;
+  }).filter(Boolean).join("");
+  wrap.innerHTML = cards;
+}
+
+/* ------------------------------------------------- historial de FCF + CAGRs */
+export function renderFcfHistory(d) {
+  const table = $("fcf-history-table");
+  const container = $("fcf-history");
+  if (!table || !container) return;
+  const cur = d.profile.currency || "USD";
+  const annuals = (d.annuals || []).filter(a => a.fcf != null && isFinite(a.fcf)).slice(-10);
+  if (annuals.length < 3) { container.classList.add("hidden"); return; }
+
+  const cagr = (series, years) => {
+    if (series.length < years + 1) return null;
+    const start = series[series.length - 1 - years], end = series[series.length - 1];
+    if (!start || start <= 0 || !end || end <= 0) return null;
+    const v = Math.pow(end / start, 1 / years) - 1;
+    return isFinite(v) ? v * 100 : null;
+  };
+
+  const rows = annuals.map((a, i) => {
+    const prev = i > 0 ? annuals[i - 1].fcf : null;
+    const growth = prev && prev > 0 ? (a.fcf / prev - 1) * 100 : null;
+    return `
+      <tr>
+        <td><b>${a.year}</b></td>
+        <td class="num ${a.fcf >= 0 ? "up" : "down"}">${fmtBig(a.fcf, cur)}</td>
+        <td class="num ${growth != null ? (growth >= 0 ? "up" : "down") : "muted"}">${growth != null ? fmtPct(growth, 0, true) : "—"}</td>
+      </tr>`;
+  }).join("");
+
+  const fcfs = annuals.map(a => a.fcf);
+  const cagr3 = cagr(fcfs, 3), cagr5 = cagr(fcfs, 5), cagr10 = cagr(fcfs, 10);
+  const cagrCell = (v) => v != null
+    ? `<span class="${v >= 0 ? "up" : "down"}">${fmtPct(v, 0, true)}</span>` : "<span class='muted'>—</span>";
+
+  table.innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Año</th><th class="num">FCF</th><th class="num">Crec. %</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr class="consensus-row">
+          <td><b>CAGR 3Y</b> · ${cagrCell(cagr3)}</td>
+          <td class="num"><b>CAGR 5Y</b> · ${cagrCell(cagr5)}</td>
+          <td class="num"><b>CAGR 10Y</b> · ${cagrCell(cagr10)}</td>
+        </tr>
+      </tfoot>
+    </table>`;
 }
 
 /* ------------------------------------------------ matriz sensibilidad */

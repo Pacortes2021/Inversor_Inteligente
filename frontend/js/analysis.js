@@ -11,7 +11,7 @@ import { checkStockAlerts } from "./alerts.js";
 import {
   renderValuationCard, renderRatiosGrid, renderEstimates, renderEpsEstimatesChart,
   renderInsidersHolders, renderFinancialStatements, renderEpsFv, renderDcfFv,
-  renderDdmFv, renderHistoricalRatios, renderAdditional,
+  renderDdmFv, renderHistoricalRatios, renderAdditional, renderScenarios, renderFcfHistory,
 } from "./valuation.js";
 
 /* ---------------------------------------------------------- render */
@@ -55,6 +55,8 @@ export function renderAnalysis(d) {
   safeCall(renderWarnings, d.warnings);
   safeCall(renderSummary, d);
   safeCall(renderValuationCard, d);
+  safeCall(renderScenarios, d);
+  safeCall(renderFcfHistory, d);
   safeCall(renderRatiosGrid, d);
   safeCall(renderGrowthTable, d);
   safeCall(renderDividendSafety, d.dividendSafety);

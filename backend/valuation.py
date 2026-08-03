@@ -228,6 +228,10 @@ def build_valuation(price, info, annuals, pe_stats, bond10y):
     is_financial = "Financial" in sector
 
     epv = epv_greenwald(info, annuals, discount) if not is_financial else None
+    # EPV (cero crecimiento) castiga injustamente a empresas de hypergrowth:
+    # se excluye cuando el crecimiento estimado supera 15% anual.
+    if growth > 0.15:
+        epv = None
     ddm = dividend_discount_model(info, annuals, discount) if is_financial else None
 
     models = []
@@ -257,6 +261,10 @@ def build_valuation(price, info, annuals, pe_stats, bond10y):
         consensus = sum(m["fair"] * m["weight"] for m in models) / wsum
         mos = (consensus / price - 1) * 100
 
+    # Precio de compra aceptable: el que deja un margen de seguridad de 25%
+    # sobre el valor intrínseco (consenso ponderado).
+    buy_price = (consensus / 1.25) if consensus else None
+
     for m in models:
         m["fair"] = round(m["fair"], 2)
         m["upside"] = round((m["fair"] / price - 1) * 100, 1) if price else None
@@ -268,6 +276,7 @@ def build_valuation(price, info, annuals, pe_stats, bond10y):
     return {
         "models": models,
         "consensus": round(consensus, 2) if consensus else None,
+        "buyPrice": round(buy_price, 2) if buy_price else None,
         "marginOfSafety": round(mos, 1) if mos is not None else None,
         "verdict": verdict_from_mos(mos),
         "impliedGrowth": round(implied * 100, 1) if implied is not None else None,
