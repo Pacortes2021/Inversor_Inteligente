@@ -202,7 +202,8 @@ def estimate_growth(annuals, info):
 def build_forward_fcf(base_fcf, annuals, fmp_rows):
     """Convierte las estimaciones de consenso de FMP (net income forward)
     en FCFs proyectados: FCF_i = NI_i × ratio FCF/NI histórico (mediana de
-    los últimos 5 años). Devuelve (years, fcfs) o (None, None)."""
+    los últimos 5 años). Solo usa ejercicios posteriores al último anual
+    reportado (FMP mezcla histórico con forward). Devuelve (years, fcfs)."""
     if not fmp_rows:
         return None, None
     pairs = [(a["fcf"], a.get("netIncome")) for a in annuals
@@ -213,17 +214,30 @@ def build_forward_fcf(base_fcf, annuals, fmp_rows):
     ratio = ratios[len(ratios) // 2]
     if not (0 < ratio < 3):
         return None, None
+    hist_years = [a.get("year") for a in annuals if _ok(a.get("year"))]
+    min_forward = max([int(y) for y in hist_years] or [0])
+    if min_forward <= 0:
+        min_forward = _now_year()  # fallback: solo ejercicios estrictamente futuros
     years, fcfs = [], []
     for row in fmp_rows:
+        try:
+            y = int(row.get("year"))
+        except (TypeError, ValueError):
+            continue
         ni = row.get("netIncomeAvg")
-        if _ok(ni) and ni > 0:
+        if y > min_forward and _ok(ni) and ni > 0:
             f = ni * ratio
             if f > 0:
-                years.append(row.get("year"))
+                years.append(str(y))
                 fcfs.append(round(f, 2))
     if len(fcfs) < 2:
         return None, None
     return years, fcfs
+
+
+def _now_year():
+    import datetime
+    return datetime.date.today().year
 
 
 def build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=None):

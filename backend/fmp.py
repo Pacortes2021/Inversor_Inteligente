@@ -76,24 +76,24 @@ def fetch_analyst_estimates(yahoo_symbol, timeout=None):
             continue
         date = str(item.get("date") or item.get("period") or "").strip()
         year = date[:4] if date else ""
-        ni = _f(item.get("estimatedNetIncomeAvg"))
-        rev = _f(item.get("estimatedRevenueAvg"))
+        ni = _f(item.get("netIncomeAvg"))
+        rev = _f(item.get("revenueAvg"))
         if not year or not year.isdigit() or (ni is None and rev is None):
             continue
         if year in seen_years:
             continue
         seen_years.add(year)
         n_analysts = 0
-        for k in ("numberOfAnalystEstimatedRevenues", "numberOfAnalystEstimatedEps",
-                  "numberOfAnalystEstimatedEbitda"):
-            if _f(item.get(k)) is not None:
-                n_analysts = max(n_analysts, int(item.get(k)))
+        for k in ("numAnalystsRevenue", "numAnalystsEps"):
+            v = _f(item.get(k))
+            if v is not None:
+                n_analysts = max(n_analysts, int(v))
         rows.append({
             "year": year,
             "revenueAvg": rev,
             "netIncomeAvg": ni,
-            "epsAvg": _f(item.get("estimatedEps")),
-            "ebitdaAvg": _f(item.get("estimatedEbitdaAvg")),
+            "epsAvg": _f(item.get("epsAvg")),
+            "ebitdaAvg": _f(item.get("ebitdaAvg")),
             "analysts": n_analysts,
         })
     rows.sort(key=lambda r: r["year"])
