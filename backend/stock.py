@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from . import edgar as E
+from . import fmp as F
 from . import metrics as M
 from . import quality as Q
 from . import snapshots as S
@@ -570,7 +571,8 @@ def build_payload(symbol: str, refresh: bool = False):
 
 
     bond10y = bond_yield_10y()
-    valuation = V.build_valuation(price, info, annuals, pe_stats, bond10y)
+    fmp_rows = F.fetch_analyst_estimates(symbol)
+    valuation = V.build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=fmp_rows)
     scorecard = V.buffett_scorecard(info, annuals, pe_stats)
     next_earnings, next_earnings_est, sec_filings = _sec_context(symbol, raw.calendar)
 

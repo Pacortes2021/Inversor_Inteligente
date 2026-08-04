@@ -10,15 +10,28 @@ import { charts } from "./charts.js";
 /* ------------------------------------------- valoración + DCF live */
 export function dcfJs(inp, growth, discount, terminal) {
   if (!inp || !inp.baseFcf || inp.baseFcf <= 0 || !inp.shares || discount <= terminal) return null;
-  let fcf = inp.baseFcf, pv = 0;
   const years = inp.years, fadeStart = inp.fadeStart;
+  const fwd = (inp.forwardFcf || []).filter(f => f > 0).slice(0, years);
+  const nFwd = fwd.length;
+  let fcf = inp.baseFcf, pv = 0, gAfter = growth;
+  const fadeOrigin = nFwd ? Math.max(fadeStart, nFwd + 1) : fadeStart;
   for (let yr = 1; yr <= years; yr++) {
-    let g = growth;
-    if (yr >= fadeStart) {
-      const frac = (yr - fadeStart + 1) / (years - fadeStart + 1);
-      g = growth + (terminal - growth) * frac;
+    let g;
+    if (yr <= nFwd) {
+      gAfter = yr > 1 && fwd[yr - 2] > 0
+        ? fwd[yr - 1] / fwd[yr - 2] - 1
+        : fwd[yr - 1] / fcf - 1;
+      gAfter = Math.min(0.75, Math.max(-0.25, gAfter));
+      fcf = fwd[yr - 1];
+    } else {
+      if (yr >= fadeOrigin) {
+        const frac = (yr - fadeOrigin + 1) / (years - fadeOrigin + 1);
+        g = gAfter + (terminal - gAfter) * frac;
+      } else {
+        g = gAfter;
+      }
+      fcf *= 1 + g;
     }
-    fcf *= 1 + g;
     pv += fcf / Math.pow(1 + discount, yr);
   }
   pv += (fcf * (1 + terminal) / (discount - terminal)) / Math.pow(1 + discount, years);
@@ -182,6 +195,11 @@ export function renderScenarios(d, g, r, t) {
   const inp = d.valuation.dcfInputs;
   const price = d.quote.price;
   const cur = d.profile.currency;
+  const src = inp.fcfSource === "fmp"
+    ? `<span class="badge badge-base" title="Los primeros años del DCF usan el FCF proyectado por el consenso de analistas (FMP). El slider de crecimiento afecta solo los años posteriores.">flujos: consenso analistas</span>`
+    : `<span class="badge badge-cons" title="Sin cobertura de consenso: el DCF proyecta con el CAGR histórico (FMP sin clave o símbolo no cubierto).">flujos: proyección propia</span>`;
+  const srcEl = $("dcf-scenarios-source");
+  if (srcEl) srcEl.innerHTML = src;
   if (!inp || !inp.baseFcf || !price) { container.classList.add("hidden"); return; }
   if (g == null) g = inp.growth;
   if (r == null) r = inp.discount;
@@ -235,6 +253,25 @@ export function renderFcfHistory(d) {
       </tr>`;
   }).join("");
 
+  // Flujos proyectados por el consenso de analistas (FMP) si están disponibles
+  const inp = d.valuation?.dcfInputs || {};
+  const fwdYears = inp.forwardYears || [], fwdFcfs = inp.forwardFcf || [];
+  let fwdRows = "", fwdNote = "";
+  if (fwdYears.length >= 2) {
+    const lastHist = annuals.length ? annuals[annuals.length - 1].fcf : null;
+    fwdRows = fwdYears.map((yr, i) => {
+      const prev = i > 0 ? fwdFcfs[i - 1] : lastHist;
+      const growth = prev && prev > 0 ? (fwdFcfs[i] / prev - 1) * 100 : null;
+      return `
+        <tr class="fwd-row">
+          <td>${yr} <span class="badge badge-base">proy.</span></td>
+          <td class="num up">${fmtBig(fwdFcfs[i], cur)}</td>
+          <td class="num ${growth != null ? (growth >= 0 ? "up" : "down") : "muted"}">${growth != null ? fmtPct(growth, 0, true) : "—"}</td>
+        </tr>`;
+    }).join("");
+    fwdNote = `<p class="muted" style="font-size:12px;margin-top:8px">Fila(s) <span class="badge badge-base">proy.</span>: FCF proyectado desde el consenso de analistas (FMP): net income estimado × ratio FCF/NI histórico.</p>`;
+  }
+
   const fcfs = annuals.map(a => a.fcf);
   const cagr3 = cagr(fcfs, 3), cagr5 = cagr(fcfs, 5), cagr10 = cagr(fcfs, 10);
   const cagrCell = (v) => v != null
@@ -243,7 +280,7 @@ export function renderFcfHistory(d) {
   table.innerHTML = `
     <table class="data-table">
       <thead><tr><th>Año</th><th class="num">FCF</th><th class="num">Crec. %</th></tr></thead>
-      <tbody>${rows}</tbody>
+      <tbody>${rows}${fwdRows}</tbody>
       <tfoot>
         <tr class="consensus-row">
           <td><b>CAGR 3Y</b> · ${cagrCell(cagr3)}</td>
@@ -251,7 +288,7 @@ export function renderFcfHistory(d) {
           <td class="num"><b>CAGR 10Y</b> · ${cagrCell(cagr10)}</td>
         </tr>
       </tfoot>
-    </table>`;
+    </table>${fwdNote}`;
 }
 
 /* ------------------------------------------------ matriz sensibilidad */
@@ -1022,7 +1059,7 @@ export function renderDcfFv(d) {
         <div style="font-size:22px; font-weight:800; color:${mos != null && mos >= 0 ? 'var(--green)' : 'var(--red)'}; margin-top:4px;">${mos != null ? fmtPct(mos, 1, true) : dcfVal == null ? 'No aplica' : '—'}</div>
       </div>
     </div>
-    ${dcfVal == null ? `<div style="padding:14px; background:var(--gold-soft); border:1px solid var(--gold-border); border-radius:var(--radius); font-size:12.5px; color:var(--gold-text);">ℹ️ El modelo DCF de FCF no aplica para esta empresa (puede ser financiera o tener FCF negativo). Se usa el modelo DDM para el consenso.</div>` : `<p class="muted" style="font-size:12.5px;">Supuestos usados: Crecimiento FCF base <b>${inputs.growth != null ? fmtPct(inputs.growth * 100, 1) : '—'}</b>, WACC <b>${inputs.discount != null ? fmtPct(inputs.discount * 100, 1) : '—'}</b>, Tasa terminal <b>${inputs.terminal != null ? fmtPct(inputs.terminal * 100, 1) : '—'}</b>. Puedes ajustarlos en la pestaña <b><svg class="h-ico" style="width:14px;height:14px;vertical-align:-2px"><use href="#i-calc"/></svg>Ratios &amp; Growth</b>.</p>`}
+    ${dcfVal == null ? `<div style="padding:14px; background:var(--gold-soft); border:1px solid var(--gold-border); border-radius:var(--radius); font-size:12.5px; color:var(--gold-text);">ℹ️ El modelo DCF de FCF no aplica para esta empresa (puede ser financiera o tener FCF negativo). Se usa el modelo DDM para el consenso.</div>` : `<p class="muted" style="font-size:12.5px;">Supuestos usados: Crecimiento FCF base <b>${inputs.growth != null ? fmtPct(inputs.growth * 100, 1) : '—'}</b>, WACC <b>${inputs.discount != null ? fmtPct(inputs.discount * 100, 1) : '—'}</b>, Tasa terminal <b>${inputs.terminal != null ? fmtPct(inputs.terminal * 100, 1) : '—'}</b>. ${inputs.fcfSource === "fmp" ? `Los primeros <b>${(inputs.forwardFcf || []).length}</b> años usan el FCF proyectado por el consenso de analistas (FMP). ` : `Flujos proyectados con el CAGR histórico (sin consenso FMP). `}Puedes ajustarlos en la pestaña <b><svg class="h-ico" style="width:14px;height:14px;vertical-align:-2px"><use href="#i-calc"/></svg>Ratios &amp; Growth</b>.</p>`}
   `;
 }
 

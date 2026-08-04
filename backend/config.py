@@ -5,8 +5,14 @@ import os
 # ─── Auth ───
 API_KEY = os.getenv("INVERSOR_API_KEY", "dev-secret-change-me")
 
+# ─── Financial Modeling Prep (estimaciones forward de analistas) ───
+# Clave gratis: site.financialmodelingprep.com (250 req/día). Vacía = solo Yahoo.
+FMP_API_KEY = os.getenv("FMP_API_KEY", "")
+FMP_TIMEOUT = float(os.getenv("FMP_TIMEOUT", "8"))
+FMP_TTL = float(os.getenv("FMP_TTL", "43200"))  # 12h
+
 # ─── Cache versioning (bump al cambiar esquema de payload) ───
-CACHE_VERSION = "v6"
+CACHE_VERSION = "v7"
 
 # ─── yfinance wrapper ───
 YF_MAX_RETRIES = int(os.getenv("YF_MAX_RETRIES", "3"))

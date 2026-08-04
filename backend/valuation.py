@@ -10,22 +10,38 @@ def _ok(x):
 # ----------------------------------------------------------------------- DCF
 
 def dcf_fair_value(base_fcf, shares, net_cash=0.0, growth=0.08,
-                   discount=0.10, terminal=0.025, years=10, fade_start=6):
-    """DCF de flujo de caja libre con crecimiento que decae linealmente hacia
-    la tasa terminal a partir de fade_start. Devuelve valor justo por acción."""
+                   discount=0.10, terminal=0.025, years=10, fade_start=6,
+                   forward_fcf=None):
+    """DCF de flujo de caja libre. Si `forward_fcf` trae FCFs explícitos
+    (consenso de analistas) se usan para los primeros años; después se
+    continúa con el crecimiento que implican, decayendo linealmente hacia
+    la tasa terminal. Sin `forward_fcf` todo crece a `growth` con el fade
+    clásico desde fade_start. Devuelve valor justo por acción."""
     if not _ok(base_fcf) or base_fcf <= 0 or not _ok(shares) or shares <= 0:
         return None
     if discount <= terminal:
         return None
+    fwd = [f for f in (forward_fcf or []) if _ok(f) and f > 0][:years]
+    n_fwd = len(fwd)
     fcf = base_fcf
+    g_after = growth
+    fade_origin = max(fade_start, n_fwd + 1) if n_fwd else fade_start
     pv_sum = 0.0
     for yr in range(1, years + 1):
-        if yr >= fade_start:
-            frac = (yr - fade_start + 1) / (years - fade_start + 1)
-            g = growth + (terminal - growth) * frac
+        if yr <= n_fwd:
+            if yr > 1 and fwd[yr - 2] > 0:
+                g_after = fwd[yr - 1] / fwd[yr - 2] - 1
+            elif fcf > 0:
+                g_after = fwd[yr - 1] / fcf - 1
+            g_after = min(max(g_after, -0.25), 0.75)
+            fcf = fwd[yr - 1]
         else:
-            g = growth
-        fcf *= (1 + g)
+            if yr >= fade_origin:
+                frac = (yr - fade_origin + 1) / (years - fade_origin + 1)
+                g = g_after + (terminal - g_after) * frac
+            else:
+                g = g_after
+            fcf *= (1 + g)
         pv_sum += fcf / (1 + discount) ** yr
     tv = fcf * (1 + terminal) / (discount - terminal)
     pv_sum += tv / (1 + discount) ** years
@@ -183,7 +199,34 @@ def estimate_growth(annuals, info):
     return min(max(g, 0.02), 0.20)
 
 
-def build_valuation(price, info, annuals, pe_stats, bond10y):
+def build_forward_fcf(base_fcf, annuals, fmp_rows):
+    """Convierte las estimaciones de consenso de FMP (net income forward)
+    en FCFs proyectados: FCF_i = NI_i × ratio FCF/NI histórico (mediana de
+    los últimos 5 años). Devuelve (years, fcfs) o (None, None)."""
+    if not fmp_rows:
+        return None, None
+    pairs = [(a["fcf"], a.get("netIncome")) for a in annuals
+             if _ok(a.get("fcf")) and a["fcf"] > 0 and _ok(a.get("netIncome")) and a["netIncome"] > 0]
+    if len(pairs) < 3:
+        return None, None
+    ratios = sorted(f / ni for f, ni in pairs[-5:])
+    ratio = ratios[len(ratios) // 2]
+    if not (0 < ratio < 3):
+        return None, None
+    years, fcfs = [], []
+    for row in fmp_rows:
+        ni = row.get("netIncomeAvg")
+        if _ok(ni) and ni > 0:
+            f = ni * ratio
+            if f > 0:
+                years.append(row.get("year"))
+                fcfs.append(round(f, 2))
+    if len(fcfs) < 2:
+        return None, None
+    return years, fcfs
+
+
+def build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=None):
     """Arma el bloque de valoración completo, con insumos para recalcular
     el DCF en el navegador (sliders)."""
     shares = info.get("sharesOutstanding")
@@ -214,7 +257,13 @@ def build_valuation(price, info, annuals, pe_stats, bond10y):
     discount = round(wacc_est, 4)
     terminal = 0.025
 
-    dcf = dcf_fair_value(base_fcf, shares, net_cash, growth, discount, terminal)
+    # Flujos forward: consenso de analistas (FMP) si hay clave y cobertura;
+    # si no, proyección propia con el CAGR histórico (fcfSource "historico").
+    fwd_years, fwd_fcfs = build_forward_fcf(base_fcf, annuals, fmp_rows)
+    fcf_source = "fmp" if fwd_fcfs else "historico"
+
+    dcf = dcf_fair_value(base_fcf, shares, net_cash, growth, discount, terminal,
+                         forward_fcf=fwd_fcfs)
     graham = graham_number(eps, bvps, fcf_per_share=fcf_per_share)
     graham_int = graham_intrinsic_value(eps, growth, bond10y)
     pe_med = pe_stats["median"] if pe_stats else None
@@ -292,6 +341,9 @@ def build_valuation(price, info, annuals, pe_stats, bond10y):
             "terminal": terminal,
             "years": 10,
             "fadeStart": 6,
+            "fcfSource": fcf_source,
+            "forwardFcf": fwd_fcfs or [],
+            "forwardYears": fwd_years or [],
         },
     }
 
