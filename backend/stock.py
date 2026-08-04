@@ -584,7 +584,7 @@ def build_payload(symbol: str, refresh: bool = False):
     S.append(symbol, price, valuation["marginOfSafety"], valuation["consensus"])
 
     ratios = calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps_hist)
-    estimates = build_estimates_payload(raw, info, annuals, price, symbol=symbol)
+    estimates = build_estimates_payload(raw, info, annuals, price, symbol=symbol, fmp_rows=fmp_rows)
     insiders_holders = build_insiders_holders_payload(raw, info)
 
     payload = {

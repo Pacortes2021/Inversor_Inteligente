@@ -107,7 +107,7 @@ def test_grid_caps_long_growth(monkeypatch):
     last_hist = eps["values"][-6]  # 2023 (histórico, último real)
     assert eps["values"][-1] > last_hist * (1.35) ** 4 * 0.9
     assert eps["values"][-1] < last_hist * (1.40) ** 5
-    assert grid["epsSources"] == {"yahooGrowth": 60.0, "saGrowth": None, "saYear": None, "conflict": False}
+    assert grid["epsSources"] == {"yahooGrowth": 60.0, "saGrowth": None, "saYear": None, "conflict": False, "fmp": False}
 
 
 def test_grid_mean_1y_2y(monkeypatch):

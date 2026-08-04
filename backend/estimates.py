@@ -147,8 +147,11 @@ def _growth_from_df(df, period):
         return None
 
 
-def _build_growth_grid(symbol, raw, info, annuals=None, price=None):
-    """Construye la grilla de crecimiento histórico + proyecciones 5 años."""
+def _build_growth_grid(symbol, raw, info, annuals=None, price=None, fmp_rows=None):
+    """Construye la grilla de crecimiento histórico + proyecciones 5 años.
+    Si hay consenso FMP (fmp_rows), los años proyectados cubiertos usan los
+    valores reales de analistas (EPS/NI/revenue/EBITDA) en vez de la
+    extrapolación por crecimiento de Yahoo, que tiende a sobre-proyectar."""
     if not annuals:
         return None
     curr = info.get("currency") or "USD"
@@ -209,7 +212,7 @@ def _build_growth_grid(symbol, raw, info, annuals=None, price=None):
 
     # Cross-check del crecimiento del próximo año contra StockAnalysis.com.
     # Si divergen >50% (relativo), preferir SA (más actualizado) y marcar.
-    eps_src = {"yahooGrowth": round(g_eps_1y * 100, 2), "saGrowth": None, "saYear": None, "conflict": False}
+    eps_src = {"yahooGrowth": round(g_eps_1y * 100, 2), "saGrowth": None, "saYear": None, "conflict": False, "fmp": bool(fmp_rows)}
     sa = _sa_eps_forecast(symbol) if symbol else None
     if sa and sa.get("growth") is not None:
         sa_g = sa["growth"] / 100.0
@@ -255,17 +258,56 @@ def _build_growth_grid(symbol, raw, info, annuals=None, price=None):
     if not base_fwd_pe and M._f(info.get("trailingPE")):
         base_fwd_pe = M._f(info.get("trailingPE")) / (1 + g_eps_1y) if (1 + g_eps_1y) > 0 else M._f(info.get("trailingPE"))
 
+    # Consenso FMP por ejercicio (solo ejercicios proyectados futuros)
+    fmp_by_year = {}
+    fmp_used = False
+    if fmp_rows:
+        last_fy = last_y
+        for row in fmp_rows:
+            try:
+                fy = int(row.get("year"))
+            except (TypeError, ValueError):
+                continue
+            if fy > last_fy:
+                fmp_by_year[fy] = row
+
+    # Ratio FCF/NI histórico (mediana 5 años) para proyectar FCF con NI de FMP
+    fcf_ni_pairs = [(a.get("fcf"), a.get("netIncome")) for a in annuals
+                    if a.get("fcf") and a.get("netIncome")
+                    and M._f(a.get("fcf")) and M._f(a.get("netIncome")) > 0]
+    fcf_ni_ratio = None
+    if len(fcf_ni_pairs) >= 3:
+        ratios = sorted(M._f(f) / M._f(n) for f, n in fcf_ni_pairs[-5:])
+        fcf_ni_ratio = ratios[len(ratios) // 2]
+
     for idx, py in enumerate(proj_years):
         g_r = g_rev_1y if idx == 0 else g_rev_long
         g_e = g_eps_1y if idx == 0 else g_eps_long
 
-        cur_rev *= (1 + g_r)
-        cur_ebitda *= (1 + g_r)
-        cur_ni *= (1 + g_e)
-        cur_eps *= (1 + g_e)
-        cur_fcf *= (1 + g_e)
-        if cur_div and cur_div > 0:
-            cur_div *= (1 + g_e)
+        row = fmp_by_year.get(py)
+        if row:
+            # Años con consenso de analistas: usar valores reales proyectados
+            fmp_used = True
+            if row.get("revenueAvg"):
+                cur_rev = row["revenueAvg"]
+            if row.get("ebitdaAvg"):
+                cur_ebitda = row["ebitdaAvg"]
+            if row.get("netIncomeAvg"):
+                cur_ni = row["netIncomeAvg"]
+                if fcf_ni_ratio:
+                    cur_fcf = cur_ni * fcf_ni_ratio
+            if row.get("epsAvg"):
+                cur_eps = row["epsAvg"]
+            if cur_div and cur_div > 0:
+                cur_div *= (1 + g_e)
+        else:
+            cur_rev *= (1 + g_r)
+            cur_ebitda *= (1 + g_r)
+            cur_ni *= (1 + g_e)
+            cur_eps *= (1 + g_e)
+            cur_fcf *= (1 + g_e)
+            if cur_div and cur_div > 0:
+                cur_div *= (1 + g_e)
 
         rev_all[py] = cur_rev
         ebitda_all[py] = cur_ebitda
@@ -344,7 +386,7 @@ def _build_growth_grid(symbol, raw, info, annuals=None, price=None):
     })
 
 
-def build_estimates_payload(raw, info, annuals=None, price=None, symbol=None):
+def build_estimates_payload(raw, info, annuals=None, price=None, symbol=None, fmp_rows=None):
     """Extrae proyecciones de analistas y estimaciones de EPS/Ingresos."""
     rec_dict = {}
     try:
@@ -419,7 +461,7 @@ def build_estimates_payload(raw, info, annuals=None, price=None, symbol=None):
         pass
 
     try:
-        growth_grid = _build_growth_grid(symbol, raw, info, annuals, price)
+        growth_grid = _build_growth_grid(symbol, raw, info, annuals, price, fmp_rows=fmp_rows)
     except Exception:
         growth_grid = None
 

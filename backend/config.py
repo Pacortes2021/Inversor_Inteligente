@@ -22,7 +22,7 @@ FMP_TIMEOUT = float(os.getenv("FMP_TIMEOUT", "8"))
 FMP_TTL = float(os.getenv("FMP_TTL", "43200"))  # 12h
 
 # ─── Cache versioning (bump al cambiar esquema de payload) ───
-CACHE_VERSION = "v8"
+CACHE_VERSION = "v9"
 
 # ─── yfinance wrapper ───
 YF_MAX_RETRIES = int(os.getenv("YF_MAX_RETRIES", "3"))
