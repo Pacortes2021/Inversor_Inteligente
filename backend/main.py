@@ -41,6 +41,19 @@ app = FastAPI(title="El Inversor Inteligente", lifespan=lifespan)
 
 FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
 
+
+@app.middleware("http")
+async def no_store_api(request, call_next):
+    """Evita la caché heurística del navegador sobre los payloads de la API:
+    sin esta cabecera Chrome cachea los JSON y la app muestra datos viejos
+    hasta un refresco manual. Los estáticos ya se sirven con no-cache."""
+    if request.url.path.startswith("/api/"):
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        return response
+    return await call_next(request)
+
 _SYMBOL_RE = re.compile(r"^[A-Z0-9\.\-\/]{1,15}$")
 
 

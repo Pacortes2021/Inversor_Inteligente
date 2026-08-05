@@ -23,6 +23,27 @@ import "./mobile-nav.js";
 // Compat para consola del desarrollador.
 window.state = state;
 
+/* --------------------- red de seguridad global ---------------------
+   Cualquier excepción no capturada se muestra como toast y se loguea,
+   en vez de dejar la app muerta o en blanco. */
+let _lastErrTs = 0;
+const _errToast = (msg) => {
+  const now = Date.now();
+  if (now - _lastErrTs < 4000) return;  // evita cascada de toasts
+  _lastErrTs = now;
+  console.error("[app]", msg);
+  try { toast("⚠ Error interno: " + msg.slice(0, 90)); } catch { /* toast no disponible */ }
+};
+window.addEventListener("error", (ev) => {
+  ev.preventDefault?.();
+  _errToast(ev.message || "error de script");
+});
+window.addEventListener("unhandledrejection", (ev) => {
+  ev.preventDefault?.();
+  const msg = ev.reason?.message || String(ev.reason || "promesa rechazada");
+  _errToast(msg);
+});
+
 // Click handlers en los tabs de acción del HTML
 document.querySelectorAll(".action-tabs .a-tab").forEach(btn => {
   btn.addEventListener("click", () => {
