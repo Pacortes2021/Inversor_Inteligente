@@ -123,6 +123,39 @@
   grid-column: span 1;
 }
 
+/* ── CHART STAT CHIPS (múltiplos históricos) ── */
+.chart-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 2px 0;
+}
+.stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--muted);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.stat-chip .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+.stat-chip b {
+  color: var(--text);
+  font-weight: 700;
+}
+
 /* ── FLEX LAYOUTS ── */
 .flex-between {
   display: flex;

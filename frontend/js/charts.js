@@ -411,29 +411,111 @@ export function chartRatio(id, pairs, stats, color, name) {
   const cc = getChartColors();
   const lastVal = pairs && pairs.length ? pairs[pairs.length - 1][1] : null;
   const markLineData = [];
-  if (stats && stats.median != null) {
-    markLineData.push({ yAxis: stats.median, lineStyle: { color: cc.gold, type: 'dashed', width: 1.5 }, label: { color: cc.gold, fontSize: 10, position: 'insideEndTop', formatter: `Mediana ${stats.median}x` } });
-  }
-  if (lastVal != null) {
-    markLineData.push({ yAxis: lastVal, lineStyle: { color: cc.green, type: 'solid', width: 1.5 }, label: { color: cc.green, fontSize: 10, position: 'insideEndBottom', formatter: `Hoy ${lastVal.toFixed(1)}x` } });
-  }
-  const markLine = markLineData.length ? { silent: true, symbol: 'none', data: markLineData } : undefined;
+
   const markArea = stats && stats.p25 != null ? {
     silent: true,
-    itemStyle: { color: cc.grid },
+    itemStyle: {
+      color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+        { offset: 0, color: color + '16' }, { offset: 1, color: color + '05' },
+      ]),
+    },
     data: [[{ yAxis: stats.p25 }, { yAxis: stats.p75 }]],
   } : undefined;
+
+  if (stats && stats.p25 != null) {
+    markLineData.push({ yAxis: stats.p25, lineStyle: { color: cc.muted, type: 'dotted', width: 1, opacity: 0.55 }, label: { show: false } });
+  }
+  if (stats && stats.p75 != null) {
+    markLineData.push({ yAxis: stats.p75, lineStyle: { color: cc.muted, type: 'dotted', width: 1, opacity: 0.55 }, label: { show: false } });
+  }
+  if (stats && stats.median != null) {
+    markLineData.push({
+      yAxis: stats.median,
+      lineStyle: { color: cc.gold, type: 'dashed', width: 1.5 },
+      label: { color: cc.gold, fontSize: 10.5, fontWeight: 700, position: 'insideEndTop', formatter: `Mediana ${stats.median}x`, fontFamily: 'Inter' },
+    });
+  }
+  if (lastVal != null) {
+    markLineData.push({
+      yAxis: lastVal,
+      lineStyle: { color: cc.green, type: 'solid', width: 1.8 },
+      label: { color: cc.green, fontSize: 10.5, fontWeight: 700, position: 'insideEndBottom', formatter: `Hoy ${lastVal.toFixed(1)}x` },
+    });
+  }
+  const markLine = markLineData.length ? { silent: true, symbol: 'none', data: markLineData } : undefined;
+
+  // Posición del valor actual dentro de la distribución histórica
+  const validPts = pairs.filter(p => p[1] != null);
+  const pctile = lastVal != null && validPts.length
+    ? Math.round(validPts.filter(p => p[1] <= lastVal).length / validPts.length * 100)
+    : null;
+  const vsMed = lastVal != null && stats && stats.median != null
+    ? ((lastVal - stats.median) / stats.median) * 100
+    : null;
+
   makeChart(id, timeOption({
+    grid: { left: 48, right: 22, top: 26, bottom: 34 },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: cc.panel, borderColor: cc.border,
+      borderWidth: 1, borderRadius: 10, padding: [10, 14],
+      extraCssText: 'box-shadow: 0 10px 28px rgba(0,0,0,0.18); backdrop-filter: blur(6px);',
+      textStyle: { color: cc.text, fontSize: 12, fontFamily: 'Inter, sans-serif' },
+      axisPointer: { type: 'line', lineStyle: { color: cc.muted, type: 'dashed', opacity: 0.5 } },
+      formatter: (params) => {
+        const p = params && params[0];
+        if (!p || !p.value || p.value[1] == null) return '';
+        const t = p.value[0], v = p.value[1];
+        const dateStr = new Date(t).toLocaleDateString('es-CL', { year: 'numeric', month: 'short' });
+        let vs = '';
+        if (stats && stats.median != null) {
+          const delta = (v - stats.median) / stats.median * 100;
+          const c = delta > 0 ? cc.red : cc.green;
+          vs = `<div style="margin-top:6px;padding-top:6px;border-top:1px solid ${cc.border};display:flex;justify-content:space-between;gap:16px;align-items:baseline">
+            <span style="color:${cc.muted}">vs mediana (${stats.median}x)</span>
+            <b style="color:${c}">${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%</b></div>`;
+        }
+        return `<div style="font-weight:700;color:${cc.text};margin-bottom:4px">${name} · ${dateStr}</div>
+          <div style="display:flex;justify-content:space-between;gap:16px;align-items:baseline">
+            <span style="color:${cc.muted}">Valor</span>
+            <b style="font-family:'Inter';font-size:14px;color:${color}">${v.toFixed(1)}x</b></div>${vs}`;
+      },
+    },
+    yAxis: Object.assign({ type: 'value', scale: true }, baseAxisStyle(cc), {
+      axisLabel: { color: cc.muted, fontSize: 11, formatter: '{value}x' },
+    }),
     series: [{
-      type: 'line', data: pairs, showSymbol: false, name,
-      lineStyle: { color, width: 2 },
+      type: 'line', data: pairs, showSymbol: false, name, smooth: 0.3,
+      lineStyle: { color, width: 2.5, shadowColor: color + '55', shadowBlur: 10, shadowOffsetY: 5 },
       areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-        { offset: 0, color: color + '30' }, { offset: 1, color: color + '02' },
+        { offset: 0, color: color + '3c' }, { offset: 1, color: color + '00' },
       ]) },
+      emphasis: { focus: 'series', lineStyle: { width: 3.5 } },
+      endLabel: {
+        show: lastVal != null,
+        color, fontSize: 12, fontWeight: 800, fontFamily: 'Inter',
+        formatter: lastVal != null ? `${lastVal.toFixed(1)}x` : '',
+      },
       markLine, markArea,
       tooltip: { valueFormatter: v => fmtRatio(v, 1) },
     }],
   }));
+
+  // ── Chips de estadísticas bajo el gráfico ──
+  const statEl = document.getElementById('stat-' + id.replace('ch-', ''));
+  if (statEl) {
+    const chips = [];
+    if (stats && stats.median != null) chips.push([cc.gold, `Mediana <b>${stats.median}x</b>`]);
+    if (stats && stats.p25 != null) chips.push([cc.muted, `p25 <b>${stats.p25}x</b>`]);
+    if (stats && stats.p75 != null) chips.push([cc.muted, `p75 <b>${stats.p75}x</b>`]);
+    if (lastVal != null) {
+      const pos = vsMed == null ? cc.muted : (vsMed > 15 ? cc.red : vsMed < -15 ? cc.green : cc.amber);
+      chips.push([pos, `Hoy <b>${lastVal.toFixed(1)}x</b>`]);
+    }
+    if (pctile != null) chips.push([cc.blue, `Percentil <b>P${pctile}</b>`]);
+    statEl.innerHTML = chips.map(([c, html]) =>
+      `<span class="stat-chip"><span class="dot" style="background:${c}"></span>${html}</span>`).join('');
+  }
 }
 
 
