@@ -95,11 +95,13 @@ def ttm_eps_series(raw: "RawData"):
             if pd.isna(dt):
                 continue
             v = _f(s_q.get(dt)) if s_q is not None else None
-            if v is None and ni is not None and dt in ni.index:
+            if ni is not None and dt in ni.index:
                 nv = _f(ni.loc[dt])
                 sv = _f(sh.loc[dt]) if sh is not None and dt in sh.index else None
                 if nv is not None and sv is not None and sv > 0:
-                    v = nv / sv
+                    implied = nv / sv
+                    if v is None or abs(v - implied) / max(abs(implied), 1e-4) > 0.25:
+                        v = implied
             if v is not None:
                 qpts[dt] = float(v)
         if len(qpts) >= 4:
@@ -315,7 +317,7 @@ def build_fundamentals(inc, bs, cf, dividends=None):
         capex = _g(cf, col_cf, "Capital Expenditure")
         fcf = _g(cf, col_cf, "Free Cash Flow")
         if fcf is None and ocf is not None and capex is not None:
-            fcf = ocf + capex  # capex viene negativo
+            fcf = (ocf - abs(capex)) if capex > 0 else (ocf + capex)
 
         tax_rate = (tax / pretax) if (tax is not None and pretax and pretax > 0) else 0.21
         tax_rate = min(max(tax_rate, 0.0), 0.5)
@@ -346,6 +348,7 @@ def build_fundamentals(inc, bs, cf, dividends=None):
             "workingCapital": (cur_assets - cur_liab) if (cur_assets is not None and cur_liab is not None) else None,
             "longTermDebt": long_term_debt,
             "shares": shares_n,
+            "sharesOut": shares_n,
             "dividendPS": div_by_year.get(year, 0.0) if dividends is not None else 0.0
         })
     return out

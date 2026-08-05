@@ -283,7 +283,7 @@ def build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=None):
     pe_med = pe_stats["median"] if pe_stats else None
     reversion = pe_reversion(eps, pe_med)
 
-    earnings_yield = (eps / price * 100) if (_ok(eps) and price) else None
+    earnings_yield = (eps / price * 100) if (_ok(eps) and _ok(price) and price > 0) else None
 
     # El FCF contable de bancos y aseguradoras no refleja su economía:
     # para financieras el DCF de FCF queda excluido y se usa DDM.
@@ -319,7 +319,7 @@ def build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=None):
         models.append({"id": "graham", "name": "Número de Graham", "fair": graham, "weight": weight})
 
     consensus, mos = None, None
-    if models and price:
+    if models and _ok(price) and price > 0:
         wsum = sum(m["weight"] for m in models)
         consensus = sum(m["fair"] * m["weight"] for m in models) / wsum
         mos = (consensus / price - 1) * 100
@@ -330,7 +330,7 @@ def build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=None):
 
     for m in models:
         m["fair"] = round(m["fair"], 2)
-        m["upside"] = round((m["fair"] / price - 1) * 100, 1) if price else None
+        m["upside"] = round((m["fair"] / price - 1) * 100, 1) if (_ok(price) and price > 0) else None
 
     implied = None
     if not is_financial:

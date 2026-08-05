@@ -472,7 +472,7 @@ def _deep_worker(universe):
                 with _deep_lock:
                     if universe in _deep_states:
                         _deep_states[universe]["done"] += 1
-        results.sort(key=lambda r: (r["mos"] is None, -(r["mos"] or -999)))
+        results.sort(key=lambda r: (r["mos"] is None, -(r["mos"] if r["mos"] is not None else -999)))
         _inject_sma(results)
         payload = jclean({"count": len(results), "universe": universe,
                           "updatedAt": int(time.time() * 1000), "results": results})

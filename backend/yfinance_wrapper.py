@@ -30,7 +30,7 @@ def _should_retry(exc: Exception) -> bool:
 def _sleep_with_jitter(attempt: int) -> float:
     delay = min(YF_BASE_DELAY * (2 ** attempt), YF_MAX_DELAY)
     jitter_amt = delay * YF_JITTER * random.random()
-    return delay + jitter
+    return delay + jitter_amt
 
 
 def with_retry(fn: Callable[..., Any]) -> Callable[..., Any]:

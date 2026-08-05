@@ -1,6 +1,7 @@
 """Watchlist persistente con margen de seguridad objetivo por acción."""
 
 import json
+import math
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -84,9 +85,13 @@ def get_watchlist():
                 delta = closes.diff()
                 gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
                 loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-                rs = gain / loss
-                rsi = 100 - (100 / (1 + rs))
-                perf["RSI"] = rsi.iloc[-1]
+                last_g, last_l = gain.iloc[-1], loss.iloc[-1]
+                if last_l is not None and not math.isnan(last_l):
+                    if last_l == 0:
+                        perf["RSI"] = 100.0 if (last_g and last_g > 0) else 50.0
+                    else:
+                        rs = last_g / last_l
+                        perf["RSI"] = round(float(100 - (100 / (1 + rs))), 1)
 
             # Reemplazar precio cacheado por precio fresco
             out["price"] = current
@@ -119,7 +124,6 @@ def get_watchlist():
             out["inBuyZone"] = None
             
         # Limpiar floats para JSON
-        import math
         for k, v in out.items():
             if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
                 out[k] = None

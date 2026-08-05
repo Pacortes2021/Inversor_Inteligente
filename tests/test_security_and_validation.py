@@ -79,3 +79,20 @@ def test_screener_multi_universe_isolation():
     res_cl = run_deep_screener("cl")
     assert res_us["universe"] == "us"
     assert res_cl["universe"] == "cl"
+
+
+def test_sleep_with_jitter_no_nameerror():
+    from backend.yfinance_wrapper import _sleep_with_jitter
+    val = _sleep_with_jitter(0)
+    assert isinstance(val, float) and val > 0
+
+
+def test_screener_mos_zero_sorting():
+    items = [
+        {"symbol": "A", "mos": None},
+        {"symbol": "B", "mos": 0.0},
+        {"symbol": "C", "mos": 15.0},
+        {"symbol": "D", "mos": -10.0},
+    ]
+    items.sort(key=lambda r: (r["mos"] is None, -(r["mos"] if r["mos"] is not None else -999)))
+    assert [x["symbol"] for x in items] == ["C", "B", "D", "A"]

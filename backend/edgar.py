@@ -186,7 +186,7 @@ def to_annual_rows(hist):
             "roe": (ni / eq * 100) if (ni is not None and eq and eq > 0) else None,
             "roic": None, "interestCoverage": None,
             "ebitda": None, "debtToEbitda": None,
-            "sharesOut": sh, "dividendPS": None,
+            "shares": sh, "sharesOut": sh, "dividendPS": None,
             "source": "edgar",
         })
     return rows

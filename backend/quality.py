@@ -75,6 +75,14 @@ def build_warnings(info, annuals, valuation, pe_pairs, edgar_hist):
                              "— revisa el 10-K antes de confiar en los ratios de ese período.")
                 break
 
+    # 6. P/E saneado automáticamente por la app
+    if info.get("_peSanitized"):
+        raw_pe = info.get("_peRawOriginal")
+        cur_pe = info.get("trailingPE")
+        if raw_pe and cur_pe:
+            w.append(f"El P/E trailing sin ajustar de Yahoo ({raw_pe:.1f}x) presentó una distorsión contable por cargos atípicos. "
+                     f"La app lo auditó y normalizó a {cur_pe:.1f}x según la utilidad neta TTM real.")
+
     return w
 
 

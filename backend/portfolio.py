@@ -141,8 +141,12 @@ def get_portfolio():
 def add_position(symbol, date, price, shares, note=""):
     with _pf_lock:
         items = _load()
+        existing_ids = {it.get("id") for it in items}
+        new_id = int(time.time() * 1000)
+        while new_id in existing_ids:
+            new_id += 1
         items.append({
-            "id": int(time.time() * 1000),
+            "id": new_id,
             "symbol": symbol.upper().strip(),
             "date": date,
             "price": float(price),

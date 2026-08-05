@@ -429,6 +429,25 @@ def build_payload(symbol: str, refresh: bool = False):
     shares = _cut(M.merge_series(shares, edgar_shares))
     fcf_ttm = _cut(fcf_ttm)
 
+    # Sanear trailingPE/trailingEps de Yahoo ante datos corruptos comparando con el EPS TTM auditado
+    eps_ttm_computed = None
+    if eps_ttm is not None and len(eps_ttm):
+        try:
+            eps_ttm_computed = float(eps_ttm.iloc[-1])
+        except (TypeError, ValueError):
+            pass
+
+    cur_pe = M._f(info.get("trailingPE"))
+    if eps_ttm_computed and eps_ttm_computed > 0 and price and price > 0:
+        pe_computed = price / eps_ttm_computed
+        if cur_pe is None or abs(cur_pe - pe_computed) / max(pe_computed, 1e-4) > 0.20:
+            if cur_pe is not None:
+                info["_peRawOriginal"] = cur_pe
+                info["_peSanitized"] = True
+            cur_pe = round(pe_computed, 2)
+            info["trailingPE"] = cur_pe
+            info["trailingEps"] = round(eps_ttm_computed, 2)
+
     # Usar precios semanales para charts más detallados
     pe_hist = M.ratio_history(weekly, eps_ttm, "per_share")
     if pe_hist is not None:
@@ -440,10 +459,6 @@ def build_payload(symbol: str, refresh: bool = False):
     if pcf_hist is not None:
         pcf_hist = pcf_hist[pcf_hist <= 500]  # Filtrar valores extremos
 
-    # Valores actuales "canónicos" (Yahoo) — fuente única de la verdad para HOY.
-    # El último punto de cada serie histórica se ancla a estos valores para que
-    # todas las secciones muestren exactamente el mismo múltiplo actual.
-    cur_pe = M._f(info.get("trailingPE"))
     cur_ps = M._f(info.get("priceToSalesTrailing12Months")) or M._f(info.get("priceToSales"))
     cur_pb = M._f(info.get("priceToBook"))
     # FCF TTM de referencia: el computado de estados de flujos (misma serie que
@@ -634,14 +649,14 @@ def build_payload(symbol: str, refresh: bool = False):
         "symbol": symbol.upper(),
         "profile": {
             "name": info.get("longName") or info.get("shortName") or symbol.upper(),
-            "sector": info.get("sector"),
+            "sector": info.get("sector") or ("Servicios Financieros / Chile" if symbol.upper().endswith(".SN") else None),
             "industry": info.get("industry"),
-            "country": info.get("country"),
+            "country": info.get("country") or ("Chile" if symbol.upper().endswith(".SN") else None),
             "website": info.get("website"),
             "employees": info.get("fullTimeEmployees"),
             "summary": (info.get("longBusinessSummary") or "")[:600],
             "exchange": info.get("fullExchangeName") or info.get("exchange"),
-            "currency": info.get("currency") or "USD",
+            "currency": info.get("currency") or ("CLP" if symbol.upper().endswith(".SN") else "USD"),
             "nextEarnings": next_earnings,
             "nextEarningsEst": next_earnings_est,
             "secFilings": sec_filings,
