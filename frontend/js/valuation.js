@@ -605,7 +605,10 @@ export function renderGrowthEstimatesGrid(grid) {
   const src = grid.epsSources;
   const warnEl = $("est-growth-warning");
   if (warnEl) {
-    if (src && src.conflict) {
+    if (src && src.fmp) {
+      warnEl.innerHTML = `✅ EPS y flujos proyectados con <b>consenso de analistas (FMP)</b> — valores reales por ejercicio, no extrapolación.`;
+      warnEl.style.display = "block";
+    } else if (src && src.conflict) {
       const saPct = src.saGrowth != null ? fmtPct(src.saGrowth, 1) : "—";
       const yfPct = src.yahooGrowth != null ? fmtPct(src.yahooGrowth, 1) : "—";
       warnEl.innerHTML = `⚠️ Fuentes de EPS en conflicto: Yahoo ${yfPct} vs StockAnalysis ${saPct}${src.saYear ? ` (${escHtml(src.saYear)})` : ''}. Se usó StockAnalysis (más actualizado).`;

@@ -271,10 +271,13 @@ def _build_growth_grid(symbol, raw, info, annuals=None, price=None, fmp_rows=Non
             if fy > last_fy:
                 fmp_by_year[fy] = row
 
-    # Ratio FCF/NI histórico (mediana 5 años) para proyectar FCF con NI de FMP
+    # Ratio FCF/NI histórico (mediana 5 años, solo FCF > 0) para proyectar
+    # FCF con NI de FMP — mismo criterio que build_forward_fcf (valuation.py)
+    def _pos(x):
+        v = M._f(x)
+        return v is not None and v > 0
     fcf_ni_pairs = [(a.get("fcf"), a.get("netIncome")) for a in annuals
-                    if a.get("fcf") and a.get("netIncome")
-                    and M._f(a.get("fcf")) and M._f(a.get("netIncome")) > 0]
+                    if _pos(a.get("fcf")) and _pos(a.get("netIncome"))]
     fcf_ni_ratio = None
     if len(fcf_ni_pairs) >= 3:
         ratios = sorted(M._f(f) / M._f(n) for f, n in fcf_ni_pairs[-5:])
