@@ -162,7 +162,8 @@ def _build_earnings_surprises(earnings_dates_df):
     # Devolver orden cronológico ascendente (el más viejo primero)
     return surprises[::-1]
 
-def _calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps_hist):
+def _calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps_hist,
+                              fcf_ttm_now=None, mc_now=None):
     import numpy as np
     sector_name = info.get("sector") or "Technology"
     sector_avgs = {
@@ -292,10 +293,16 @@ def _calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps
     pb_ttm = M._f(info.get("priceToBook"))
     ps_ttm = M._f(info.get("priceToSalesTrailing12Months")) or M._f(info.get("priceToSales"))
     
-    fcf_now = annuals[-1].get("fcf") if annuals else None
-    mc = M._f(info.get("marketCap"))
-    fcf_yield = (fcf_now / mc * 100) if (fcf_now and mc) else None
-    pcf_ttm = 100.0 / fcf_yield if fcf_yield and fcf_yield > 0 else None
+    # P/CF actual: TTM computado de estados de flujos (única fuente de verdad,
+    # consistente con el último punto de la serie histórica del chart). Fallback
+    # al FCF de Yahoo y, en último caso, al último FCF anual.
+    if fcf_ttm_now and mc_now and fcf_ttm_now > 0:
+        pcf_ttm = round(mc_now / fcf_ttm_now, 2)
+    else:
+        fcf_now = annuals[-1].get("fcf") if annuals else None
+        mc_fb = mc_now or M._f(info.get("marketCap"))
+        fcf_yield = (fcf_now / mc_fb * 100) if (fcf_now and mc_fb) else None
+        pcf_ttm = 100.0 / fcf_yield if fcf_yield and fcf_yield > 0 else None
     
     if pe_ttm is None and pe_hist is not None and not pe_hist.empty:
         pe_ttm = float(pe_hist.iloc[-1])
@@ -399,7 +406,7 @@ def build_payload(symbol: str, refresh: bool = False):
     # ------------------------------------------------ series históricas
     shares = M.shares_series(raw)
 
-    eps_ttm = M.ttm_from_statements(raw.inc_a, raw.inc_q, "Diluted EPS", "Basic EPS")
+    eps_ttm = M.ttm_eps_series(raw)
     rev_ttm = M.ttm_from_statements(raw.inc_a, raw.inc_q, "Total Revenue", "Operating Revenue")
     equity = M.step_series(raw.bs_a, raw.bs_q, "Stockholders Equity", "Common Stock Equity")
     fcf_ttm = M.fcf_ttm_series(raw.cf_a, raw.cf_q)
@@ -433,10 +440,43 @@ def build_payload(symbol: str, refresh: bool = False):
     if pcf_hist is not None:
         pcf_hist = pcf_hist[pcf_hist <= 500]  # Filtrar valores extremos
 
-    pe_pairs = M._pairs(pe_hist, 2) if pe_hist is not None else []
-    ps_pairs = M._pairs(ps_hist, 2) if ps_hist is not None else []
-    pb_pairs = M._pairs(pb_hist, 2) if pb_hist is not None else []
-    pcf_pairs = M._pairs(pcf_hist, 2) if pcf_hist is not None else []
+    # Valores actuales "canónicos" (Yahoo) — fuente única de la verdad para HOY.
+    # El último punto de cada serie histórica se ancla a estos valores para que
+    # todas las secciones muestren exactamente el mismo múltiplo actual.
+    cur_pe = M._f(info.get("trailingPE"))
+    cur_ps = M._f(info.get("priceToSalesTrailing12Months")) or M._f(info.get("priceToSales"))
+    cur_pb = M._f(info.get("priceToBook"))
+    # FCF TTM de referencia: el computado de estados de flujos (misma serie que
+    # alimenta el chart) y, si no hay, el de Yahoo. Fuente única de la verdad.
+    fcf_t_now = None
+    if fcf_ttm is not None and len(fcf_ttm):
+        try:
+            fcf_t_now = float(fcf_ttm.iloc[-1])
+        except (TypeError, ValueError):
+            pass
+    if fcf_t_now is None or fcf_t_now <= 0:
+        fcf_t_now = M._f(info.get("freeCashflow"))
+    mc_px = M._f(info.get("marketCap"))
+    cur_pcf = None
+    if fcf_t_now and mc_px and fcf_t_now > 0:
+        cur_pcf = round(mc_px / fcf_t_now, 2)
+
+    def _snap_tail(pairs, cur_val):
+        """Ancla el último punto válido de la serie al valor actual canónico
+        (Yahoo/actual) para que todas las secciones muestren el mismo "hoy"."""
+        if cur_val is None or cur_val <= 0 or not pairs:
+            return pairs
+        i = len(pairs) - 1
+        while i >= 0 and pairs[i][1] is None:
+            i -= 1
+        if i < 0:
+            return pairs
+        pairs[i][1] = round(cur_val, 2)
+        return pairs
+    pe_pairs = _snap_tail(M._pairs(pe_hist, 2), cur_pe) if pe_hist is not None else []
+    ps_pairs = _snap_tail(M._pairs(ps_hist, 2), cur_ps) if ps_hist is not None else []
+    pb_pairs = _snap_tail(M._pairs(pb_hist, 2), cur_pb) if pb_hist is not None else []
+    pcf_pairs = _snap_tail(M._pairs(pcf_hist, 2), cur_pcf) if pcf_hist is not None else []
     pe_stats = M.series_stats(pe_pairs)
     pcf_stats = M.series_stats(pcf_pairs)
 
@@ -447,8 +487,10 @@ def build_payload(symbol: str, refresh: bool = False):
     quarterlies = M.quarterly_fundamentals(raw)
 
     # ------------------------------------------------ snapshot actual
-    fcf_now = M._f(info.get("freeCashflow"))
-    mc = M._f(info.get("marketCap"))
+    # FCF TTM único (computado o fallback Yahoo), usado en fcfYield, P/CF del
+    # grid de ratios y ancla del chart — un solo número en toda la app.
+    fcf_now = fcf_t_now
+    mc = mc_px
 
     sma50 = None
     sma200 = None
@@ -583,7 +625,8 @@ def build_payload(symbol: str, refresh: bool = False):
     # foto del día para el historial de margen de seguridad
     S.append(symbol, price, valuation["marginOfSafety"], valuation["consensus"])
 
-    ratios = calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps_hist)
+    ratios = calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps_hist,
+                                      fcf_ttm_now=fcf_now, mc_now=mc)
     estimates = build_estimates_payload(raw, info, annuals, price, symbol=symbol, fmp_rows=fmp_rows)
     insiders_holders = build_insiders_holders_payload(raw, info)
 

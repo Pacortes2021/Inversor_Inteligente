@@ -64,13 +64,67 @@ def ttm_from_statements(df_a, df_q, *names):
                 pts[pd.Timestamp(dt)] = float(v)
     s_q = _row(df_q, *names)
     if s_q is not None and len(s_q) >= 4:
-        roll = s_q.rolling(4).sum().dropna()
+        roll = s_q.rolling(4, min_periods=4).sum().dropna()
         for dt, v in roll.items():
             if _f(v) is not None:
                 pts[pd.Timestamp(dt)] = float(v)
     if not pts:
         return None
     return pd.Series(pts).sort_index()
+
+
+def ttm_eps_series(raw: "RawData"):
+    """Serie TTM de EPS diluido, imputando los trimestres sin EPS (NaN) con
+    NI_del_trimestre / acciones_del_cierre (mismo criterio de Yahoo). Evita
+    que un hueco de datos de yfinance (frecuente en tickers CL) rompa o
+    subestime el EPS trailing 12m."""
+    pts = {}
+    s_a = _row(raw.inc_a, "Diluted EPS", "Basic EPS")
+    if s_a is not None:
+        for dt, v in s_a.items():
+            if _f(v) is not None:
+                pts[pd.Timestamp(dt)] = float(v)
+
+    q = raw.inc_q
+    if q is not None and len(q.columns) >= 4:
+        s_q = _row(q, "Diluted EPS", "Basic EPS")
+        ni = _row(q, "Net Income", "Net Income Common Stockholders")
+        sh = _qb_series(raw, "Ordinary Shares Number", "Share Issued")
+        qpts = {}
+        for dt in pd.to_datetime(q.columns, errors="coerce"):
+            if pd.isna(dt):
+                continue
+            v = _f(s_q.get(dt)) if s_q is not None else None
+            if v is None and ni is not None and dt in ni.index:
+                nv = _f(ni.loc[dt])
+                sv = _f(sh.loc[dt]) if sh is not None and dt in sh.index else None
+                if nv is not None and sv is not None and sv > 0:
+                    v = nv / sv
+            if v is not None:
+                qpts[dt] = float(v)
+        if len(qpts) >= 4:
+            roll = pd.Series(qpts).sort_index().rolling(4, min_periods=4).sum().dropna()
+            for dt, vq in roll.items():
+                if _f(vq) is not None:
+                    pts[pd.Timestamp(dt)] = float(vq)
+
+    if not pts:
+        return None
+    return pd.Series(pts).sort_index()
+
+
+def _qb_series(raw: "RawData", *names):
+    """Serie de acciones desde el balance (trimestral) para imputación."""
+    for df in (getattr(raw, "bs_q", None), getattr(raw, "bs_a", None)):
+        if df is None:
+            continue
+        for n in names:
+            if n in df.index:
+                s = df.loc[n].dropna()
+                if not s.empty:
+                    s.index = pd.to_datetime(s.index).tz_localize(None)
+                    return s.sort_index()
+    return None
 
 
 def fcf_ttm_series(cf_a, cf_q):

@@ -131,7 +131,8 @@ def _pcf_5y(annuals, prices):
     return sum(pcf_vals) / len(pcf_vals) if pcf_vals else None
 
 
-def calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps_hist):
+def calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps_hist,
+                             fcf_ttm_now=None, mc_now=None):
     """Construye el bloque 'ratios' del payload con comparativas sector/5Y."""
     sector_name = info.get("sector") or "Technology"
     sec = SECTOR_AVGS.get(sector_name, SECTOR_AVGS["Technology"])
@@ -165,8 +166,10 @@ def calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps_
     pb_ttm = M._f(info.get("priceToBook"))
     ps_ttm = M._f(info.get("priceToSalesTrailing12Months")) or M._f(info.get("priceToSales"))
 
-    fcf_now = annuals[-1].get("fcf") if annuals else None
-    mc = M._f(info.get("marketCap"))
+    # P/CF actual: usa el FCF TTM computado de estados de flujos si se entregó
+    # (misma fuente que el último punto del chart), con fallback al FCF anual.
+    fcf_now = fcf_ttm_now or (annuals[-1].get("fcf") if annuals else None)
+    mc = mc_now or M._f(info.get("marketCap"))
     fcf_yield = (fcf_now / mc * 100) if (fcf_now and mc) else None
     pcf_ttm = 100.0 / fcf_yield if fcf_yield and fcf_yield > 0 else None
 
