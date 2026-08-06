@@ -872,6 +872,179 @@ export function renderHeatmap(rows, onOpen) {
   });
 }
 
+/* --------------------------------------- overlay precio + múltiplos */
+export function renderPriceOverlay(data) {
+  const el = document.getElementById('ch-overlay');
+  const chipsEl = document.getElementById('overlay-chips');
+  const togglesEl = document.getElementById('overlay-toggles');
+  if (!el || !chipsEl || !togglesEl) return;
+  const cc = getChartColors();
+  const hist = (data && data.history) || {};
+  const pricePts = hist.price || [];
+  if (pricePts.length < 30) return;
+
+  const OVERLAYS = [
+    { key: 'peTtm',  label: 'PE',            color: '#3b82f6', fmt: v => fmtRatio(v, 1) },
+    { key: 'psTtm',  label: 'PS',            color: '#8b5cf6', fmt: v => fmtRatio(v, 2) },
+    { key: 'pbTtm',  label: 'PB',            color: '#0ea5e9', fmt: v => fmtRatio(v, 2) },
+    { key: 'pcfTtm', label: 'P/CF',          color: '#e11d48', fmt: v => fmtRatio(v, 1) },
+    { key: 'epsTtm', label: 'EPS TTM',       color: '#10b981', fmt: v => fmtNum(v, 2) },
+    { key: 'revTtm', label: 'Revenue TTM',   color: '#f59e0b', fmt: v => fmtBig(v) },
+    { key: 'netMarginTtm', label: 'Margen TTM', color: '#ec4899', fmt: v => fmtPct(v, 1) },
+    { key: 'sma50',  label: 'SMA 50',        color: '#94a3b8', fmt: v => fmtNum(v, 2) },
+    { key: 'sma200', label: 'SMA 200',       color: '#64748b', fmt: v => fmtNum(v, 2) },
+  ];
+
+  const src = {};
+  for (const o of OVERLAYS) {
+    const raw = hist[o.key] || [];
+    src[o.key] = raw.filter(p => p && p[1] != null);
+  }
+  src.sma50 = sma(pricePts, 50);
+  src.sma200 = sma(pricePts, 200);
+
+  const FMT = {};
+  for (const o of OVERLAYS) FMT[o.label] = o.fmt;
+  const fmtByName = name => FMT[name] || (name === 'Precio' ? (v => fmtNum(v, 2)) : (v => v));
+
+  const active = new Set(['peTtm']);
+  let normalized = false;
+  let logScale = false;
+
+  function indexed(pts) {
+    if (!pts.length) return [];
+    const base = pts[0][1];
+    if (!base) return pts;
+    return pts.map(p => [p[0], +(p[1] / base * 100).toFixed(2)]);
+  }
+
+  function build() {
+    const ba = baseAxisStyle(cc);
+    const rightSeries = OVERLAYS.filter(o => active.has(o.key) && !o.key.startsWith('sma'));
+    const leftSeries = OVERLAYS.filter(o => active.has(o.key) && o.key.startsWith('sma'));
+    const yAxis = [];
+    const series = [];
+
+    if (normalized) {
+      yAxis.push(Object.assign({ type: 'value', position: 'right', scale: true, name: 'Base 100', nameTextStyle: { color: cc.muted } }, ba,
+        { splitLine: { show: false }, axisLabel: { color: cc.muted, fontSize: 10.5 } }));
+      const mk = (name, color) =>
+        series.push({
+          type: 'line', name, yAxisIndex: 0,
+          data: indexed(name === 'Precio' ? pricePts : (src[name] || [])),
+          showSymbol: false, lineStyle: { color, width: 1.8 }, itemStyle: { color },
+          tooltip: { valueFormatter: v => v != null ? fmtNum(v, 1) : '—' },
+        });
+      mk('Precio', cc.gold);
+      OVERLAYS.filter(o => active.has(o.key)).forEach(o => mk(o.label, o.color));
+    } else {
+      yAxis.push(Object.assign({ type: logScale ? 'log' : 'value', position: 'left', scale: true, name: 'Precio', nameTextStyle: { color: cc.muted }, logBase: 10 }, ba,
+        { axisLabel: { color: cc.muted, fontSize: 10.5, formatter: v => fmtNum(v, 0) } }));
+      series.push({
+        type: 'line', name: 'Precio', yAxisIndex: 0, data: pricePts, showSymbol: false,
+        lineStyle: { color: cc.gold, width: 2.5, shadowColor: cc.gold + '55', shadowBlur: 8, shadowOffsetY: 4 },
+        itemStyle: { color: cc.gold },
+        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: cc.gold + '26' }, { offset: 1, color: cc.gold + '00' }]) },
+        tooltip: { valueFormatter: v => fmtNum(v, 2) },
+      });
+      leftSeries.forEach(o => {
+        series.push({ type: 'line', name: o.label, yAxisIndex: 0, data: src[o.key], showSymbol: false, lineStyle: { color: o.color, width: 1.4 }, itemStyle: { color: o.color }, tooltip: { valueFormatter: o.fmt } });
+      });
+      rightSeries.forEach((o, i) => {
+        const idx = i + 1;
+        yAxis.push(Object.assign({ type: 'value', position: 'right', scale: true, offset: i * 46, name: o.label, nameTextStyle: { color: o.color, fontWeight: 600 } }, ba,
+          { splitLine: { show: false }, axisLabel: { color: o.color, fontSize: 10.5, formatter: v => o.fmt(v) } }));
+        series.push({ type: 'line', name: o.label, yAxisIndex: idx, data: src[o.key], showSymbol: false, lineStyle: { color: o.color, width: 1.8 }, itemStyle: { color: o.color }, tooltip: { valueFormatter: o.fmt } });
+      });
+    }
+
+    const axisCount = normalized ? 1 : 1 + rightSeries.length;
+    makeChart('ch-overlay', {
+      animationDuration: 400,
+      grid: { left: 60, right: 14 + (axisCount - 1) * 46, top: 26, bottom: 52 },
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: cc.panel, borderColor: cc.border, borderWidth: 1, borderRadius: 10, padding: [10, 14],
+        extraCssText: 'box-shadow: 0 10px 28px rgba(0,0,0,0.18);',
+        textStyle: { color: cc.text, fontSize: 12, fontFamily: 'Inter, sans-serif' },
+        axisPointer: { type: 'line', lineStyle: { color: cc.muted, type: 'dashed', opacity: 0.5 } },
+        formatter: (params) => {
+          if (!params || !params.length) return '';
+          const t = params[0].value ? params[0].value[0] : null;
+          const dStr = t ? new Date(t).toLocaleDateString('es-CL', { year: 'numeric', month: 'short' }) : '';
+          let rows = '';
+          for (const p of params) {
+            if (!p.value || p.value[1] == null) continue;
+            rows += `<div style="display:flex;justify-content:space-between;gap:16px;align-items:baseline">
+              <span style="color:${cc.muted}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:6px;"></span>${p.seriesName}</span>
+              <b style="color:${cc.text}">${fmtByName(p.seriesName)(p.value[1])}</b></div>`;
+          }
+          return `<div style="font-weight:700;color:${cc.text};margin-bottom:4px">${dStr}</div>${rows}`;
+        },
+      },
+      dataZoom: [
+        { type: 'inside', start: 0, end: 100 },
+        { type: 'slider', start: 0, end: 100, bottom: 8, height: 18,
+          borderColor: cc.border, backgroundColor: cc.grid, fillerColor: 'rgba(59,130,246,0.12)',
+          handleStyle: { color: cc.muted }, textStyle: { color: cc.muted, fontSize: 10 } },
+      ],
+      xAxis: Object.assign({ type: 'time' }, ba, { splitLine: { show: false }, axisLabel: { color: cc.muted, fontSize: 10.5 } }),
+      yAxis,
+      series,
+    });
+  }
+
+  // chips de series activables
+  chipsEl.innerHTML = '';
+  for (const o of OVERLAYS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'overlay-chip';
+    b.innerHTML = `<span class="dot" style="background:${o.color}"></span>${o.label}`;
+    const paint = () => {
+      const on = active.has(o.key);
+      b.classList.toggle('active', on);
+      if (on) b.style.cssText = `border-color:${o.color};color:${o.color};background:${o.color}1f;`;
+      else b.style.cssText = '';
+    };
+    b.onclick = () => {
+      if (active.has(o.key)) active.delete(o.key); else active.add(o.key);
+      paint(); build();
+    };
+    paint();
+    chipsEl.appendChild(b);
+  }
+
+  togglesEl.innerHTML = `
+    <label class="ov-toggle"><input type="checkbox" id="ov-normalize"><span>Base 100</span></label>
+    <label class="ov-toggle"><input type="checkbox" id="ov-log"><span>Escala log</span></label>`;
+  const cbN = document.getElementById('ov-normalize');
+  const cbL = document.getElementById('ov-log');
+  cbN.onchange = e => { normalized = e.target.checked; build(); };
+  cbL.onchange = e => { logScale = e.target.checked; build(); };
+
+  build();
+
+  // botón de descarga PNG (repite el patrón de las demás tarjetas)
+  const head = el.closest('.card')?.querySelector('.section-heading');
+  if (head && !head.querySelector('.btn-dl')) {
+    const btn = document.createElement('button');
+    btn.className = 'btn-dl';
+    btn.title = 'Descargar gráfico como PNG';
+    btn.textContent = '⤓';
+    btn.onclick = () => {
+      const ch = charts['ch-overlay'];
+      if (!ch) return;
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const a = document.createElement('a');
+      a.href = ch.getDataURL({ pixelRatio: 2, backgroundColor: dark ? '#090d16' : '#ffffff' });
+      a.download = `${(state && state.symbol) || 'chart'}_overlay.png`;
+      a.click();
+    };
+    head.appendChild(btn);
+  }
+}
+
 /* ------------------------------------------------- descarga como PNG */
 export function addChartDownloadButtons() {
   document.querySelectorAll('#view-analisis .chart-card').forEach(card => {

@@ -495,6 +495,18 @@ def build_payload(symbol: str, refresh: bool = False):
     pe_stats = M.series_stats(pe_pairs)
     pcf_stats = M.series_stats(pcf_pairs)
 
+    # series TTM para el overlay interactivo (precio vs fundamentales)
+    ni_ttm = M.ttm_from_statements(raw.inc_a, raw.inc_q, "Net Income", "Net Income Common Stockholders")
+    net_margin_ttm_series = None
+    if rev_ttm is not None and ni_ttm is not None and len(rev_ttm) and len(ni_ttm):
+        _idx = rev_ttm.index.union(ni_ttm.index).sort_values()
+        _rev_r = rev_ttm.reindex(_idx).ffill()
+        _ni_r = ni_ttm.reindex(_idx).ffill()
+        _m = (_ni_r / _rev_r * 100)
+        _m = _m[_m.notna()]
+        if len(_m):
+            net_margin_ttm_series = _m
+
     price_10y = prices["Close"][prices.index >= min_date].dropna()
 
     annuals = _merge_annuals(M.annual_fundamentals(raw), E.to_annual_rows(edgar_hist),
@@ -683,6 +695,9 @@ def build_payload(symbol: str, refresh: bool = False):
             "psStats": M.series_stats(ps_pairs),
             "pbStats": M.series_stats(pb_pairs),
             "pcfStats": pcf_stats,
+            "epsTtm": M._pairs(eps_ttm, 2) if eps_ttm is not None else [],
+            "revTtm": M._pairs(rev_ttm, 0) if rev_ttm is not None else [],
+            "netMarginTtm": M._pairs(net_margin_ttm_series, 2) if net_margin_ttm_series is not None else [],
             "shares": M._pairs(shares.resample("QE").last().dropna(), 0) if shares is not None else [],
             "dividends": dividends_annual,
             "mos": S.history(symbol),
