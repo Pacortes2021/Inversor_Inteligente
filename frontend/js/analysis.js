@@ -71,6 +71,8 @@ export function renderAnalysis(d) {
   safeCall(renderAdditional, d);
   safeCall(checkStockAlerts, d);
   safeCall(renderNews, d.news);
+  safeCall(renderKoyfinBar, d);
+  safeCall(renderWidgetBoard, d);
 
   try { loadNotes(d.symbol); } catch(e){}
   try { setStarState(d.inWatchlist); } catch(e){}
@@ -728,4 +730,151 @@ export async function refreshSidebar() {
       </div>`;
     }).join("");
   } catch { /* red caída */ }
+}
+
+/* ────────────────────────── barra de KPIs estilo Koyfin ───────────── */
+function _kpi(label, value, cls = "") {
+  return `<div class="k-kpi"><span class="k-kpi-lab">${label}</span><b class="k-kpi-val ${cls}">${value || "—"}</b></div>`;
+}
+
+function _priceCagr(pts, n) {
+  if (!pts || pts.length < 5) return null;
+  const last = pts[pts.length - 1][0];
+  const target = last - n * 365.25 * 86400000;
+  let i = 0;
+  for (let k = 0; k < pts.length; k++) {
+    if (pts[k][0] >= target) { i = k > 0 ? k - 1 : 0; break; }
+  }
+  const v0 = pts[i][1], v1 = pts[pts.length - 1][1];
+  if (!v0 || !v1 || v0 <= 0) return null;
+  return (Math.pow(v1 / v0, 1 / n) - 1) * 100;
+}
+
+export function renderKoyfinBar(d) {
+  const el = $("k-kpis");
+  if (!el || !d) return;
+  const p = d.profile || {}, q = d.quote || {}, c = d.current || {};
+  const pts = (d.history && d.history.price) || [];
+  const mkt = q.marketCap != null ? fmtBig(q.marketCap) : null;
+  const cagr3 = _priceCagr(pts, 3), cagr10 = _priceCagr(pts, 10);
+  let nextStr = p.nextEarnings ? String(p.nextEarnings) : null;
+  try {
+    if (nextStr) nextStr = new Date(nextStr + "T00:00:00").toLocaleDateString("es-CL", { weekday: "short", day: "2-digit", month: "short" });
+  } catch (e) {}
+  el.innerHTML = [
+    _kpi("Sector", escHtml(p.sector || "—")),
+    _kpi("Industry", escHtml(p.industry || "—")),
+    _kpi("Dividend Yield", c.divYield != null ? `${fmtNum(c.divYield, 2)}%` : "—", "k-mono"),
+    _kpi("Market Cap", mkt, "k-mono"),
+    _kpi("P/E Trailing", c.pe ? `${fmtRatio(c.pe, 1)}x` : "—", "k-mono"),
+    _kpi("P/E Forward", c.forwardPe ? `${fmtRatio(c.forwardPe, 1)}x` : "—", "k-mono"),
+    _kpi("CAGR 3Y", cagr3 != null ? fmtPct(cagr3, 1, true) : "—", cagr3 != null ? pctClass(cagr3) : ""),
+    _kpi("CAGR 10Y", cagr10 != null ? fmtPct(cagr10, 1, true) : "—", cagr10 != null ? pctClass(cagr10) : ""),
+    _kpi("Próximos Earnings", nextStr || "—"),
+  ].join("");
+}
+
+/* ──────────────────────── widget board estilo Koyfin ──────────────── */
+function _sparkInit(id, option) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const inst = echarts.getInstanceByDom(el);
+  if (inst) inst.dispose();
+  echarts.init(el).setOption(option);
+}
+
+export function renderWidgetBoard(d) {
+  const el = $("kw-grid");
+  if (!el || !d) return;
+  const ih = d.insidersHolders || {};
+  const est = d.estimates || {};
+  const rec = est.recommendations || {};
+  const cards = [];
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  const cc = { text: isDark ? "#e6ebf2" : "#1c2430", muted: isDark ? "#8996a9" : "#5e6b7d", green: isDark ? "#1ca58d" : "#0f9c8a", red: isDark ? "#f4555c" : "#e54850" };
+
+  const buy = (rec.strongBuy || 0) + (rec.buy || 0);
+  const hold = rec.hold || 0;
+  const sell = (rec.sell || 0) + (rec.strongSell || 0);
+  const tot = buy + hold + sell;
+
+  if (tot > 0) {
+    const pt = est.priceTargets || {};
+    const cur = d.quote && d.quote.price;
+    const ups = cur && pt.mean ? ((pt.mean / cur) - 1) * 100 : null;
+    cards.push(`<div class="kw-card">
+      <h4>Consenso de Analistas</h4>
+      <div id="kw-donut" style="height:118px"></div>
+      <div class="kw-legend">
+        <span><i style="background:#1ca58d"></i>Comprar ${buy}</span>
+        <span><i style="background:#94a3b8"></i>Mantener ${hold}</span>
+        <span><i style="background:#f4555c"></i>Vender ${sell}</span>
+      </div>
+      ${pt.mean ? `<div class="kw-tgt"><span style="color:${cc.muted}">Objetivo medio</span><b class="k-mono">${fmtPrice(pt.mean)}${ups != null ? ` <span class="${pctClass(ups)}">${fmtPct(ups, 1, true)}</span>` : ""}</b></div>` : ""}
+    </div>`);
+  }
+
+  if (ih.holders && ih.holders.length) {
+    const rows = ih.holders.slice(0, 5).map(h => {
+      const chg = h.pctChange != null
+        ? `<span class="k-mono ${pctClass(h.pctChange)}">${h.pctChange > 0 ? "▲" : "▼"}${fmtNum(Math.abs(h.pctChange), 1)}%</span>`
+        : "";
+      return `<div class="kw-row" title="${escHtml(h.holder)}"><span class="kw-name">${escHtml(h.holder)}</span><span class="k-mono">${h.value ? fmtBig(h.value) : "—"}</span>${chg}</div>`;
+    }).join("");
+    cards.push(`<div class="kw-card">
+      <h4>Top Institucionales <span class="kw-sub">${ih.institutionPercent != null ? `· ${fmtNum(ih.institutionPercent, 1)}% accionistas` : ""}</span></h4>
+      ${rows}
+    </div>`);
+  }
+
+  if (ih.insiders && ih.insiders.length) {
+    const rows = ih.insiders.slice(0, 4).map(x => {
+      const t = String(x.transaction || "");
+      const col = /purchase|buy/i.test(t) ? "#1ca58d" : /sale/i.test(t) ? "#f4555c" : "#94a3b8";
+      return `<div class="kw-row"><span class="kw-name" title="${escHtml(x.insider)}">${escHtml(x.insider.split(",")[0])}</span><span class="k-mono">${x.value ? fmtBig(x.value) : (x.shares ? `${fmtNum(x.shares, 0)} sh` : "—")}</span><span class="kw-chg" style="color:${col}">${x.date || ""}</span></div>`;
+    }).join("");
+    cards.push(`<div class="kw-card"><h4>Transacciones de Directivos</h4>${rows}</div>`);
+  }
+
+  const peSeries = (d.history && d.history.peTtm) || [];
+  if (peSeries.length > 20) {
+    const tail = peSeries.slice(-130);
+    const vals = tail.map(p => p[1]).filter(v => v != null);
+    const last = vals[vals.length - 1];
+    const mn = Math.min(...vals), mx = Math.max(...vals);
+    cards.push(`<div class="kw-card">
+      <h4>P/E Trailing <span class="kw-sub">últimos ${tail.length} pts</span></h4>
+      <div id="kw-pe" style="height:84px"></div>
+      <div class="kw-legend"><span style="color:${cc.muted}">rango</span><b class="k-mono">${fmtRatio(mn, 1)}x – ${fmtRatio(mx, 1)}x</b></div>
+    </div>`);
+    setTimeout(() => _sparkInit("kw-pe", {
+      animationDuration: 400,
+      grid: { left: 6, right: 6, top: 8, bottom: 6 },
+      xAxis: { type: "time", show: false },
+      yAxis: { type: "value", show: false, scale: true },
+      tooltip: { trigger: "axis", backgroundColor: cc.panel || "#101720", borderColor: "#2a3441", borderWidth: 1, textStyle: { color: cc.text, fontSize: 11, fontFamily: "Inter" }, formatter: p => `${new Date(p[0].value[0]).toLocaleDateString("es-CL", { month: "short", year: "2-digit" })} · ${fmtRatio(p[0].value[1], 1)}x` },
+      series: [{ type: "line", data: tail, showSymbol: false, lineStyle: { color: "#4f8df7", width: 1.6 }, areaStyle: { color: "rgba(79,141,247,0.12)" } }],
+    }));
+  }
+
+  el.innerHTML = cards.join("");
+
+  if (tot > 0) {
+    _sparkInit("kw-donut", {
+      animationDuration: 400,
+      tooltip: { trigger: "item", backgroundColor: cc.panel || "#101720", borderColor: "#2a3441", borderWidth: 1, textStyle: { color: cc.text, fontSize: 11, fontFamily: "Inter" } },
+      series: [{
+        type: "pie", radius: ["62%", "88%"], center: ["50%", "50%"],
+        itemStyle: { borderColor: cc.panel || "#101720", borderWidth: 2, borderRadius: 4 },
+        label: { show: false },
+        data: [
+          { value: buy, name: "Comprar", itemStyle: { color: "#1ca58d" } },
+          { value: hold, name: "Mantener", itemStyle: { color: "#94a3b8" } },
+          { value: sell, name: "Vender", itemStyle: { color: "#f4555c" } },
+        ],
+        graphic: [],
+      }],
+      title: { show: true, text: `${fmtNum(buy / tot * 100, 0)}%`, subtext: "Buy", left: "center", top: "33%", textStyle: { color: "#1ca58d", fontSize: 16, fontWeight: 700, fontFamily: "Inter" }, subtextStyle: { color: cc.muted, fontSize: 10 } },
+    });
+  }
 }

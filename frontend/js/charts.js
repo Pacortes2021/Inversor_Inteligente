@@ -878,8 +878,12 @@ export function renderPriceOverlay(data) {
   const el = document.getElementById('ch-overlay');
   const chipsEl = document.getElementById('overlay-chips');
   const togglesEl = document.getElementById('overlay-toggles');
+  const timeEl = document.getElementById('overlay-time');
+  const freqEl = document.getElementById('overlay-freq');
   if (!el || !chipsEl || !togglesEl) return;
   const cc = getChartColors();
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const PRICE_C = isDark ? '#dfe5ee' : '#232c3b';
   const hist = (data && data.history) || {};
   const pricePts = Array.isArray(hist.price) ? hist.price.filter(p => p && p[1] != null) : [];
   if (pricePts.length < 30) {
@@ -890,32 +894,83 @@ export function renderPriceOverlay(data) {
   }
 
   const OVERLAYS = [
-    { key: 'peTtm',  label: 'PE',            color: '#3b82f6', fmt: v => fmtRatio(v, 1) },
-    { key: 'psTtm',  label: 'PS',            color: '#8b5cf6', fmt: v => fmtRatio(v, 2) },
-    { key: 'pbTtm',  label: 'PB',            color: '#0ea5e9', fmt: v => fmtRatio(v, 2) },
-    { key: 'pcfTtm', label: 'P/CF',          color: '#e11d48', fmt: v => fmtRatio(v, 1) },
-    { key: 'epsTtm', label: 'EPS TTM',       color: '#10b981', fmt: v => fmtNum(v, 2) },
-    { key: 'revTtm', label: 'Revenue TTM',   color: '#f59e0b', fmt: v => fmtBig(v) },
+    { key: 'peTtm',  label: 'PE',            color: '#4f8df7', fmt: v => fmtRatio(v, 1) },
+    { key: 'psTtm',  label: 'PS',            color: '#9d8cfb', fmt: v => fmtRatio(v, 2) },
+    { key: 'pbTtm',  label: 'PB',            color: '#2fb7e6', fmt: v => fmtRatio(v, 2) },
+    { key: 'pcfTtm', label: 'P/CF',          color: '#f4555c', fmt: v => fmtRatio(v, 1) },
+    { key: 'epsTtm', label: 'EPS TTM',       color: '#1ca58d', fmt: v => fmtNum(v, 2) },
+    { key: 'revTtm', label: 'Revenue TTM',   color: '#e8a33d', fmt: v => fmtBig(v) },
     { key: 'netMarginTtm', label: 'Margen TTM', color: '#ec4899', fmt: v => fmtPct(v, 1) },
     { key: 'sma50',  label: 'SMA 50',        color: '#94a3b8', fmt: v => fmtNum(v, 2) },
     { key: 'sma200', label: 'SMA 200',       color: '#64748b', fmt: v => fmtNum(v, 2) },
   ];
 
-  const src = {};
+  let normalized = false;
+  let logScale = false;
+  let pRange = '1y';
+  let pFreq = 'D';
+
+  const src = { price: pricePts };
+  const buck = (pairs, freq) => {
+    if (!freq || freq === 'D') return pairs;
+    const keyed = new Map();
+    for (const [ts, v] of pairs) {
+      const d = new Date(ts);
+      let kt;
+      if (freq === 'W') {
+        const base = new Date(d);
+        base.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+        base.setHours(0, 0, 0, 0);
+        kt = base.getTime();
+      } else {
+        kt = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+      }
+      keyed.set(kt, v);
+    }
+    return [...keyed.entries()].sort((a, b) => a[0] - b[0]);
+  };
+  const priceFull = buck(pricePts, pFreq);
   for (const o of OVERLAYS) {
     const raw = hist[o.key] || [];
-    src[o.key] = raw.filter(p => p && p[1] != null);
+    src[o.key] = buck(raw.filter(p => p && p[1] != null), pFreq === 'D' ? null : pFreq);
   }
-  src.sma50 = sma(pricePts, 50);
-  src.sma200 = sma(pricePts, 200);
+  src.sma50 = sma(priceFull, 50);
+  src.sma200 = sma(priceFull, 200);
 
   const FMT = {};
   for (const o of OVERLAYS) FMT[o.label] = o.fmt;
-  const fmtByName = name => FMT[name] || (name === 'Precio' ? (v => fmtNum(v, 2)) : (v => v));
+  const fmtByName = name => FMT[name] || (name === 'Precio' ? (v => fmtNum(v, 2)) : (v => v != null ? v : '—'));
+  const keyOf = label => (OVERLAYS.find(o => o.label === label) || {}).key || label;
 
   const active = new Set(['peTtm']);
-  let normalized = false;
-  let logScale = false;
+
+  const RANGES = [
+    { key: 'mtd', label: 'MTD' }, { key: '1m', label: '1M' }, { key: 'qtd', label: 'QTD' },
+    { key: '3m', label: '3M' }, { key: '6m', label: '6M' }, { key: 'ytd', label: 'YTD' },
+    { key: '1y', label: '1Y' }, { key: '3y', label: '3Y' }, { key: '5y', label: '5Y' },
+    { key: '10y', label: '10Y' }, { key: '20y', label: '20Y' }, { key: 'all', label: 'TODOS' },
+  ];
+
+  function windowMin() {
+    const last = priceFull[priceFull.length - 1][0];
+    const day = 86400000;
+    const days = { '1m': 31, '3m': 92, '6m': 183, '1y': 365, '3y': 1095, '5y': 1826, '10y': 3652, '20y': 7305 };
+    if (days[pRange]) return last - days[pRange] * day;
+    const t = new Date(last);
+    if (pRange === 'mtd') return new Date(t.getFullYear(), t.getMonth(), 1).getTime();
+    if (pRange === 'qtd') return new Date(t.getFullYear(), Math.floor(t.getMonth() / 3) * 3, 1).getTime();
+    if (pRange === 'ytd') return new Date(t.getFullYear(), 0, 1).getTime();
+    return 0;
+  }
+  const inWin = pts => { const mn = windowMin(); return mn ? pts.filter(p => p[0] >= mn) : pts; };
+
+  function rangeStats(pairs) {
+    const vals = pairs.map(p => p[1]).filter(v => v != null && isFinite(v));
+    if (vals.length < 8) return null;
+    const s = vals.slice().sort((a, b) => a - b);
+    const pct = q => { const i = (s.length - 1) * q, lo = Math.floor(i), hi = Math.min(lo + 1, s.length - 1); return s[lo] + (i - lo) * (s[hi] - s[lo]); };
+    return { high: s[s.length - 1], low: s[0], median: pct(0.5), p25: pct(0.25), p75: pct(0.75) };
+  }
 
   function indexed(pts) {
     if (!pts.length) return [];
@@ -931,43 +986,68 @@ export function renderPriceOverlay(data) {
     const yAxis = [];
     const series = [];
 
+    const dataOf = key => inWin(src[keyOf(key)] || []);
+
     if (normalized) {
       yAxis.push(Object.assign({ type: 'value', position: 'right', scale: true, name: 'Base 100', nameTextStyle: { color: cc.muted } }, ba,
         { splitLine: { show: false }, axisLabel: { color: cc.muted, fontSize: 10.5 } }));
       const mk = (name, color) =>
         series.push({
           type: 'line', name, yAxisIndex: 0,
-          data: indexed(name === 'Precio' ? pricePts : (src[name] || [])),
-          showSymbol: false, lineStyle: { color, width: 1.8 }, itemStyle: { color },
+          data: indexed(dataOf(name)),
+          showSymbol: false, lineStyle: { color, width: 1.6 }, itemStyle: { color },
           tooltip: { valueFormatter: v => v != null ? fmtNum(v, 1) : '—' },
         });
-      mk('Precio', cc.gold);
+      mk('Precio', PRICE_C);
       OVERLAYS.filter(o => active.has(o.key)).forEach(o => mk(o.label, o.color));
     } else {
       yAxis.push(Object.assign({ type: logScale ? 'log' : 'value', position: 'left', scale: true, name: 'Precio', nameTextStyle: { color: cc.muted }, logBase: 10 }, ba,
         { axisLabel: { color: cc.muted, fontSize: 10.5, formatter: v => fmtNum(v, 0) } }));
       series.push({
-        type: 'line', name: 'Precio', yAxisIndex: 0, data: pricePts, showSymbol: false,
-        lineStyle: { color: cc.gold, width: 2 },
-        itemStyle: { color: cc.gold },
-        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: cc.gold + '1f' }, { offset: 1, color: cc.gold + '00' }]) },
+        type: 'line', name: 'Precio', yAxisIndex: 0, data: dataOf('price'), showSymbol: false,
+        lineStyle: { color: PRICE_C, width: 2 },
+        itemStyle: { color: PRICE_C },
+        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: PRICE_C + '14' }, { offset: 1, color: PRICE_C + '00' }]) },
         tooltip: { valueFormatter: v => fmtNum(v, 2) },
       });
       leftSeries.forEach(o => {
-        series.push({ type: 'line', name: o.label, yAxisIndex: 0, data: src[o.key], showSymbol: false, lineStyle: { color: o.color, width: 1.4 }, itemStyle: { color: o.color }, tooltip: { valueFormatter: o.fmt } });
+        series.push({ type: 'line', name: o.label, yAxisIndex: 0, data: dataOf(o.key), showSymbol: false, lineStyle: { color: o.color, width: 1.4 }, itemStyle: { color: o.color }, tooltip: { valueFormatter: o.fmt } });
       });
+      let banded = null;
       rightSeries.forEach((o, i) => {
         const idx = i + 1;
         yAxis.push(Object.assign({ type: 'value', position: 'right', scale: true, offset: i * 46, name: o.label, nameTextStyle: { color: o.color, fontWeight: 600 } }, ba,
           { splitLine: { show: false }, axisLabel: { color: o.color, fontSize: 10.5, formatter: v => o.fmt(v) } }));
-        series.push({ type: 'line', name: o.label, yAxisIndex: idx, data: src[o.key], showSymbol: false, lineStyle: { color: o.color, width: 1.8 }, itemStyle: { color: o.color }, tooltip: { valueFormatter: o.fmt } });
+        const s = { type: 'line', name: o.label, yAxisIndex: idx, data: dataOf(o.key), showSymbol: false, lineStyle: { color: o.color, width: 1.8 }, itemStyle: { color: o.color }, tooltip: { valueFormatter: o.fmt } };
+        if (!banded) {
+          const lastTs = src[o.key].length ? src[o.key][src[o.key].length - 1][0] : 0;
+          const ref = src[o.key].filter(p => p[0] >= lastTs - 10 * 365.25 * 86400000);
+          const st = rangeStats(ref);
+          if (st && st.high > st.low) {
+            banded = o;
+            s.markArea = {
+              silent: true,
+              itemStyle: { color: 'rgba(148,163,184,0.07)' },
+              data: [[{ yAxis: st.p25 }, { yAxis: st.p75 }]],
+            };
+            s.markLine = {
+              silent: true, symbol: 'none',
+              data: [
+                { yAxis: st.high, lineStyle: { color: cc.red, type: 'dashed', width: 1, opacity: 0.85 }, label: { show: true, color: cc.red, position: 'insideEndTop', fontSize: 10, formatter: () => 'Alto ' + o.fmt(st.high) } },
+                { yAxis: st.median, lineStyle: { color: cc.muted, type: 'dashed', width: 1 }, label: { show: true, color: cc.muted, position: 'insideEndTop', fontSize: 10, formatter: () => 'Mediana ' + o.fmt(st.median) } },
+                { yAxis: st.low, lineStyle: { color: cc.green, type: 'dashed', width: 1, opacity: 0.85 }, label: { show: true, color: cc.green, position: 'insideEndBottom', fontSize: 10, formatter: () => 'Bajo ' + o.fmt(st.low) } },
+              ],
+            };
+          }
+        }
+        series.push(s);
       });
     }
 
     const axisCount = normalized ? 1 : 1 + rightSeries.length;
     makeChart('ch-overlay', {
-      animationDuration: 400,
-      grid: { left: 60, right: 14 + (axisCount - 1) * 46, top: 26, bottom: 52 },
+      animationDuration: 350,
+      grid: { left: 56, right: 14 + (axisCount - 1) * 46, top: 8, bottom: 52 },
       tooltip: {
         trigger: 'axis',
         backgroundColor: cc.panel, borderColor: cc.border, borderWidth: 1, borderRadius: 8, padding: [10, 12],
@@ -976,27 +1056,48 @@ export function renderPriceOverlay(data) {
         formatter: (params) => {
           if (!params || !params.length) return '';
           const t = params[0].value ? params[0].value[0] : null;
-          const dStr = t ? new Date(t).toLocaleDateString('es-CL', { year: 'numeric', month: 'short' }) : '';
+          const dStr = t ? new Date(t).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: '2-digit' }) : '';
           let rows = '';
           for (const p of params) {
             if (!p.value || p.value[1] == null) continue;
-            rows += `<div style="display:flex;justify-content:space-between;gap:16px;align-items:baseline">
-              <span style="color:${cc.muted}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:6px;"></span>${p.seriesName}</span>
-              <b style="color:${cc.text}">${fmtByName(p.seriesName)(p.value[1])}</b></div>`;
+            rows += `<div style="display:flex;justify-content:space-between;gap:20px;align-items:baseline;font-variant-numeric:tabular-nums">
+              <span style="color:${cc.muted};font-size:11.5px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${p.color};margin-right:6px;"></span>${p.seriesName}</span>
+              <b style="color:${p.color};font-size:12.5px;font-weight:700">${fmtByName(p.seriesName)(p.value[1])}</b></div>`;
           }
-          return `<div style="font-weight:700;color:${cc.text};margin-bottom:4px">${dStr}</div>${rows}`;
+          return `<div style="font-weight:700;color:${cc.text};margin-bottom:5px;font-size:11px;text-transform:uppercase;letter-spacing:.02em">${dStr}</div>${rows}`;
         },
       },
       dataZoom: [
         { type: 'inside', start: 0, end: 100 },
         { type: 'slider', start: 0, end: 100, bottom: 8, height: 18,
-          borderColor: cc.border, backgroundColor: cc.grid, fillerColor: 'rgba(59,130,246,0.12)',
-          handleStyle: { color: cc.muted }, textStyle: { color: cc.muted, fontSize: 10 } },
+          borderColor: cc.border, backgroundColor: 'transparent', showDetail: false,
+          fillerColor: 'rgba(148,163,184,0.08)', handleStyle: { color: cc.muted }, handleSize: '70%',
+          textStyle: { color: cc.muted, fontSize: 10 } },
       ],
       xAxis: Object.assign({ type: 'time' }, ba, { splitLine: { show: false }, axisLabel: { color: cc.muted, fontSize: 10.5 } }),
       yAxis,
       series,
     });
+  }
+
+  // toolbar: timeframes + frecuencia
+  const pill = (parent, on, make) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ov-pill';
+    b.textContent = make.label;
+    const paint = () => b.classList.toggle('active', on());
+    b.onclick = () => { make.fn(); paint(); build(); };
+    paint();
+    parent.appendChild(b);
+  };
+  if (timeEl) {
+    timeEl.innerHTML = '';
+    for (const r of RANGES) pill(timeEl, () => pRange === r.key, { label: r.label, fn: () => { pRange = r.key; } });
+  }
+  if (freqEl) {
+    freqEl.innerHTML = '';
+    for (const [key, label] of [['D', 'Diario'], ['W', 'Semanal'], ['M', 'Mensual']]) pill(freqEl, () => pFreq === key, { label, fn: () => { pFreq = key; } });
   }
 
   // chips de series activables
@@ -1009,8 +1110,7 @@ export function renderPriceOverlay(data) {
     const paint = () => {
       const on = active.has(o.key);
       b.classList.toggle('active', on);
-      if (on) b.style.cssText = `border-color:${o.color};color:${o.color};background:${o.color}1f;`;
-      else b.style.cssText = '';
+      b.style.cssText = on ? `border-color:${o.color};color:${o.color};background:${o.color}1c;` : '';
     };
     b.onclick = () => {
       if (active.has(o.key)) active.delete(o.key); else active.add(o.key);
@@ -1040,16 +1140,14 @@ export function renderPriceOverlay(data) {
     btn.onclick = () => {
       const ch = charts['ch-overlay'];
       if (!ch) return;
-      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
       const a = document.createElement('a');
-      a.href = ch.getDataURL({ pixelRatio: 2, backgroundColor: dark ? '#090d16' : '#ffffff' });
+      a.href = ch.getDataURL({ pixelRatio: 2, backgroundColor: isDark ? '#090d16' : '#ffffff' });
       a.download = `${(state && state.symbol) || 'chart'}_overlay.png`;
       a.click();
     };
     head.appendChild(btn);
   }
 }
-
 /* ------------------------------------------------- descarga como PNG */
 export function addChartDownloadButtons() {
   document.querySelectorAll('#view-analisis .chart-card').forEach(card => {

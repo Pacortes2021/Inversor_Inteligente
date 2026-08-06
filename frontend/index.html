@@ -225,6 +225,9 @@
       </div>
     </div>
 
+    <!-- BARRA DE KPIs ESTILO KOYFIN -->
+    <div class="k-kpis" id="k-kpis"></div>
+
     <nav class="action-tabs" aria-label="Sub-navegación del análisis">
       <button class="a-tab active" data-pane="summary" role="tab" aria-selected="true" aria-controls="pane-summary"><svg class="h-ico "><use href="#i-chart"/></svg>Resumen Ejecutivo</button>
       <button class="a-tab" data-pane="valuation" role="tab" aria-selected="false" aria-controls="pane-valuation"><svg class="h-ico "><use href="#i-diamond"/></svg>Centro de Valoración & Proyecciones</button>
@@ -879,8 +882,18 @@
           <div class="overlay-toggles" id="overlay-toggles"></div>
         </div>
         <p class="card-sub multiples-sub">Compara la trayectoria del precio con múltiplos, EPS, ventas y medias móviles. Activa las series que quieras; <b>Base 100</b> iguala las escalas para ver cómo se superponen y <b>Escala log</b> aplana el precio.</p>
+        <div class="overlay-toolbar">
+          <div class="ov-pill-group" id="overlay-time"></div>
+          <div class="ov-pill-group" id="overlay-freq"></div>
+        </div>
         <div class="overlay-chips" id="overlay-chips"></div>
         <div class="chart" id="ch-overlay" style="height:430px;"></div>
+      </section>
+
+      <!-- WIDGET BOARD ESTILO KOYFIN -->
+      <section class="card">
+        <h2><svg class="h-ico "><use href="#i-cash"/></svg>Inteligencia de Mercado</h2>
+        <div class="kw-grid" id="kw-grid"></div>
       </section>
 
       <!-- EARNINGS & DIVIDENDOS -->
