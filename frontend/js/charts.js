@@ -998,27 +998,34 @@ export function renderPriceOverlay(data) {
           showSymbol: false, lineStyle: { color, width: 1.6 }, itemStyle: { color },
           tooltip: { valueFormatter: v => v != null ? fmtNum(v, 1) : '—' },
         });
-      mk('Precio', PRICE_C);
-      OVERLAYS.filter(o => active.has(o.key)).forEach(o => mk(o.label, o.color));
+      mk('Precio', '#ffffff');
+      OVERLAYS.filter(o => active.has(o.key)).forEach(o => mk(o.label, o.color === '#4f8df7' ? '#f97316' : o.color));
     } else {
-      yAxis.push(Object.assign({ type: logScale ? 'log' : 'value', position: 'left', scale: true, name: 'Precio', nameTextStyle: { color: cc.muted }, logBase: 10 }, ba,
-        { axisLabel: { color: cc.muted, fontSize: 10.5, formatter: v => fmtNum(v, 0) } }));
+      // Eje Y 0: PRECIO A LA DERECHA (Línea Blanca)
+      yAxis.push(Object.assign({ type: logScale ? 'log' : 'value', position: 'right', scale: true, name: 'Precio', nameTextStyle: { color: cc.muted }, logBase: 10 }, ba,
+        { splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } }, axisLabel: { color: '#e2e8f0', fontSize: 10.5, formatter: v => fmtNum(v, 0) } }));
+      
       series.push({
         type: 'line', name: 'Precio', yAxisIndex: 0, data: dataOf('price'), showSymbol: false,
-        lineStyle: { color: PRICE_C, width: 2 },
-        itemStyle: { color: PRICE_C },
-        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: PRICE_C + '14' }, { offset: 1, color: PRICE_C + '00' }]) },
+        lineStyle: { color: '#ffffff', width: 1.8 },
+        itemStyle: { color: '#ffffff' },
         tooltip: { valueFormatter: v => fmtNum(v, 2) },
       });
+
       leftSeries.forEach(o => {
         series.push({ type: 'line', name: o.label, yAxisIndex: 0, data: dataOf(o.key), showSymbol: false, lineStyle: { color: o.color, width: 1.4 }, itemStyle: { color: o.color }, tooltip: { valueFormatter: o.fmt } });
       });
+
       let banded = null;
       rightSeries.forEach((o, i) => {
         const idx = i + 1;
-        yAxis.push(Object.assign({ type: 'value', position: 'right', scale: true, offset: i * 46, name: o.label, nameTextStyle: { color: o.color, fontWeight: 600 } }, ba,
-          { splitLine: { show: false }, axisLabel: { color: o.color, fontSize: 10.5, formatter: v => o.fmt(v) } }));
-        const s = { type: 'line', name: o.label, yAxisIndex: idx, data: dataOf(o.key), showSymbol: false, lineStyle: { color: o.color, width: 1.8 }, itemStyle: { color: o.color }, tooltip: { valueFormatter: o.fmt } };
+        const oColor = o.color === '#4f8df7' ? '#f97316' : o.color;
+        // Eje Y 1: MÚLTIPLO A LA DERECHA (Línea Naranja, offset: 60)
+        yAxis.push(Object.assign({ type: 'value', position: 'right', scale: true, offset: (i + 1) * 60, name: o.label, nameTextStyle: { color: oColor, fontWeight: 700 } }, ba,
+          { splitLine: { show: false }, axisLabel: { color: oColor, fontSize: 10.5, formatter: v => o.fmt(v) } }));
+        
+        const s = { type: 'line', name: o.label, yAxisIndex: idx, data: dataOf(o.key), showSymbol: false, lineStyle: { color: oColor, width: 1.8 }, itemStyle: { color: oColor }, tooltip: { valueFormatter: o.fmt } };
+        
         if (!banded) {
           const lastTs = src[o.key].length ? src[o.key][src[o.key].length - 1][0] : 0;
           const ref = src[o.key].filter(p => p[0] >= lastTs - 10 * 365.25 * 86400000);
@@ -1027,15 +1034,39 @@ export function renderPriceOverlay(data) {
             banded = o;
             s.markArea = {
               silent: true,
-              itemStyle: { color: 'rgba(148,163,184,0.07)' },
-              data: [[{ yAxis: st.p25 }, { yAxis: st.p75 }]],
+              itemStyle: { color: 'rgba(255, 255, 255, 0.03)' },
+              data: [[{ yAxis: st.low }, { yAxis: st.high }]],
             };
             s.markLine = {
               silent: true, symbol: 'none',
               data: [
-                { yAxis: st.high, lineStyle: { color: cc.red, type: 'dashed', width: 1, opacity: 0.85 }, label: { show: true, color: cc.red, position: 'insideEndTop', fontSize: 10, formatter: () => 'Alto ' + o.fmt(st.high) } },
-                { yAxis: st.median, lineStyle: { color: cc.muted, type: 'dashed', width: 1 }, label: { show: true, color: cc.muted, position: 'insideEndTop', fontSize: 10, formatter: () => 'Mediana ' + o.fmt(st.median) } },
-                { yAxis: st.low, lineStyle: { color: cc.green, type: 'dashed', width: 1, opacity: 0.85 }, label: { show: true, color: cc.green, position: 'insideEndBottom', fontSize: 10, formatter: () => 'Bajo ' + o.fmt(st.low) } },
+                {
+                  yAxis: st.high,
+                  lineStyle: { color: '#ef4444', type: 'dashed', width: 1.2 },
+                  label: {
+                    show: true, position: 'insideEndTop', color: '#ffffff', backgroundColor: '#ef4444',
+                    padding: [3, 6], borderRadius: 3, fontSize: 10.5, fontWeight: 'bold',
+                    formatter: () => `High (${o.label}) ${o.fmt(st.high)}`
+                  }
+                },
+                {
+                  yAxis: st.median,
+                  lineStyle: { color: '#94a3b8', type: 'dashed', width: 1.2 },
+                  label: {
+                    show: true, position: 'insideEndTop', color: '#ffffff', backgroundColor: '#64748b',
+                    padding: [3, 6], borderRadius: 3, fontSize: 10.5, fontWeight: 'bold',
+                    formatter: () => `Median (${o.label}) ${o.fmt(st.median)}`
+                  }
+                },
+                {
+                  yAxis: st.low,
+                  lineStyle: { color: '#22c55e', type: 'dashed', width: 1.2 },
+                  label: {
+                    show: true, position: 'insideEndBottom', color: '#ffffff', backgroundColor: '#22c55e',
+                    padding: [3, 6], borderRadius: 3, fontSize: 10.5, fontWeight: 'bold',
+                    formatter: () => `Low (${o.label}) ${o.fmt(st.low)}`
+                  }
+                },
               ],
             };
           }
@@ -1044,37 +1075,38 @@ export function renderPriceOverlay(data) {
       });
     }
 
-    const axisCount = normalized ? 1 : 1 + rightSeries.length;
+    const rightOffsetCount = normalized ? 1 : 1 + rightSeries.length;
     makeChart('ch-overlay', {
       animationDuration: 350,
-      grid: { left: 56, right: 14 + (axisCount - 1) * 46, top: 8, bottom: 52 },
+      grid: { left: 16, right: 20 + (rightOffsetCount * 60), top: 20, bottom: 45 },
       tooltip: {
         trigger: 'axis',
-        backgroundColor: cc.panel, borderColor: cc.border, borderWidth: 1, borderRadius: 8, padding: [10, 12],
-        textStyle: { color: cc.text, fontSize: 12, fontFamily: 'Inter, sans-serif' },
-        axisPointer: { type: 'line', lineStyle: { color: cc.muted, type: 'dashed', opacity: 0.5 } },
+        backgroundColor: '#111722', borderColor: '#334155', borderWidth: 1, borderRadius: 6, padding: [10, 12],
+        textStyle: { color: '#ffffff', fontSize: 12, fontFamily: 'Inter, sans-serif' },
+        axisPointer: { type: 'cross', crossStyle: { color: '#64748b', type: 'dashed' }, label: { backgroundColor: '#334155', color: '#ffffff' } },
         formatter: (params) => {
           if (!params || !params.length) return '';
           const t = params[0].value ? params[0].value[0] : null;
-          const dStr = t ? new Date(t).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: '2-digit' }) : '';
+          const dStr = t ? new Date(t).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: '2-digit' }) : '';
           let rows = '';
           for (const p of params) {
             if (!p.value || p.value[1] == null) continue;
-            rows += `<div style="display:flex;justify-content:space-between;gap:20px;align-items:baseline;font-variant-numeric:tabular-nums">
-              <span style="color:${cc.muted};font-size:11.5px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${p.color};margin-right:6px;"></span>${p.seriesName}</span>
-              <b style="color:${p.color};font-size:12.5px;font-weight:700">${fmtByName(p.seriesName)(p.value[1])}</b></div>`;
+            const c = p.seriesName === 'Precio' ? '#ffffff' : (p.color === '#4f8df7' ? '#f97316' : p.color);
+            rows += `<div style="display:flex;justify-content:space-between;gap:16px;align-items:center;font-variant-numeric:tabular-nums;margin-top:3px">
+              <span style="color:#94a3b8;font-size:11px"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${c};margin-right:6px;"></span>${p.seriesName}</span>
+              <b style="color:${c};font-size:13px;font-weight:700">${fmtByName(p.seriesName)(p.value[1])}</b></div>`;
           }
-          return `<div style="font-weight:700;color:${cc.text};margin-bottom:5px;font-size:11px;text-transform:uppercase;letter-spacing:.02em">${dStr}</div>${rows}`;
+          return `<div style="font-weight:700;color:#94a3b8;margin-bottom:6px;font-size:11px;border-bottom:1px solid #1e293b;padding-bottom:4px">${dStr}</div>${rows}`;
         },
       },
       dataZoom: [
         { type: 'inside', start: 0, end: 100 },
-        { type: 'slider', start: 0, end: 100, bottom: 8, height: 18,
-          borderColor: cc.border, backgroundColor: 'transparent', showDetail: false,
-          fillerColor: 'rgba(148,163,184,0.08)', handleStyle: { color: cc.muted }, handleSize: '70%',
-          textStyle: { color: cc.muted, fontSize: 10 } },
+        { type: 'slider', start: 0, end: 100, bottom: 6, height: 18,
+          borderColor: '#1e293b', backgroundColor: '#0f172a', showDetail: false,
+          fillerColor: 'rgba(59, 130, 246, 0.15)', handleStyle: { color: '#94a3b8' }, handleSize: '70%',
+          textStyle: { color: '#94a3b8', fontSize: 10 } },
       ],
-      xAxis: Object.assign({ type: 'time' }, ba, { splitLine: { show: false }, axisLabel: { color: cc.muted, fontSize: 10.5 } }),
+      xAxis: Object.assign({ type: 'time' }, ba, { splitLine: { show: false }, axisLabel: { color: '#8a99ad', fontSize: 10.5 } }),
       yAxis,
       series,
     });
