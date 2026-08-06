@@ -880,8 +880,13 @@ export function renderPriceOverlay(data) {
   if (!el || !chipsEl || !togglesEl) return;
   const cc = getChartColors();
   const hist = (data && data.history) || {};
-  const pricePts = hist.price || [];
-  if (pricePts.length < 30) return;
+  const pricePts = Array.isArray(hist.price) ? hist.price.filter(p => p && p[1] != null) : [];
+  if (pricePts.length < 30) {
+    el.innerHTML = `<p class="muted" style="padding:60px 20px;text-align:center;font-size:13px">Sin suficiente historial de precio para el overlay de ${(state && state.symbol) || "este símbolo"}.</p>`;
+    chipsEl.innerHTML = '';
+    togglesEl.innerHTML = '';
+    return;
+  }
 
   const OVERLAYS = [
     { key: 'peTtm',  label: 'PE',            color: '#3b82f6', fmt: v => fmtRatio(v, 1) },
