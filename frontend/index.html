@@ -13,6 +13,7 @@
   <!-- CSS Principal -->
   <link rel="stylesheet" href="css/style.css?v=36.0">
   <link rel="stylesheet" href="css/additions.css?v=36.0">
+  <link rel="stylesheet" href="css/koyfin.css?v=1.0">
   
   <!-- ECharts CDN -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
@@ -875,20 +876,139 @@
         </div>
       </section>
 
-      <!-- PRECIO + MÚLTIPLOS (OVERLAY INTERACTIVO) -->
-      <section class="card">
-        <div class="multiples-header">
-          <h2 class="section-heading u-m0"><svg class="h-ico "><use href="#i-chart"/></svg>Precio y Múltiplos (Overlay)</h2>
-          <div class="overlay-toggles" id="overlay-toggles"></div>
+      <!-- ═══════════════════════════════════════════════════════════
+           KOYFIN LAYOUT — Precio + Múltiplos (Overlay Interactivo)
+           4 zonas: Top Strip · Left Sidebar · Main Chart · Right Panel
+           ═══════════════════════════════════════════════════════════ -->
+      <section class="koyfin-container" id="koyfin-view">
+
+        <!-- ZONA 1: TOP STRIP ─ Ticker · Precio · KPIs en línea -->
+        <div class="koy-top-strip">
+          <div class="koy-ticker-block">
+            <span class="koy-ticker" id="koy-sym">—</span>
+            <span class="koy-top-price" id="koy-price">—</span>
+            <span class="koy-top-change" id="koy-change">—</span>
+            <span class="koy-top-ah hidden" id="koy-ah">—</span>
+          </div>
+          <div class="koy-strip-kpis" id="koy-strip-kpis">
+            <!-- Poblado por renderKoyfinLayout() -->
+          </div>
         </div>
-        <p class="card-sub multiples-sub">Compara la trayectoria del precio con múltiplos, EPS, ventas y medias móviles. Activa las series que quieras; <b>Base 100</b> iguala las escalas para ver cómo se superponen y <b>Escala log</b> aplana el precio.</p>
-        <div class="overlay-toolbar">
-          <div class="ov-pill-group" id="overlay-time"></div>
-          <div class="ov-pill-group" id="overlay-freq"></div>
-        </div>
-        <div class="overlay-chips" id="overlay-chips"></div>
-        <div class="chart" id="ch-overlay" style="height:430px;"></div>
-      </section>
+
+        <!-- ZONA 2+3+4: BODY -->
+        <div class="koy-body">
+
+          <!-- ZONA 2: LEFT SIDEBAR ─ Templates & Nav -->
+          <aside class="koy-left-sidebar">
+            <div class="koy-sidebar-header">
+              <span>My Templates</span>
+              <button class="koy-sidebar-new" id="koy-new-btn">+ New</button>
+            </div>
+            <nav class="koy-sidebar-nav" id="koy-sidebar-nav">
+              <button class="koy-nav-btn active" data-koy-view="overlay">📈 Chart (Overlay)</button>
+              <button class="koy-nav-btn" data-koy-view="pe">📊 PER (PE Ratio)</button>
+              <button class="koy-nav-btn" data-koy-view="income">💰 P&amp;L / Ingresos</button>
+              <button class="koy-nav-btn" data-koy-view="fcf">🔄 Cash Flow / FCF</button>
+              <button class="koy-nav-btn" data-koy-view="returns">📈 Retornos (ROE/ROIC)</button>
+              <button class="koy-nav-btn" data-koy-view="shares">🔁 Acciones (Recompras)</button>
+              <button class="koy-nav-btn" data-koy-view="debt">🏦 Balance / Deuda</button>
+              <button class="koy-nav-btn" data-koy-view="margins">📉 EBIT / Márgenes</button>
+              <button class="koy-nav-btn" data-koy-view="eps">💵 EPS Histórico</button>
+              <button class="koy-nav-btn" data-koy-view="divs">🎁 Dividendos</button>
+            </nav>
+            <div class="koy-sidebar-divider"></div>
+            <div class="koy-sidebar-group-label">Análisis Fundamental</div>
+            <nav class="koy-sidebar-nav" id="koy-sidebar-nav-fa">
+              <button class="koy-nav-btn" data-koy-view="fa-val">🔎 FA — Valuation</button>
+              <button class="koy-nav-btn" data-koy-view="fa-fin">📄 FA — Financials</button>
+              <button class="koy-nav-btn" data-koy-view="fa-growth">🚀 FA — Growth</button>
+              <button class="koy-nav-btn" data-koy-view="fa-ratios">⚖️ FA — Key Ratios</button>
+              <button class="koy-nav-btn" data-koy-view="estimates">🎯 Estimates</button>
+            </nav>
+            <div class="koy-sidebar-group-label">Técnico</div>
+            <nav class="koy-sidebar-nav">
+              <button class="koy-nav-btn" data-koy-view="technicals">📡 Technicals (MACD, RSI)</button>
+              <button class="koy-nav-btn" data-koy-view="sma">〰️ SMA 50 / 200</button>
+            </nav>
+          </aside>
+
+          <!-- ZONA 3: MAIN CHART AREA -->
+          <main class="koy-chart-area">
+            <!-- Toolbar Superior: Título + Chips de Overlay -->
+            <div class="koy-chart-toolbar">
+              <span class="koy-chart-title" id="koy-chart-title">Precio + Múltiplos (Overlay)</span>
+              <div class="overlay-chips" id="overlay-chips"></div>
+            </div>
+            <!-- Toolbar Fila 2: Timeframes + Frecuencia + Toggles -->
+            <div class="koy-toolbar-row2">
+              <div class="ov-pill-group" id="overlay-time"></div>
+              <div class="koy-toolbar-sep"></div>
+              <div class="ov-pill-group" id="overlay-freq"></div>
+              <div class="koy-toolbar-sep"></div>
+              <div id="overlay-toggles" style="display:flex;gap:10px;align-items:center;"></div>
+            </div>
+            <!-- Canvas del Gráfico ECharts -->
+            <div class="koy-chart-canvas" id="ch-overlay"></div>
+          </main>
+
+          <!-- ZONA 4: RIGHT SIDEBAR ─ Intelligence Panel -->
+          <aside class="koy-right-sidebar">
+
+            <!-- Widget 1: Analyst Consensus -->
+            <div class="koy-widget" id="koy-widget-analyst">
+              <div class="koy-widget-title">Analyst Consensus</div>
+              <div class="koy-analyst-donut" id="koy-analyst-donut"></div>
+              <div class="koy-analyst-legend" id="koy-analyst-legend"></div>
+            </div>
+
+            <!-- Widget 2: Top Institutional Holders -->
+            <div class="koy-widget" id="koy-widget-holders">
+              <div class="koy-widget-title">Top Institutional Holders</div>
+              <table class="koy-widget-table" id="koy-holders-table">
+                <thead>
+                  <tr>
+                    <th>Holder</th>
+                    <th class="num">Valor</th>
+                    <th class="num">Chg%</th>
+                  </tr>
+                </thead>
+                <tbody id="koy-holders-tbody"></tbody>
+              </table>
+            </div>
+
+            <!-- Widget 3: Recent Insider Trades -->
+            <div class="koy-widget" id="koy-widget-insiders">
+              <div class="koy-widget-title">Recent Insider Trades</div>
+              <div id="koy-insiders-list"></div>
+            </div>
+
+            <!-- Widget 4: Comparable Companies -->
+            <div class="koy-widget" id="koy-widget-peers">
+              <div class="koy-widget-title">Comparable Companies</div>
+              <table class="koy-widget-table" id="koy-peers-table">
+                <thead>
+                  <tr>
+                    <th>Company</th>
+                    <th class="num">Price</th>
+                    <th class="num">P/E</th>
+                  </tr>
+                </thead>
+                <tbody id="koy-peers-tbody"></tbody>
+              </table>
+            </div>
+
+            <!-- Widget 5: Forward PE Mini Chart -->
+            <div class="koy-widget" id="koy-widget-fwdpe">
+              <div class="koy-widget-title">P/E Trailing Trend</div>
+              <div class="koy-mini-chart" id="koy-fwd-pe-chart"></div>
+              <div class="koy-analyst-legend" id="koy-fwd-pe-legend"></div>
+            </div>
+
+          </aside><!-- .koy-right-sidebar -->
+
+        </div><!-- .koy-body -->
+      </section><!-- .koyfin-container -->
+
 
       <!-- WIDGET BOARD ESTILO KOYFIN -->
       <section class="card">

@@ -1300,3 +1300,464 @@ function _renderPeBandBadge(peStats, peCurrent) {
   headEl.appendChild(badge);
 }
 
+
+/* ======================================================================
+   renderKoyfinLayout — Populates the 4-zone Koyfin-style chart layout
+   ====================================================================== */
+export function renderKoyfinLayout(data) {
+  if (!data) return;
+  const cc  = getChartColors();
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const p   = data.profile  || {};
+  const q   = data.quote    || {};
+  const c   = data.current  || {};
+  const est = data.estimates || {};
+  const ih  = data.insidersHolders || {};
+
+  // ── 1. TOP STRIP ────────────────────────────────────────────────────
+  const elSym    = document.getElementById('koy-sym');
+  const elPrice  = document.getElementById('koy-price');
+  const elChange = document.getElementById('koy-change');
+  const elAh     = document.getElementById('koy-ah');
+  const elKpis   = document.getElementById('koy-strip-kpis');
+
+  if (elSym)    elSym.textContent  = data.symbol || '—';
+  if (elPrice)  elPrice.textContent = q.price != null ? fmtNum(q.price, q.price >= 1000 ? 0 : 2) : '—';
+
+  if (elChange && q.previousClose && q.price) {
+    const chgAbs = q.price - q.previousClose;
+    const chgPct = (chgAbs / q.previousClose) * 100;
+    const dir    = chgAbs >= 0;
+    elChange.textContent  = `${dir ? '+' : ''}${fmtNum(chgAbs, 2)} (${dir ? '+' : ''}${fmtNum(chgPct, 2)}%)`;
+    elChange.className    = 'koy-top-change ' + (dir ? 'up' : 'down');
+  } else if (elChange) {
+    elChange.textContent = '—';
+    elChange.className   = 'koy-top-change';
+  }
+
+  if (elAh) {
+    if (q.postMarketPrice) {
+      const ahChg = q.postMarketChangePercent;
+      elAh.textContent = `AH ${fmtNum(q.postMarketPrice, 2)} ${ahChg != null ? (ahChg >= 0 ? '+' : '') + fmtNum(ahChg * 100, 2) + '%' : ''}`;
+      elAh.classList.remove('hidden');
+    } else {
+      elAh.classList.add('hidden');
+    }
+  }
+
+  // KPIs en línea del Top Strip
+  if (elKpis) {
+    const pts = (data.history && data.history.price) || [];
+    const cagr = (n) => {
+      if (pts.length < 5) return null;
+      const last = pts[pts.length - 1][0];
+      const tgt  = last - n * 365.25 * 86400000;
+      let i = 0;
+      for (let k = 0; k < pts.length; k++) { if (pts[k][0] >= tgt) { i = k > 0 ? k - 1 : 0; break; } }
+      const v0 = pts[i][1], v1 = pts[pts.length - 1][1];
+      if (!v0 || !v1 || v0 <= 0) return null;
+      return (Math.pow(v1 / v0, 1 / n) - 1) * 100;
+    };
+    const cagr3  = cagr(3);
+    const cagr10 = cagr(10);
+    let nextStr  = p.nextEarnings ? String(p.nextEarnings) : null;
+    try { if (nextStr) nextStr = new Date(nextStr + 'T00:00:00').toLocaleDateString('es-CL', { weekday: 'short', day: '2-digit', month: 'short' }); } catch {}
+
+    const kpiItem = (lbl, val, cls = '') =>
+      `<div class="koy-kpi-item" title="${lbl}">
+         <span class="koy-kpi-lbl">${lbl}</span>
+         <span class="koy-kpi-val${cls ? ' ' + cls : ''}">${val || '—'}</span>
+       </div>`;
+
+    const pctCls = v => v == null ? '' : (v >= 0 ? ' up' : ' down');
+    elKpis.innerHTML = [
+      kpiItem('Sector',       p.sector   || '—'),
+      kpiItem('Industry',     p.industry || '—'),
+      kpiItem('Div. Yield',   c.divYield  != null ? fmtNum(c.divYield, 2) + '%' : '—'),
+      kpiItem('Market Cap',   q.marketCap != null ? fmtBig(q.marketCap) : '—'),
+      kpiItem('P/E Trailing', c.pe        != null ? fmtRatio(c.pe, 1) + 'x' : '—'),
+      kpiItem('P/E Forward',  c.forwardPe != null ? fmtRatio(c.forwardPe, 1) + 'x' : '—'),
+      kpiItem('CAGR 3Y',      cagr3  != null ? fmtNum(cagr3,  1, true) + '%' : '—', pctCls(cagr3)),
+      kpiItem('CAGR 10Y',     cagr10 != null ? fmtNum(cagr10, 1, true) + '%' : '—', pctCls(cagr10)),
+      kpiItem('Next Earnings', nextStr || '—'),
+    ].join('');
+  }
+
+  // ── 2. LEFT SIDEBAR — nav routing ──────────────────────────────────
+  const allNavBtns = document.querySelectorAll('[data-koy-view]');
+  const CHART_MAP = {
+    overlay:    () => { renderPriceOverlay(data); _koySetTitle('Precio + Múltiplos (Overlay)'); },
+    pe:         () => { _koySwapCanvas('ch-pe-koy', 520); chartRatioInCanvas('ch-pe-koy', (data.history||{}).peTtm, (data.history||{}).peStats, '#4f8df7', 'PE (TTM)'); _koySetTitle('PE Ratio histórico (TTM)'); },
+    income:     () => { _koySwapCanvas('ch-income-koy', 520); chartIncomeInCanvas('ch-income-koy', data); _koySetTitle('P&L — Ingresos y Utilidad'); },
+    fcf:        () => { _koySwapCanvas('ch-fcf-koy', 520); chartFcfInCanvas('ch-fcf-koy', data); _koySetTitle('Free Cash Flow'); },
+    returns:    () => { _koySwapCanvas('ch-returns-koy', 520); chartReturnsInCanvas('ch-returns-koy', data); _koySetTitle('Retornos — ROE y ROIC'); },
+    shares:     () => { _koySwapCanvas('ch-shares-koy', 520); chartSharesInCanvas('ch-shares-koy', data); _koySetTitle('Acciones en circulación'); },
+    debt:       () => { _koySwapCanvas('ch-debt-koy', 520); chartDebtInCanvas('ch-debt-koy', data); _koySetTitle('Balance — Deuda vs Caja'); },
+    margins:    () => { _koySwapCanvas('ch-margins-koy', 520); chartMarginsInCanvas('ch-margins-koy', data); _koySetTitle('Márgenes — Bruto / Operativo / Neto'); },
+    eps:        () => { _koySwapCanvas('ch-eps-koy', 520); chartEpsInCanvas('ch-eps-koy', data); _koySetTitle('EPS Histórico (Diluted)'); },
+    divs:       () => { _koySwapCanvas('ch-divs-koy', 520); chartDividendsInCanvas('ch-divs-koy', data); _koySetTitle('Dividendo por acción (DPS)'); },
+    technicals: () => { renderPriceOverlay(data); _koySetTitle('Técnico — MACD / RSI / SMA'); },
+    sma:        () => { renderPriceOverlay(data); _koySetTitle('SMA 50 / SMA 200'); },
+    'fa-val':   () => { renderPriceOverlay(data); _koySetTitle('FA — Valuation Overlay'); },
+    'fa-fin':   () => { renderPriceOverlay(data); _koySetTitle('FA — Financials Overlay'); },
+    'fa-growth':() => { renderPriceOverlay(data); _koySetTitle('FA — Growth Overlay'); },
+    'fa-ratios':() => { renderPriceOverlay(data); _koySetTitle('FA — Key Ratios Overlay'); },
+    estimates:  () => { renderPriceOverlay(data); _koySetTitle('Estimates'); },
+  };
+
+  allNavBtns.forEach(btn => {
+    if (btn.dataset._koyBound) return; // evitar duplicar listeners
+    btn.dataset._koyBound = '1';
+    btn.addEventListener('click', () => {
+      // Toggle active
+      document.querySelectorAll('.koy-nav-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      // Mostrar toolbar solo en overlay
+      const view = btn.getAttribute('data-koy-view');
+      const isOverlay = (view === 'overlay');
+      const toolbar = document.querySelector('.koy-chart-toolbar');
+      const row2    = document.querySelector('.koy-toolbar-row2');
+      if (toolbar) toolbar.style.display = isOverlay ? '' : 'none';
+      if (row2)    row2.style.display    = isOverlay ? '' : 'none';
+      // Ejecutar el chart
+      const fn = CHART_MAP[view];
+      if (fn) { try { fn(); } catch(e) { console.error('koy nav error:', e); } }
+      setTimeout(() => Object.values(charts).forEach(ch => ch.resize()), 50);
+    });
+  });
+
+  // ── 3. RIGHT SIDEBAR: Analyst Consensus ────────────────────────────
+  _koyRenderAnalyst(data, cc, isDark);
+
+  // ── 4. RIGHT SIDEBAR: Institutional Holders ────────────────────────
+  _koyRenderHolders(ih, cc);
+
+  // ── 5. RIGHT SIDEBAR: Insider Trades ───────────────────────────────
+  _koyRenderInsiders(ih, cc);
+
+  // ── 6. RIGHT SIDEBAR: Comparable Companies ─────────────────────────
+  _koyRenderPeers(data, cc);
+
+  // ── 7. RIGHT SIDEBAR: PE mini-chart ────────────────────────────────
+  _koyRenderPeMini(data, cc);
+}
+
+/* ─────────────────────────── helpers internos ─────────────────────── */
+
+function _koySetTitle(txt) {
+  const el = document.getElementById('koy-chart-title');
+  if (el) el.textContent = txt;
+}
+
+/** Replaces ch-overlay content with a temporary div for non-overlay charts */
+function _koySwapCanvas(newId, h = 500) {
+  const wrap = document.getElementById('ch-overlay');
+  if (!wrap) return;
+  // Hide overlay toolbar since this is a standalone chart
+  wrap.innerHTML = `<div id="${newId}" style="width:100%;height:${h}px;"></div>`;
+}
+
+/** Analyst consensus donut in right sidebar */
+function _koyRenderAnalyst(data, cc, isDark) {
+  const donutEl = document.getElementById('koy-analyst-donut');
+  const legEl   = document.getElementById('koy-analyst-legend');
+  if (!donutEl) return;
+  const est = data.estimates || {};
+  const rec = est.recommendations || {};
+  const buy  = (rec.strongBuy || 0) + (rec.buy || 0);
+  const hold = rec.hold || 0;
+  const sell = (rec.sell || 0) + (rec.strongSell || 0);
+  const tot  = buy + hold + sell;
+  if (tot === 0) {
+    donutEl.innerHTML = '<div class="koy-no-data">Sin datos de analistas</div>';
+    return;
+  }
+  const panel = isDark ? '#111720' : '#ffffff';
+  const buyPct = Math.round(buy / tot * 100);
+  if (charts['koy-analyst-donut']) charts['koy-analyst-donut'].dispose();
+  const ch = echarts.init(donutEl, null, { renderer: 'canvas' });
+  ch.setOption({
+    animationDuration: 500,
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: cc.panel, borderColor: cc.border, borderWidth: 1,
+      textStyle: { color: cc.text, fontSize: 11, fontFamily: 'Inter' },
+    },
+    graphic: [{
+      type: 'text', left: 'center', top: '30%',
+      style: { text: `${buyPct}%`, fill: '#22c55e', fontSize: 17, fontWeight: 700, fontFamily: 'Inter' },
+    }, {
+      type: 'text', left: 'center', top: '50%',
+      style: { text: 'Buy', fill: cc.muted, fontSize: 10, fontFamily: 'Inter' },
+    }],
+    series: [{
+      type: 'pie', radius: ['56%', '85%'], center: ['50%', '50%'],
+      itemStyle: { borderColor: panel, borderWidth: 2, borderRadius: 4 },
+      label: { show: false },
+      data: [
+        { value: buy,  name: `Comprar (${buy})`,  itemStyle: { color: '#22c55e' } },
+        { value: hold, name: `Mantener (${hold})`, itemStyle: { color: cc.muted } },
+        { value: sell, name: `Vender (${sell})`,   itemStyle: { color: '#f87171' } },
+      ],
+    }],
+  });
+  charts['koy-analyst-donut'] = ch;
+
+  if (legEl) {
+    const pt = est.priceTargets || {};
+    const cur = data.quote && data.quote.price;
+    const ups = cur && pt.mean ? ((pt.mean / cur) - 1) * 100 : null;
+    legEl.innerHTML = [
+      `<div class="koy-analyst-legend-item"><span class="koy-dot" style="background:#22c55e"></span>Buy ${buy}</div>`,
+      `<div class="koy-analyst-legend-item"><span class="koy-dot" style="background:${cc.muted}"></span>Hold ${hold}</div>`,
+      `<div class="koy-analyst-legend-item"><span class="koy-dot" style="background:#f87171"></span>Sell ${sell}</div>`,
+      pt.mean ? `<div class="koy-analyst-legend-item" style="width:100%;margin-top:4px;color:${cc.muted}">Target <b style="color:${cc.text}">${fmtNum(pt.mean, 2)}${ups != null ? ` <span style="color:${ups >= 0 ? '#22c55e' : '#f87171'}">(${ups >= 0 ? '+' : ''}${fmtNum(ups, 1)}%)</span>` : ''}</b></div>` : '',
+    ].join('');
+  }
+}
+
+/** Institutional holders table in right sidebar */
+function _koyRenderHolders(ih, cc) {
+  const tbody = document.getElementById('koy-holders-tbody');
+  if (!tbody) return;
+  const holders = (ih.holders || []).slice(0, 8);
+  if (!holders.length) {
+    tbody.innerHTML = `<tr><td colspan="3" class="koy-no-data">Sin datos</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = holders.map(h => {
+    const chg = h.pctChange != null
+      ? `<span style="color:${h.pctChange >= 0 ? '#22c55e' : '#f87171'}">${h.pctChange >= 0 ? '▲' : '▼'}${fmtNum(Math.abs(h.pctChange), 1)}%</span>`
+      : '—';
+    const name = (h.holder || '').replace(/,.*/, '').slice(0, 18);
+    return `<tr>
+      <td title="${escHtml(h.holder || '')}">${escHtml(name)}</td>
+      <td class="num muted">${h.value ? fmtBig(h.value) : '—'}</td>
+      <td class="num">${chg}</td>
+    </tr>`;
+  }).join('');
+}
+
+/** Insider trades list in right sidebar */
+function _koyRenderInsiders(ih, cc) {
+  const el = document.getElementById('koy-insiders-list');
+  if (!el) return;
+  const insiders = (ih.insiders || []).slice(0, 6);
+  if (!insiders.length) {
+    el.innerHTML = `<div class="koy-no-data">Sin datos de directivos</div>`;
+    return;
+  }
+  el.innerHTML = insiders.map(x => {
+    const t   = String(x.transaction || '');
+    const isBuy  = /purchase|buy/i.test(t);
+    const isSell = /sale/i.test(t);
+    const tagCls = isBuy ? 'buy' : isSell ? 'sell' : 'other';
+    const tagLbl = isBuy ? 'BUY' : isSell ? 'SELL' : t.slice(0, 6);
+    const name   = (x.insider || '—').split(',')[0].slice(0, 20);
+    const val    = x.value ? fmtBig(x.value) : (x.shares ? fmtNum(x.shares, 0) + ' sh' : '—');
+    return `<div class="koy-insider-row">
+      <span class="koy-insider-name" title="${escHtml(x.insider || '')}">${escHtml(name)}</span>
+      <span class="koy-insider-meta">${val}</span>
+      <span class="koy-insider-tag ${tagCls}">${escHtml(tagLbl)}</span>
+    </div>`;
+  }).join('');
+}
+
+/** Peer/comparable table in right sidebar */
+function _koyRenderPeers(data, cc) {
+  const tbody = document.getElementById('koy-peers-tbody');
+  if (!tbody) return;
+  // Use sector peers if available (data.comparables or data.sectorPeers)
+  const peers = data.comparables || data.sectorPeers || [];
+  if (!peers.length) {
+    tbody.innerHTML = `<tr><td colspan="3" class="koy-no-data">Sin comparables</td></tr>`;
+    return;
+  }
+  const currentSym = data.symbol;
+  tbody.innerHTML = peers.slice(0, 7).map(peer => {
+    const isCur = peer.symbol === currentSym;
+    const pe    = peer.pe  != null ? fmtRatio(peer.pe, 1) + 'x' : '—';
+    const price = peer.price != null ? fmtNum(peer.price, peer.price >= 100 ? 0 : 2) : '—';
+    return `<tr class="${isCur ? 'koy-peers-current' : ''}">
+      <td title="${escHtml(peer.symbol)}">${escHtml(peer.symbol)}${isCur ? ' ★' : ''}</td>
+      <td class="num">${price}</td>
+      <td class="num">${pe}</td>
+    </tr>`;
+  }).join('');
+}
+
+/** PE trailing mini sparkline chart in right sidebar */
+function _koyRenderPeMini(data, cc) {
+  const el     = document.getElementById('koy-fwd-pe-chart');
+  const legEl  = document.getElementById('koy-fwd-pe-legend');
+  if (!el) return;
+  const series = (data.history && data.history.peTtm) || [];
+  if (series.length < 20) {
+    el.innerHTML = '<div class="koy-no-data">Sin historial de PE</div>';
+    return;
+  }
+  const tail = series.slice(-260); // últimos ~1 año de datos diarios
+  const vals = tail.map(p => p[1]).filter(v => v != null && isFinite(v));
+  const mn   = Math.min(...vals);
+  const mx   = Math.max(...vals);
+  const last = vals[vals.length - 1];
+  const peSt = data.history.peStats || {};
+
+  if (charts['koy-fwd-pe-chart']) charts['koy-fwd-pe-chart'].dispose();
+  const ch = echarts.init(el, null, { renderer: 'canvas' });
+  ch.setOption({
+    animationDuration: 400,
+    grid: { left: 4, right: 4, top: 4, bottom: 4 },
+    xAxis: { type: 'time', show: false },
+    yAxis: { type: 'value', show: false, scale: true },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: cc.panel, borderColor: cc.border, borderWidth: 1,
+      textStyle: { color: cc.text, fontSize: 10.5, fontFamily: 'Inter' },
+      formatter: p => {
+        if (!p || !p[0] || !p[0].value) return '';
+        const d = new Date(p[0].value[0]).toLocaleDateString('es-CL', { month: 'short', year: '2-digit' });
+        return `${d} · <b>${fmtRatio(p[0].value[1], 1)}x</b>`;
+      },
+    },
+    series: [{
+      type: 'line', data: tail, showSymbol: false,
+      lineStyle: { color: '#4f8df7', width: 1.5 },
+      areaStyle: { color: 'rgba(79,141,247,0.10)' },
+    }],
+  });
+  charts['koy-fwd-pe-chart'] = ch;
+
+  if (legEl) {
+    legEl.innerHTML = [
+      `<div class="koy-analyst-legend-item"><span class="koy-dot" style="background:#f87171"></span>High ${fmtRatio(mx, 1)}x</div>`,
+      `<div class="koy-analyst-legend-item"><span class="koy-dot" style="background:#fbbf24"></span>Median ${peSt.median ? fmtRatio(peSt.median, 1) + 'x' : '—'}</div>`,
+      `<div class="koy-analyst-legend-item"><span class="koy-dot" style="background:#22c55e"></span>Low ${fmtRatio(mn, 1)}x</div>`,
+    ].join('');
+  }
+}
+
+/* ─── Canvas-swapping wrappers para nav del left sidebar ──────────── */
+/* Cada función crea un div temporal dentro de ch-overlay y llama a     */
+/* makeChart con ese id, reutilizando las funciones existentes pero      */
+/* sin depender de sus IDs fijos (ch-pe, ch-income, etc.)               */
+
+function chartRatioInCanvas(id, pairs, stats, color, name) {
+  if (!pairs || pairs.length < 6) { document.getElementById(id) && (document.getElementById(id).innerHTML = '<div class="koy-no-data">Datos insuficientes</div>'); return; }
+  const cc = getChartColors();
+  const lastVal = pairs[pairs.length - 1][1];
+  const markLineData = [];
+  if (stats && stats.p25 != null) markLineData.push({ yAxis: stats.p25, lineStyle: { color: cc.muted, type: 'dotted', width: 1, opacity: 0.5 }, label: { show: false } });
+  if (stats && stats.p75 != null) markLineData.push({ yAxis: stats.p75, lineStyle: { color: cc.muted, type: 'dotted', width: 1, opacity: 0.5 }, label: { show: false } });
+  if (stats && stats.median != null) markLineData.push({ yAxis: stats.median, lineStyle: { color: cc.gold, type: 'dashed', width: 1.5 }, label: { color: cc.gold, fontSize: 10.5, fontWeight: 700, position: 'insideEndTop', formatter: `Mediana ${stats.median}x`, fontFamily: 'Inter' } });
+  if (lastVal != null) markLineData.push({ yAxis: lastVal, lineStyle: { color: cc.green, type: 'solid', width: 1.8 }, label: { color: cc.green, fontSize: 10.5, fontWeight: 700, position: 'insideEndBottom', formatter: `Hoy ${lastVal.toFixed(1)}x` } });
+  const ba = baseAxisStyle(cc);
+  makeChart(id, timeOption({
+    grid: { left: 50, right: 22, top: 24, bottom: 40 },
+    yAxis: Object.assign({ type: 'value', scale: true }, ba, { axisLabel: { color: cc.muted, fontSize: 11, formatter: '{value}x' } }),
+    series: [{ type: 'line', data: pairs, showSymbol: false, name, smooth: 0.3, lineStyle: { color, width: 2.2 }, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: color + '30' }, { offset: 1, color: color + '00' }]) }, markLine: { silent: true, symbol: 'none', data: markLineData } }],
+    dataZoom: [{ type: 'inside' }, { type: 'slider', bottom: 6, height: 18, borderColor: cc.border, fillerColor: color + '18', handleStyle: { color: cc.muted }, showDetail: false }],
+  }));
+}
+
+function chartIncomeInCanvas(id, data) {
+  const a = (data.annuals || []).filter(x => x.revenue != null);
+  if (a.length < 2) return;
+  const cc = getChartColors(), ba = baseAxisStyle(cc);
+  const cur = data.profile && data.profile.currency;
+  makeChart(id, yearsOption(a.map(x => x.year), {
+    yAxis: [Object.assign({ type: 'value' }, ba, { axisLabel: { color: cc.muted, fontSize: 11, formatter: v => fmtBig(v) } }), Object.assign({ type: 'value' }, ba, { splitLine: { show: false }, axisLabel: { color: cc.muted, fontSize: 11, formatter: '{value}%' } })],
+    series: [
+      { type: 'bar', name: 'Ingresos',      data: a.map(x => x.revenue),   itemStyle: { color: cc.blue,  borderRadius: [4,4,0,0] }, barMaxWidth: 34, tooltip: { valueFormatter: v => fmtBig(v, cur) } },
+      { type: 'bar', name: 'Utilidad neta', data: a.map(x => x.netIncome), itemStyle: { color: cc.green, borderRadius: [4,4,0,0] }, barMaxWidth: 34, tooltip: { valueFormatter: v => fmtBig(v, cur) } },
+      { type: 'line', name: 'Margen neto', yAxisIndex: 1, data: a.map(x => x.netMargin != null ? +x.netMargin.toFixed(1) : null), lineStyle: { color: cc.gold, width: 2 }, itemStyle: { color: cc.gold }, tooltip: { valueFormatter: v => fmtPct(v) } },
+    ],
+  }));
+}
+
+function chartFcfInCanvas(id, data) {
+  const a = (data.annuals || []).filter(x => x.fcf != null);
+  if (a.length < 2) return;
+  const cc = getChartColors(), ba = baseAxisStyle(cc);
+  const cur = data.profile && data.profile.currency;
+  makeChart(id, yearsOption(a.map(x => x.year), {
+    yAxis: [Object.assign({ type: 'value' }, ba, { axisLabel: { color: cc.muted, fontSize: 11, formatter: v => fmtBig(v) } }), Object.assign({ type: 'value' }, ba, { splitLine: { show: false }, axisLabel: { color: cc.muted, fontSize: 11, formatter: '{value}%' } })],
+    series: [
+      { type: 'bar', name: 'FCF', data: a.map(x => x.fcf), barMaxWidth: 40, itemStyle: { color: p => p.value >= 0 ? cc.green : cc.red, borderRadius: [4,4,0,0] }, tooltip: { valueFormatter: v => fmtBig(v, cur) } },
+      { type: 'line', name: 'Margen FCF', yAxisIndex: 1, data: a.map(x => x.fcfMargin != null ? +x.fcfMargin.toFixed(1) : null), lineStyle: { color: cc.gold, width: 2 }, itemStyle: { color: cc.gold }, tooltip: { valueFormatter: v => fmtPct(v) } },
+    ],
+  }));
+}
+
+function chartReturnsInCanvas(id, data) {
+  const a = (data.annuals || []).filter(x => x.roe != null || x.roic != null);
+  if (a.length < 2) return;
+  const cc = getChartColors(), ba = baseAxisStyle(cc);
+  makeChart(id, yearsOption(a.map(x => x.year), {
+    yAxis: Object.assign({ type: 'value' }, ba, { axisLabel: { color: cc.muted, fontSize: 11, formatter: '{value}%' } }),
+    series: [
+      { type: 'bar', name: 'ROE',  data: a.map(x => x.roe  != null ? +x.roe.toFixed(1)  : null), itemStyle: { color: cc.blue,   borderRadius: [4,4,0,0] }, barMaxWidth: 30, tooltip: { valueFormatter: v => fmtPct(v) } },
+      { type: 'bar', name: 'ROIC', data: a.map(x => x.roic != null ? +x.roic.toFixed(1) : null), itemStyle: { color: cc.violet, borderRadius: [4,4,0,0] }, barMaxWidth: 30, tooltip: { valueFormatter: v => fmtPct(v) }, markLine: { silent: true, symbol: 'none', lineStyle: { color: cc.gold, type: 'dashed' }, data: [{ yAxis: 15 }] } },
+    ],
+  }));
+}
+
+function chartSharesInCanvas(id, data) {
+  const pts = data.history && data.history.shares;
+  if (!pts || pts.length < 4) return;
+  const cc = getChartColors(), ba = baseAxisStyle(cc);
+  makeChart(id, timeOption({
+    yAxis: Object.assign({ type: 'value', scale: true }, ba, { axisLabel: { color: cc.muted, fontSize: 11, formatter: v => fmtBig(v) } }),
+    series: [{ type: 'line', data: pts, showSymbol: false, step: 'end', lineStyle: { color: cc.cyan, width: 2 }, areaStyle: { color: 'rgba(6,182,212,0.08)' } }],
+  }));
+}
+
+function chartDebtInCanvas(id, data) {
+  const a = (data.annuals || []).filter(x => x.totalDebt != null || x.cash != null);
+  if (a.length < 2) return;
+  const cc = getChartColors(), ba = baseAxisStyle(cc);
+  const cur = data.profile && data.profile.currency;
+  makeChart(id, yearsOption(a.map(x => x.year), {
+    yAxis: [Object.assign({ type: 'value' }, ba, { axisLabel: { color: cc.muted, fontSize: 11, formatter: v => fmtBig(v) } }), Object.assign({ type: 'value' }, ba, { splitLine: { show: false }, axisLabel: { color: cc.muted, fontSize: 11, formatter: '{value}x' } })],
+    series: [
+      { type: 'bar', name: 'Deuda total', data: a.map(x => x.totalDebt), itemStyle: { color: cc.red,   borderRadius: [4,4,0,0] }, barMaxWidth: 30, tooltip: { valueFormatter: v => fmtBig(v, cur) } },
+      { type: 'bar', name: 'Caja',        data: a.map(x => x.cash),      itemStyle: { color: cc.green, borderRadius: [4,4,0,0] }, barMaxWidth: 30, tooltip: { valueFormatter: v => fmtBig(v, cur) } },
+      { type: 'line', name: 'D/E', yAxisIndex: 1, data: a.map(x => x.debtToEquity != null ? +x.debtToEquity.toFixed(2) : null), lineStyle: { color: cc.amber, width: 2 }, itemStyle: { color: cc.amber }, tooltip: { valueFormatter: v => fmtRatio(v, 2) } },
+    ],
+  }));
+}
+
+function chartMarginsInCanvas(id, data) {
+  const a = (data.annuals || []).filter(x => x.netMargin != null || x.grossMargin != null);
+  if (a.length < 2) return;
+  const cc = getChartColors(), ba = baseAxisStyle(cc);
+  const line = (name, key, color) => ({ type: 'line', name, data: a.map(x => x[key] != null ? +x[key].toFixed(1) : null), lineStyle: { color, width: 2 }, itemStyle: { color }, symbolSize: 5, tooltip: { valueFormatter: v => fmtPct(v) } });
+  makeChart(id, yearsOption(a.map(x => x.year), {
+    yAxis: Object.assign({ type: 'value' }, ba, { axisLabel: { color: cc.muted, fontSize: 11, formatter: '{value}%' } }),
+    series: [line('Margen bruto', 'grossMargin', cc.cyan), line('Margen operativo', 'opMargin', cc.violet), line('Margen neto', 'netMargin', cc.gold)],
+  }));
+}
+
+function chartEpsInCanvas(id, data) {
+  const a = (data.annuals || []).filter(x => x.eps != null);
+  if (a.length < 2) return;
+  const cc = getChartColors();
+  makeChart(id, yearsOption(a.map(x => x.year), {
+    series: [{ type: 'bar', name: 'EPS diluido', data: a.map(x => +x.eps.toFixed(2)), barMaxWidth: 40, itemStyle: { color: p => p.value >= 0 ? cc.gold : cc.red, borderRadius: [4,4,0,0] }, label: { show: true, position: 'top', color: cc.muted, fontSize: 11, formatter: p => fmtNum(p.value, 2) } }],
+  }));
+}
+
+function chartDividendsInCanvas(id, data) {
+  const d = data.history && data.history.dividends;
+  if (!d || d.length < 3) return;
+  const cc = getChartColors();
+  const curYear = new Date().getFullYear();
+  makeChart(id, yearsOption(d.map(x => x[0]), {
+    series: [{ type: 'bar', name: 'DPS', barMaxWidth: 26, data: d.map(x => ({ value: +x[1].toFixed(3), itemStyle: x[0] === curYear ? { color: 'rgba(34,197,94,0.35)', borderRadius: [4,4,0,0] } : { color: cc.green, borderRadius: [4,4,0,0] } })), tooltip: { valueFormatter: v => fmtNum(v, 3) } }],
+  }));
+}
+
+// Inline escHtml for use in renderKoyfinLayout without importing
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}

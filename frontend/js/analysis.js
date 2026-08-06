@@ -6,7 +6,8 @@ import { $, toast, apiFetch } from "./dom.js";
 import { state, currentPeriodYears, currentMultiplesRange, setCurrentMultiplesRange } from "./state.js";
 import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, escHtml, pctClass } from "./format.js";
 import { termify } from "./glossary.js";
-import { chartPrice, chartRatio, chartDividends, chartEps, chartEarningsSurprise, renderAllCharts, renderPriceOverlay, C, charts } from "./charts.js";
+import { chartPrice, chartRatio, chartDividends, chartEps, chartEarningsSurprise, renderAllCharts, renderPriceOverlay, renderKoyfinLayout, C, charts } from "./charts.js";
+
 import { checkStockAlerts } from "./alerts.js";
 import {
   renderValuationCard, renderRatiosGrid, renderEstimates, renderEpsEstimatesChart,
@@ -660,8 +661,10 @@ export function triggerTabSpecificActions(tab) {
     renderAllCharts(state.data);
     renderRatiosCharts(state.data, currentMultiplesRange);
     renderPriceOverlay(state.data);
+    renderKoyfinLayout(state.data);
     chartDividends(state.data);
     chartEps(state.data);
+
 
     const btnContainer = $("multiples-range-controls");
     if (btnContainer && !btnContainer.dataset.bound) {
