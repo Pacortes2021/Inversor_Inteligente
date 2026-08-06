@@ -7,13 +7,18 @@ import { state } from "./state.js";
 export function getChartColors() {
   const dark = document.documentElement.getAttribute('data-theme') === 'dark';
   return {
-    gold:   '#d97706', green:  '#0d9488', red:    '#e11d48',
-    blue:   '#3b82f6', cyan:   '#0ea5e9', violet: '#8b5cf6', amber: '#d97706',
-    text:   dark ? '#f1f5f9'  : '#0f172a',
-    muted:  dark ? '#94a3b8'  : '#64748b',
-    border: dark ? '#1e293b'  : '#e2e8f0',
-    grid:   dark ? '#1a2236'  : '#eef1f5',
-    panel:  dark ? '#131a22'  : '#ffffff',
+    gold: '#e8a33d',
+    green: dark ? '#1ca58d' : '#0f9c8a',
+    red: dark ? '#f4555c' : '#e54850',
+    blue: dark ? '#4f8df7' : '#2f6be7',
+    cyan: dark ? '#2fb7e6' : '#1478c9',
+    violet: dark ? '#9d8cfb' : '#7c5cdb',
+    amber: '#e8a33d',
+    text: dark ? '#e6ebf2' : '#1c2430',
+    muted: dark ? '#8996a9' : '#5e6b7d',
+    border: dark ? 'rgba(148,163,184,0.16)' : 'rgba(15,23,42,0.14)',
+    grid: dark ? 'rgba(148,163,184,0.13)' : 'rgba(15,23,42,0.08)',
+    panel: dark ? '#101720' : '#ffffff',
   };
 }
 
@@ -56,17 +61,19 @@ export function showCard(id) {
 /* ---------------------------------------------------------- base común */
 export function baseAxisStyle(cc) {
   return {
-    axisLine: { lineStyle: { color: cc.border } },
+    axisLine: { show: false },
+    axisTick: { show: false },
     axisLabel: { color: cc.muted, fontSize: 11, fontFamily: 'Inter, sans-serif' },
-    splitLine: { lineStyle: { color: cc.grid } },
+    splitLine: { lineStyle: { color: cc.grid, type: 'dashed', opacity: 0.4 } },
   };
 }
 
 /* Retro-compatibilidad: baseAxis legacy (usa colores estáticos) */
 export const baseAxis = {
-  axisLine: { lineStyle: { color: C.border } },
+  axisLine: { show: false },
+  axisTick: { show: false },
   axisLabel: { color: C.muted, fontSize: 11, fontFamily: 'Inter, sans-serif' },
-  splitLine: { lineStyle: { color: C.grid } },
+  splitLine: { lineStyle: { color: C.grid, type: 'dashed', opacity: 0.4 } },
 };
 
 export function timeOption(extra) {
@@ -216,8 +223,8 @@ export function chartPrice(data, id = 'ch-price', customPts = null) {
   const lastPrice = pts[pts.length - 1][1];
   const isUp = lastPrice >= firstPrice;
   const lineColor = isUp ? cc.green : cc.red;
-  const fillStart = isUp ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)';
-  const fillEnd   = isUp ? 'rgba(16, 185, 129, 0.01)' : 'rgba(239, 68, 68, 0.01)';
+  const fillStart = isUp ? `${cc.green}26` : `${cc.red}26`;
+  const fillEnd   = isUp ? `${cc.green}00` : `${cc.red}00`;
 
   const isArea = priceView.type === 'area';
   
@@ -271,7 +278,7 @@ export function chartPrice(data, id = 'ch-price', customPts = null) {
   // 1. Price Series
   series.push({
     type: 'line', data: pts, showSymbol: false, name: 'Precio', xAxisIndex: 0, yAxisIndex: 0,
-    lineStyle: { color: lineColor, width: 2 },
+    lineStyle: { color: lineColor, width: 1.5 },
     areaStyle: isArea ? { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
       { offset: 0, color: fillStart }, { offset: 1, color: fillEnd },
     ]) } : undefined,
@@ -295,7 +302,7 @@ export function chartPrice(data, id = 'ch-price', customPts = null) {
       lineStyle: { color: cc.cyan, width: 1.5 }, itemStyle: { color: cc.cyan },
       tooltip: { valueFormatter: v => fmtPrice(v, cur) } });
     series.push({ type: 'line', name: 'SMA 200', data: sma(pts, 200), showSymbol: false, xAxisIndex: 0, yAxisIndex: 0,
-      lineStyle: { color: cc.gold, width: 1.5 }, itemStyle: { color: cc.gold },
+      lineStyle: { color: '#9aa8bd', width: 1.3 }, itemStyle: { color: '#9aa8bd' },
       tooltip: { valueFormatter: v => fmtPrice(v, cur) } });
   }
 
@@ -373,21 +380,14 @@ export function chartPrice(data, id = 'ch-price', customPts = null) {
     });
   }
 
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const opt = timeOption({
     legend: { textStyle: { color: cc.text, fontSize: 10 }, top: 0, right: 80 },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'cross', label: { backgroundColor: cc.muted, color: '#fff' }, lineStyle: { type: 'dashed', color: cc.muted } },
-      backgroundColor: cc.panel, borderColor: cc.border, borderWidth: 1, padding: 12,
+      backgroundColor: cc.panel, borderColor: cc.border, borderWidth: 1, padding: 10,
       textStyle: { color: cc.text, fontSize: 12, fontFamily: 'Inter, sans-serif' }
-    },
-    graphic: [
-      {
-        type: 'text', left: 'center', top: 'center', z: -1,
-        style: { text: data.symbol, fontSize: 100, fontWeight: 'bold', fill: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }
-      }
-    ]
+    }
   });
 
   opt.grid = grids;
@@ -395,9 +395,11 @@ export function chartPrice(data, id = 'ch-price', customPts = null) {
   opt.yAxis = yAxes;
   opt.dataZoom = [
     { type: 'inside', xAxisIndex: grids.map((_, i) => i) },
-    { type: 'slider', xAxisIndex: grids.map((_, i) => i), height: 20, bottom: 4, borderColor: cc.border,
-      backgroundColor: 'transparent', fillerColor: isUp ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-      handleStyle: { color: lineColor }, textStyle: { color: cc.muted, fontSize: 9 } }
+    { type: 'slider', xAxisIndex: grids.map((_, i) => i), height: 22, bottom: 5,
+      borderColor: 'transparent', backgroundColor: 'transparent', showDetail: false,
+      fillerColor: isUp ? `${cc.green}1a` : `${cc.red}1a`,
+      handleStyle: { color: cc.muted }, handleSize: '80%',
+      textStyle: { color: cc.muted, fontSize: 9 } }
   ];
   opt.series = series;
 
@@ -458,8 +460,7 @@ export function chartRatio(id, pairs, stats, color, name) {
     tooltip: {
       trigger: 'axis',
       backgroundColor: cc.panel, borderColor: cc.border,
-      borderWidth: 1, borderRadius: 10, padding: [10, 14],
-      extraCssText: 'box-shadow: 0 10px 28px rgba(0,0,0,0.18); backdrop-filter: blur(6px);',
+      borderWidth: 1, borderRadius: 8, padding: [10, 14],
       textStyle: { color: cc.text, fontSize: 12, fontFamily: 'Inter, sans-serif' },
       axisPointer: { type: 'line', lineStyle: { color: cc.muted, type: 'dashed', opacity: 0.5 } },
       formatter: (params) => {
@@ -947,9 +948,9 @@ export function renderPriceOverlay(data) {
         { axisLabel: { color: cc.muted, fontSize: 10.5, formatter: v => fmtNum(v, 0) } }));
       series.push({
         type: 'line', name: 'Precio', yAxisIndex: 0, data: pricePts, showSymbol: false,
-        lineStyle: { color: cc.gold, width: 2.5, shadowColor: cc.gold + '55', shadowBlur: 8, shadowOffsetY: 4 },
+        lineStyle: { color: cc.gold, width: 2 },
         itemStyle: { color: cc.gold },
-        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: cc.gold + '26' }, { offset: 1, color: cc.gold + '00' }]) },
+        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: cc.gold + '1f' }, { offset: 1, color: cc.gold + '00' }]) },
         tooltip: { valueFormatter: v => fmtNum(v, 2) },
       });
       leftSeries.forEach(o => {
@@ -969,8 +970,7 @@ export function renderPriceOverlay(data) {
       grid: { left: 60, right: 14 + (axisCount - 1) * 46, top: 26, bottom: 52 },
       tooltip: {
         trigger: 'axis',
-        backgroundColor: cc.panel, borderColor: cc.border, borderWidth: 1, borderRadius: 10, padding: [10, 14],
-        extraCssText: 'box-shadow: 0 10px 28px rgba(0,0,0,0.18);',
+        backgroundColor: cc.panel, borderColor: cc.border, borderWidth: 1, borderRadius: 8, padding: [10, 12],
         textStyle: { color: cc.text, fontSize: 12, fontFamily: 'Inter, sans-serif' },
         axisPointer: { type: 'line', lineStyle: { color: cc.muted, type: 'dashed', opacity: 0.5 } },
         formatter: (params) => {
