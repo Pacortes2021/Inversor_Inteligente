@@ -874,7 +874,7 @@ export function renderHeatmap(rows, onOpen) {
 }
 
 /* --------------------------------------- overlay precio + múltiplos */
-export function renderPriceOverlay(data) {
+export function renderPriceOverlay(data, initialActive) {
   const el = document.getElementById('ch-overlay');
   const chipsEl = document.getElementById('overlay-chips');
   const togglesEl = document.getElementById('overlay-toggles');
@@ -907,7 +907,7 @@ export function renderPriceOverlay(data) {
 
   let normalized = false;
   let logScale = false;
-  let pRange = '1y';
+  let pRange = 'all';  // default: show full history like Koyfin
   let pFreq = 'D';
 
   const src = { price: pricePts };
@@ -942,7 +942,8 @@ export function renderPriceOverlay(data) {
   const fmtByName = name => FMT[name] || (name === 'Precio' ? (v => fmtNum(v, 2)) : (v => v != null ? v : '—'));
   const keyOf = label => (OVERLAYS.find(o => o.label === label) || {}).key || label;
 
-  const active = new Set(['peTtm']);
+  // Seed active chips from caller (nav router) or default to peTtm
+  const active = new Set(Array.isArray(initialActive) ? initialActive : ['peTtm']);
 
   const RANGES = [
     { key: 'mtd', label: 'MTD' }, { key: '1m', label: '1M' }, { key: 'qtd', label: 'QTD' },
@@ -1343,44 +1344,58 @@ export function renderKoyfinLayout(data) {
   const p   = data.profile  || {};
   const q   = data.quote    || {};
   const c   = data.current  || {};
-  const est = data.estimates || {};
   const ih  = data.insidersHolders || {};
+  const hist = data.history || {};
 
-  // ── 1. TOP STRIP ────────────────────────────────────────────────────
+  // ── 1. TOP HEADER ─────────────────────────────────────────────────
+  const elName   = document.getElementById('koy-name');
+  const elExch   = document.getElementById('koy-exchange');
   const elSym    = document.getElementById('koy-sym');
   const elPrice  = document.getElementById('koy-price');
   const elChange = document.getElementById('koy-change');
   const elAh     = document.getElementById('koy-ah');
   const elKpis   = document.getElementById('koy-strip-kpis');
+  const elDtRng  = document.getElementById('koy-date-range-lbl');
 
-  if (elSym)    elSym.textContent  = data.symbol || '—';
-  if (elPrice)  elPrice.textContent = q.price != null ? fmtNum(q.price, q.price >= 1000 ? 0 : 2) : '—';
+  if (elName) elName.textContent = p.companyName || p.longName || data.symbol || '—';
+  if (elExch) {
+    const exch = p.exchange || p.exchangeShortName || '';
+    const flag  = (p.country || '').toUpperCase() === 'US' || exch.includes('NQ') || exch.includes('NAS') || exch.includes('NYSE') ? '🇺🇸 ' : '';
+    elExch.textContent = flag + (exch || '—');
+  }
+  if (elSym)   elSym.textContent  = data.symbol || '—';
+  if (elPrice) elPrice.textContent = q.price != null ? fmtNum(q.price, q.price >= 1000 ? 0 : 2) + ' ' + (q.currency || p.currency || 'USD') : '—';
 
   if (elChange && q.previousClose && q.price) {
     const chgAbs = q.price - q.previousClose;
     const chgPct = (chgAbs / q.previousClose) * 100;
     const dir    = chgAbs >= 0;
-    elChange.textContent  = `${dir ? '+' : ''}${fmtNum(chgAbs, 2)} (${dir ? '+' : ''}${fmtNum(chgPct, 2)}%)`;
-    elChange.className    = 'koy-top-change ' + (dir ? 'up' : 'down');
+    elChange.textContent = `${dir ? '+' : ''}${fmtNum(chgAbs, 2)} (${dir ? '+' : ''}${fmtNum(chgPct, 2)}%)`;
+    elChange.className   = 'koy-top-change ' + (dir ? 'up' : 'down');
   } else if (elChange) {
-    elChange.textContent = '—';
-    elChange.className   = 'koy-top-change';
+    elChange.textContent = '—'; elChange.className = 'koy-top-change';
   }
 
   if (elAh) {
     if (q.postMarketPrice) {
       const ahChg = q.postMarketChangePercent;
-      elAh.textContent = `AH ${fmtNum(q.postMarketPrice, 2)} ${ahChg != null ? (ahChg >= 0 ? '+' : '') + fmtNum(ahChg * 100, 2) + '%' : ''}`;
+      elAh.textContent = `After Market: ${fmtNum(q.postMarketPrice, 2)} ${ahChg != null ? (ahChg >= 0 ? '+' : '') + fmtNum(ahChg * 100, 2) + '%' : ''}`;
       elAh.classList.remove('hidden');
-    } else {
-      elAh.classList.add('hidden');
-    }
+    } else { elAh.classList.add('hidden'); }
   }
 
-  // KPIs en línea del Top Strip
+  // Date range label from price history
+  if (elDtRng && hist.price && hist.price.length > 1) {
+    const first = new Date(hist.price[0][0]);
+    const last  = new Date(hist.price[hist.price.length - 1][0]);
+    const fmt   = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    elDtRng.textContent = `${fmt(first)} – ${fmt(last)}`;
+  }
+
+  // KPI strip
   if (elKpis) {
-    const pts = (data.history && data.history.price) || [];
-    const cagr = (n) => {
+    const pts = hist.price || [];
+    const cagr = n => {
       if (pts.length < 5) return null;
       const last = pts[pts.length - 1][0];
       const tgt  = last - n * 365.25 * 86400000;
@@ -1390,87 +1405,87 @@ export function renderKoyfinLayout(data) {
       if (!v0 || !v1 || v0 <= 0) return null;
       return (Math.pow(v1 / v0, 1 / n) - 1) * 100;
     };
-    const cagr3  = cagr(3);
-    const cagr10 = cagr(10);
-    let nextStr  = p.nextEarnings ? String(p.nextEarnings) : null;
-    try { if (nextStr) nextStr = new Date(nextStr + 'T00:00:00').toLocaleDateString('es-CL', { weekday: 'short', day: '2-digit', month: 'short' }); } catch {}
-
-    const kpiItem = (lbl, val, cls = '') =>
-      `<div class="koy-kpi-item" title="${lbl}">
-         <span class="koy-kpi-lbl">${lbl}</span>
-         <span class="koy-kpi-val${cls ? ' ' + cls : ''}">${val || '—'}</span>
-       </div>`;
-
+    const cagr3 = cagr(3), cagr10 = cagr(10);
+    let nextStr = p.nextEarnings ? String(p.nextEarnings) : null;
+    try { if (nextStr) nextStr = new Date(nextStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); } catch {}
     const pctCls = v => v == null ? '' : (v >= 0 ? ' up' : ' down');
+    const ki = (lbl, val, cls = '') =>
+      `<div class="koy-kpi-item"><span class="koy-kpi-lbl">${lbl}</span><span class="koy-kpi-val${cls}">${val || '—'}</span></div>`;
     elKpis.innerHTML = [
-      kpiItem('Sector',       p.sector   || '—'),
-      kpiItem('Industry',     p.industry || '—'),
-      kpiItem('Div. Yield',   c.divYield  != null ? fmtNum(c.divYield, 2) + '%' : '—'),
-      kpiItem('Market Cap',   q.marketCap != null ? fmtBig(q.marketCap) : '—'),
-      kpiItem('P/E Trailing', c.pe        != null ? fmtRatio(c.pe, 1) + 'x' : '—'),
-      kpiItem('P/E Forward',  c.forwardPe != null ? fmtRatio(c.forwardPe, 1) + 'x' : '—'),
-      kpiItem('CAGR 3Y',      cagr3  != null ? fmtNum(cagr3,  1, true) + '%' : '—', pctCls(cagr3)),
-      kpiItem('CAGR 10Y',     cagr10 != null ? fmtNum(cagr10, 1, true) + '%' : '—', pctCls(cagr10)),
-      kpiItem('Next Earnings', nextStr || '—'),
+      ki('Sector',        p.sector   || '—'),
+      ki('Industry',      p.industry || '—'),
+      ki('Div. Yield',    c.divYield  != null ? fmtNum(c.divYield, 2) + '%' : '—'),
+      ki('Market Cap',    q.marketCap != null ? fmtBig(q.marketCap) : '—'),
+      ki('Trailing P/E',  c.pe        != null ? fmtRatio(c.pe, 1) + 'x' : '—'),
+      ki('Forward P/E',   c.forwardPe != null ? fmtRatio(c.forwardPe, 1) + 'x' : '—'),
+      ki('CAGR 3Y',       cagr3  != null ? (cagr3  >= 0 ? '+' : '') + fmtNum(cagr3,  1) + '%' : '—', pctCls(cagr3)),
+      ki('CAGR 10Y',      cagr10 != null ? (cagr10 >= 0 ? '+' : '') + fmtNum(cagr10, 1) + '%' : '—', pctCls(cagr10)),
+      ki('Next Earnings', nextStr || '—'),
     ].join('');
   }
 
-  // ── 2. LEFT SIDEBAR — nav routing ──────────────────────────────────
-  const allNavBtns = document.querySelectorAll('[data-koy-view]');
-  const CHART_MAP = {
-    overlay:    () => { renderPriceOverlay(data); _koySetTitle('Precio + Múltiplos (Overlay)'); },
-    pe:         () => { _koySwapCanvas('ch-pe-koy', 520); chartRatioInCanvas('ch-pe-koy', (data.history||{}).peTtm, (data.history||{}).peStats, '#4f8df7', 'PE (TTM)'); _koySetTitle('PE Ratio histórico (TTM)'); },
-    income:     () => { _koySwapCanvas('ch-income-koy', 520); chartIncomeInCanvas('ch-income-koy', data); _koySetTitle('P&L — Ingresos y Utilidad'); },
-    fcf:        () => { _koySwapCanvas('ch-fcf-koy', 520); chartFcfInCanvas('ch-fcf-koy', data); _koySetTitle('Free Cash Flow'); },
-    returns:    () => { _koySwapCanvas('ch-returns-koy', 520); chartReturnsInCanvas('ch-returns-koy', data); _koySetTitle('Retornos — ROE y ROIC'); },
-    shares:     () => { _koySwapCanvas('ch-shares-koy', 520); chartSharesInCanvas('ch-shares-koy', data); _koySetTitle('Acciones en circulación'); },
-    debt:       () => { _koySwapCanvas('ch-debt-koy', 520); chartDebtInCanvas('ch-debt-koy', data); _koySetTitle('Balance — Deuda vs Caja'); },
-    margins:    () => { _koySwapCanvas('ch-margins-koy', 520); chartMarginsInCanvas('ch-margins-koy', data); _koySetTitle('Márgenes — Bruto / Operativo / Neto'); },
-    eps:        () => { _koySwapCanvas('ch-eps-koy', 520); chartEpsInCanvas('ch-eps-koy', data); _koySetTitle('EPS Histórico (Diluted)'); },
-    divs:       () => { _koySwapCanvas('ch-divs-koy', 520); chartDividendsInCanvas('ch-divs-koy', data); _koySetTitle('Dividendo por acción (DPS)'); },
-    technicals: () => { renderPriceOverlay(data); _koySetTitle('Técnico — MACD / RSI / SMA'); },
-    sma:        () => { renderPriceOverlay(data); _koySetTitle('SMA 50 / SMA 200'); },
-    'fa-val':   () => { renderPriceOverlay(data); _koySetTitle('FA — Valuation Overlay'); },
-    'fa-fin':   () => { renderPriceOverlay(data); _koySetTitle('FA — Financials Overlay'); },
-    'fa-growth':() => { renderPriceOverlay(data); _koySetTitle('FA — Growth Overlay'); },
-    'fa-ratios':() => { renderPriceOverlay(data); _koySetTitle('FA — Key Ratios Overlay'); },
-    estimates:  () => { renderPriceOverlay(data); _koySetTitle('Estimates'); },
+  // ── 2. LEFT SIDEBAR: nav routing ──────────────────────────────────
+  // Helper: show/hide chips+toggles rows based on whether view uses the overlay
+  const _koySetChartContext = (isOverlayView) => {
+    const chipsRow   = document.getElementById('koy-chips-row');
+    const togglesRow = document.getElementById('koy-toggles-row');
+    if (chipsRow)   chipsRow.style.display   = isOverlayView ? '' : 'none';
+    if (togglesRow) togglesRow.style.display = isOverlayView ? '' : 'none';
   };
 
+  // CHART_MAP: what each nav item renders
+  // 'overlay' = pure price chart (no multiples chip pre-selected)
+  // 'pe' = price + peTtm overlay → the canonical Koyfin PER view
+  // Everything else = standalone bar/line chart via _koySwapCanvas
+  const OVERLAY_KEYS = new Set(['overlay', 'pe', 'technicals', 'sma', 'fa-val', 'fa-fin', 'fa-growth', 'fa-ratios', 'estimates']);
+
+  const CHART_MAP = {
+    overlay:     () => { _koySetChartContext(true);  renderPriceOverlay(data, []); },
+    pe:          () => { _koySetChartContext(true);  renderPriceOverlay(data, ['peTtm']); },
+    technicals:  () => { _koySetChartContext(true);  renderPriceOverlay(data, ['sma50', 'sma200']); },
+    sma:         () => { _koySetChartContext(true);  renderPriceOverlay(data, ['sma50', 'sma200']); },
+    'fa-val':    () => { _koySetChartContext(true);  renderPriceOverlay(data, ['peTtm', 'psTtm', 'pbTtm']); },
+    'fa-fin':    () => { _koySetChartContext(true);  renderPriceOverlay(data, ['revTtm', 'epsTtm']); },
+    'fa-growth': () => { _koySetChartContext(true);  renderPriceOverlay(data, ['epsTtm', 'revTtm']); },
+    'fa-ratios': () => { _koySetChartContext(true);  renderPriceOverlay(data, ['peTtm', 'pbTtm', 'pcfTtm']); },
+    estimates:   () => { _koySetChartContext(true);  renderPriceOverlay(data, ['peTtm']); },
+    income:      () => { _koySetChartContext(false); _koySwapCanvas('ch-income-koy', 520); chartIncomeInCanvas('ch-income-koy', data); },
+    fcf:         () => { _koySetChartContext(false); _koySwapCanvas('ch-fcf-koy',    520); chartFcfInCanvas('ch-fcf-koy', data); },
+    returns:     () => { _koySetChartContext(false); _koySwapCanvas('ch-returns-koy', 520); chartReturnsInCanvas('ch-returns-koy', data); },
+    shares:      () => { _koySetChartContext(false); _koySwapCanvas('ch-shares-koy',  520); chartSharesInCanvas('ch-shares-koy', data); },
+    debt:        () => { _koySetChartContext(false); _koySwapCanvas('ch-debt-koy',    520); chartDebtInCanvas('ch-debt-koy', data); },
+    margins:     () => { _koySetChartContext(false); _koySwapCanvas('ch-margins-koy', 520); chartMarginsInCanvas('ch-margins-koy', data); },
+    eps:         () => { _koySetChartContext(false); _koySwapCanvas('ch-eps-koy',     520); chartEpsInCanvas('ch-eps-koy', data); },
+    divs:        () => { _koySetChartContext(false); _koySwapCanvas('ch-divs-koy',    520); chartDividendsInCanvas('ch-divs-koy', data); },
+  };
+
+  const allNavBtns = document.querySelectorAll('[data-koy-view]');
   allNavBtns.forEach(btn => {
-    if (btn.dataset._koyBound) return; // evitar duplicar listeners
+    if (btn.dataset._koyBound) return;
     btn.dataset._koyBound = '1';
     btn.addEventListener('click', () => {
-      // Toggle active
       document.querySelectorAll('.koy-nav-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      // Mostrar toolbar solo en overlay
       const view = btn.getAttribute('data-koy-view');
-      const isOverlay = (view === 'overlay');
-      const toolbar = document.querySelector('.koy-chart-toolbar');
-      const row2    = document.querySelector('.koy-toolbar-row2');
-      if (toolbar) toolbar.style.display = isOverlay ? '' : 'none';
-      if (row2)    row2.style.display    = isOverlay ? '' : 'none';
-      // Ejecutar el chart
       const fn = CHART_MAP[view];
       if (fn) { try { fn(); } catch(e) { console.error('koy nav error:', e); } }
-      setTimeout(() => Object.values(charts).forEach(ch => ch.resize()), 50);
+      setTimeout(() => Object.values(charts).forEach(ch => { try { ch.resize(); } catch(_){} }), 60);
     });
   });
 
-  // ── 3. RIGHT SIDEBAR: Analyst Consensus ────────────────────────────
+  // Auto-trigger the currently active nav button on first load
+  const activeBtn = document.querySelector('.koy-nav-btn.active[data-koy-view]');
+  if (activeBtn) {
+    const view = activeBtn.getAttribute('data-koy-view');
+    const fn   = CHART_MAP[view];
+    if (fn) { try { fn(); } catch(e) { console.error('koy initial render error:', e); } }
+  }
+
+  // ── 3-7. RIGHT SIDEBAR widgets (graceful no-op if elements absent) ─
   _koyRenderAnalyst(data, cc, isDark);
-
-  // ── 4. RIGHT SIDEBAR: Institutional Holders ────────────────────────
   _koyRenderHolders(ih, cc);
-
-  // ── 5. RIGHT SIDEBAR: Insider Trades ───────────────────────────────
   _koyRenderInsiders(ih, cc);
-
-  // ── 6. RIGHT SIDEBAR: Comparable Companies ─────────────────────────
   _koyRenderPeers(data, cc);
-
-  // ── 7. RIGHT SIDEBAR: PE mini-chart ────────────────────────────────
   _koyRenderPeMini(data, cc);
 }
 

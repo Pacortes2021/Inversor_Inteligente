@@ -876,21 +876,15 @@
         </div>
       </section>
 
-      <!-- ═══════════════════════════════════════════════════════════
-           KOYFIN LAYOUT — Precio + Múltiplos (Overlay Interactivo)
-           4 zonas: Top Strip · Left Sidebar · Main Chart · Right Panel
-           ═══════════════════════════════════════════════════════════ -->
-      <!-- ═══════════════════════════════════════════════════════════
-           KOYFIN LAYOUT — Réplica Píxel por Píxel de Koyfin
-           ═══════════════════════════════════════════════════════════ -->
+      <!-- ═══════════════════════════════ KOYFIN VIEW ═══════════════════════════════ -->
       <section class="koyfin-container" id="koyfin-view">
 
-        <!-- CABECERA SUPERIOR DE LA ACCIÓN & KPIS EN LÍNEA -->
+        <!-- TOP HEADER: Company · Price · KPI strip -->
         <div class="koy-top-header">
           <div class="koy-title-row">
             <div class="koy-company-title">
-              <span id="koy-name">AppLovin Corporation</span>
-              <span class="koy-flag-badge">🇺🇸 NasdaqGS</span>
+              <span id="koy-name">—</span>
+              <span class="koy-flag-badge" id="koy-exchange">🇺🇸 —</span>
             </div>
             <div class="koy-header-actions">
               <button class="koy-hdr-btn">🔔 My Alerts</button>
@@ -901,31 +895,29 @@
           </div>
 
           <div class="koy-price-row">
-            <span class="koy-ticker-lbl" id="koy-sym">APP</span>
-            <span class="koy-top-price" id="koy-price">417.80 USD</span>
-            <span class="koy-top-change down" id="koy-change">-1.90 (-0.45%)</span>
-            <span class="koy-top-ah" id="koy-ah">After Market: 351.75 USD -66.05 (-15.81%)</span>
+            <span class="koy-ticker-lbl" id="koy-sym">—</span>
+            <span class="koy-top-price" id="koy-price">—</span>
+            <span class="koy-top-change" id="koy-change">—</span>
+            <span class="koy-top-ah hidden" id="koy-ah"></span>
           </div>
 
-          <!-- FILA DE KPIS HORIZONTALES -->
-          <div class="koy-strip-kpis" id="koy-strip-kpis">
-            <!-- Poblado por renderKoyfinLayout() -->
-          </div>
+          <!-- KPI strip (populated by renderKoyfinLayout) -->
+          <div class="koy-strip-kpis" id="koy-strip-kpis"></div>
         </div>
 
-        <!-- CUERPO PRINCIPAL (LEFT SIDEBAR TEMPLATES + MAIN CHART AREA) -->
+        <!-- BODY: Left Sidebar + Main Chart -->
         <div class="koy-body">
 
-          <!-- LEFT SIDEBAR: MY TEMPLATES -->
+          <!-- LEFT SIDEBAR: My Templates nav -->
           <aside class="koy-left-sidebar">
             <div class="koy-sidebar-tabs">
               <button class="koy-sb-tab">Selections</button>
-              <span class="muted">•</span>
+              <span class="koy-sb-tab-sep">|</span>
               <button class="koy-sb-tab active">Templates</button>
             </div>
             <div class="koy-sidebar-header">
               <span>My Templates</span>
-              <div style="display:flex;gap:4px;">
+              <div style="display:flex;gap:4px">
                 <button class="koy-sidebar-new" id="koy-new-btn">+ New</button>
                 <button class="koy-sidebar-new">Saved ▾</button>
               </div>
@@ -939,17 +931,18 @@
               <button class="koy-nav-btn" data-koy-view="shares"><span class="koy-radio-icon"></span>- Acciones en circulación</button>
               <button class="koy-nav-btn" data-koy-view="debt"><span class="koy-radio-icon"></span>- Balance</button>
               <button class="koy-nav-btn" data-koy-view="margins"><span class="koy-radio-icon"></span>- EBIT margin</button>
-              <button class="koy-nav-btn" data-koy-view="hist"><span class="koy-radio-icon"></span>- Gráfico histórico</button>
-              <button class="koy-nav-btn" data-koy-view="income-stmt"><span class="koy-radio-icon"></span>- Cuenta de resultados</button>
+              <button class="koy-nav-btn" data-koy-view="eps"><span class="koy-radio-icon"></span>- EPS histórico</button>
+              <button class="koy-nav-btn" data-koy-view="divs"><span class="koy-radio-icon"></span>- Dividendos</button>
             </nav>
           </aside>
 
           <!-- MAIN CHART AREA -->
           <main class="koy-chart-area">
-            <!-- Toolbar Superior del Gráfico Koyfin -->
+            <!-- Toolbar 1: Date range + Timeframes + Freq + Actions -->
             <div class="koy-chart-toolbar">
               <div class="koy-tb-left">
-                <div class="koy-date-range-box" id="koy-date-range-lbl">Apr 15 2021 - Aug 5 2026</div>
+                <div class="koy-date-range-box" id="koy-date-range-lbl">— — —</div>
+                <div class="koy-toolbar-sep"></div>
                 <div class="ov-pill-group" id="overlay-time"></div>
                 <div class="koy-toolbar-sep"></div>
                 <div class="ov-pill-group" id="overlay-freq"></div>
@@ -957,21 +950,28 @@
               <div class="koy-tb-right">
                 <button class="koy-tb-btn">Show Table</button>
                 <button class="koy-tb-btn">Export</button>
-                <button class="koy-tb-btn">Settings</button>
+                <button class="koy-tb-btn">⚙ Settings</button>
                 <button class="koy-tb-btn primary">+ Add to My Graph</button>
               </div>
             </div>
 
-            <!-- Chips de métricas superpuestas (PE, PS, PB, etc.) -->
-            <div class="overlay-chips" id="overlay-chips" style="padding: 6px 14px; background: var(--koy-panel); border-bottom: 1px solid var(--koy-border);"></div>
-            <div id="overlay-toggles" style="display:none;"></div>
+            <!-- Toolbar 2: Overlay chips (PE, PS, PB...) -->
+            <div class="koy-chips-row" id="koy-chips-row">
+              <div class="overlay-chips" id="overlay-chips"></div>
+            </div>
 
-            <!-- Canvas del Gráfico ECharts (Ejes Duales a la Derecha) -->
+            <!-- Toolbar 3: Base100 / Log toggles -->
+            <div class="koy-toggles-row" id="koy-toggles-row">
+              <div id="overlay-toggles" style="display:flex;gap:14px;align-items:center;"></div>
+            </div>
+
+            <!-- ECharts canvas -->
             <div class="koy-chart-canvas" id="ch-overlay"></div>
           </main>
 
         </div><!-- .koy-body -->
-      </section><!-- .koyfin-container -->
+      </section><!-- #koyfin-view -->
+
 
 
 
