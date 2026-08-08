@@ -11,8 +11,14 @@ from .base import BaseDataProvider
 logger = logging.getLogger(__name__)
 
 
+from pathlib import Path
+import json
+
 FMP_STABLE_URL = "https://financialmodelingprep.com/stable"
 FMP_V3_URL = "https://financialmodelingprep.com/api/v3"
+
+FMP_CACHE_DIR = Path(__file__).resolve().parent.parent.parent / "cache" / "fmp"
+FMP_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 _fmp_cache: Dict[str, Any] = {}
 
@@ -27,37 +33,67 @@ class FMPProvider(BaseDataProvider):
         if not self.api_key:
             return None
 
-        # Standardize symbol parameter for FMP (/stable/ expects ?symbol=TICKER)
         p = {"apikey": self.api_key}
         if params:
             p.update(params)
 
-        cache_key = f"{base_url}/{endpoint}:{sorted(p.items())}"
+        param_str = "_".join(f"{k}-{v}" for k, v in sorted(p.items()) if k != "apikey")
+        safe_endpoint = endpoint.replace("/", "_").replace("?", "_")
+        cache_filename = f"{safe_endpoint}_{param_str}.json"
+        cache_file = FMP_CACHE_DIR / cache_filename
+
+        cache_key = f"{base_url}/{endpoint}:{param_str}"
         if cache_key in _fmp_cache:
             return _fmp_cache[cache_key]
 
+        # 1. Leer de caché en disco si existe (válido por 24h)
+        if cache_file.exists():
+            try:
+                mtime = cache_file.stat().st_mtime
+                if time.time() - mtime < 86400:
+                    data = json.loads(cache_file.read_text(encoding="utf-8"))
+                    _fmp_cache[cache_key] = data
+                    return data
+            except Exception:
+                pass
+
         url = f"{base_url}/{endpoint}"
 
-        for attempt in range(3):
+        for attempt in range(4):
             try:
-                resp = requests.get(url, params=p, timeout=8)
+                resp = requests.get(url, params=p, timeout=10)
                 if resp.status_code == 200:
                     data = resp.json()
                     if isinstance(data, dict) and ("Error Message" in data or "error" in data):
-                        logger.warning(f"FMP Error on {endpoint}: {data}")
+                        logger.warning(f"FMP Error en {endpoint}: {data}")
                         return None
                     _fmp_cache[cache_key] = data
+                    try:
+                        cache_file.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+                    except Exception:
+                        pass
                     return data
                 elif resp.status_code == 429:
-                    logger.warning(f"FMP HTTP 429 (Rate Limit). Reintentando en {0.4 * (attempt + 1)}s...")
-                    time.sleep(0.4 * (attempt + 1))
+                    wait_time = 1.0 * (attempt + 1)
+                    logger.warning(f"FMP HTTP 429 (Rate Limit). Reintentando intento {attempt+1} en {wait_time}s...")
+                    time.sleep(wait_time)
                 else:
                     logger.warning(f"FMP HTTP {resp.status_code} para {endpoint}")
                     return None
             except Exception as e:
                 logger.error(f"Error conectando a FMP {endpoint}: {e}")
-                time.sleep(0.3)
+                time.sleep(0.5)
+
+        # Si expiró el rate limit pero existe caché viejo en disco, usarlo como respaldo
+        if cache_file.exists():
+            try:
+                data = json.loads(cache_file.read_text(encoding="utf-8"))
+                _fmp_cache[cache_key] = data
+                return data
+            except Exception:
+                pass
         return None
+
 
     def fetch_raw_data(self, symbol: str) -> Dict[str, Any]:
         raw_symbol = symbol.upper().strip()
