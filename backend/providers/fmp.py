@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 from pathlib import Path
 import json
 
+from pathlib import Path
+import json
+
 FMP_STABLE_URL = "https://financialmodelingprep.com/stable"
 FMP_V3_URL = "https://financialmodelingprep.com/api/v3"
 
@@ -21,6 +24,15 @@ FMP_CACHE_DIR = Path(__file__).resolve().parent.parent.parent / "cache" / "fmp"
 FMP_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 _fmp_cache: Dict[str, Any] = {}
+_last_fmp_req_time: float = 0.0
+
+def _throttle_fmp():
+    global _last_fmp_req_time
+    now = time.time()
+    elapsed = now - _last_fmp_req_time
+    if elapsed < 0.12:
+        time.sleep(0.12 - elapsed)
+    _last_fmp_req_time = time.time()
 
 class FMPProvider(BaseDataProvider):
     def __init__(self, api_key: Optional[str] = None):
@@ -60,8 +72,31 @@ class FMPProvider(BaseDataProvider):
         url = f"{base_url}/{endpoint}"
 
         for attempt in range(4):
+            _throttle_fmp()
             try:
                 resp = requests.get(url, params=p, timeout=10)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if isinstance(data, dict) and ("Error Message" in data or "error" in data):
+                        logger.warning(f"FMP Error en {endpoint}: {data}")
+                        return None
+                    _fmp_cache[cache_key] = data
+                    try:
+                        cache_file.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+                    except Exception:
+                        pass
+                    return data
+                elif resp.status_code == 429:
+                    wait_time = 1.2 * (attempt + 1)
+                    logger.warning(f"FMP HTTP 429 (Rate Limit). Reintentando intento {attempt+1} en {wait_time}s...")
+                    time.sleep(wait_time)
+                else:
+                    logger.warning(f"FMP HTTP {resp.status_code} para {endpoint}")
+                    return None
+            except Exception as e:
+                logger.error(f"Error conectando a FMP {endpoint}: {e}")
+                time.sleep(0.5)
+
                 if resp.status_code == 200:
                     data = resp.json()
                     if isinstance(data, dict) and ("Error Message" in data or "error" in data):
