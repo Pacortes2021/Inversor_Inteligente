@@ -27,18 +27,19 @@ export function renderAnalysis(d) {
   if ($("co-name")) $("co-name").textContent = `${d.symbol} - ${d.profile.name}`;
   const heroProv = $("hero-provider");
   if (heroProv) {
-    const isFallback = d.isFallback || (d.provider && (d.provider.includes("Hybrid") || d.provider.includes("yfinance")));
-    const provName = d.provider || (isFallback ? "yfinance Fallback" : "FMP Premium");
+    const isFallback = Boolean(d.isFallback);
+    const provName = d.provider || (isFallback ? "yfinance (Fallback)" : "FMP Premium");
     if (isFallback) {
       heroProv.className = "provider-badge fallback";
       heroProv.innerHTML = `⚠️ <span>Fuente: ${provName}</span>`;
-      heroProv.title = "Aviso: Se activó el respaldo de Yahoo Finance (Límite diario de FMP alcanzado o sin cobertura en FMP Free).";
+      heroProv.title = "Aviso: Se activó el respaldo de Yahoo Finance.";
     } else {
       heroProv.className = "provider-badge premium";
-      heroProv.innerHTML = `✓ <span>Fuente: FMP Premium</span>`;
-      heroProv.title = "Datos 100% auditados y sincronizados desde Financial Modeling Prep API.";
+      heroProv.innerHTML = `✓ <span>Fuente: ${provName}</span>`;
+      heroProv.title = "Datos 100% auditados y sincronizados desde la SEC de EE.UU. y fuentes oficiales.";
     }
   }
+
   if ($("co-currency")) $("co-currency").textContent = d.profile.currency || "USD";
 
   if ($("co-price")) $("co-price").textContent = fmtPrice(d.quote.price, d.profile.currency);
