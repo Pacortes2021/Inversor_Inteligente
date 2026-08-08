@@ -120,90 +120,37 @@ def jclean(obj):
 
 
 class RawData:
-    """Descarga todo lo necesario de Yahoo para un símbolo, en paralelo."""
+    """Descarga datos para un símbolo utilizando el proveedor configurado (FMP o yfinance fallback)."""
 
     def __init__(self, symbol: str):
-        from concurrent.futures import ThreadPoolExecutor
+        from .providers.factory import fetch_data_with_fallback
 
         self.symbol = symbol
-        start = (pd.Timestamp.now() - pd.DateOffset(years=10)).strftime("%Y-%m-%d")
+        data = fetch_data_with_fallback(symbol)
 
-        # cada tarea usa su propio Ticker: yfinance no garantiza thread-safety
-        # sobre la misma instancia
-        def T():
-            return safe_ticker(symbol)
-
-        tasks = {
-            "info": lambda: safe_info(T()) or {},
-            "prices": lambda: safe_history(T(), period="max", interval="1d", auto_adjust=True),
-            "inc_a": lambda: safe_financials(T(), "income_stmt"),
-            "inc_q": lambda: safe_financials(T(), "quarterly_income_stmt"),
-            "bs_a": lambda: safe_financials(T(), "balance_sheet"),
-            "bs_q": lambda: safe_financials(T(), "quarterly_balance_sheet"),
-            "cf_a": lambda: safe_financials(T(), "cashflow"),
-            "cf_q": lambda: safe_financials(T(), "quarterly_cashflow"),
-            "dividends": lambda: safe_dividends(T()),
-            "calendar": lambda: safe_calendar(T()) or {},
-            "shares": lambda: safe_shares(T(), start=start),
-            "recommendations": lambda: safe_recommendations(T()),
-            "earnings_estimate": lambda: safe_earnings_estimate(T()),
-            "revenue_estimate": lambda: safe_revenue_estimate(T()),
-            "earnings_dates": lambda: safe_earnings_dates(T()),
-            "insider_transactions": lambda: safe_insider_transactions(T()),
-            "institutional_holders": lambda: safe_institutional_holders(T()),
-            "news": lambda: safe_news(T()),
-        }
-        with ThreadPoolExecutor(max_workers=8) as ex:
-            futures = {name: ex.submit(self._safe, fn) for name, fn in tasks.items()}
-            results = {}
-            for name, fut in futures.items():
-                try:
-                    results[name] = fut.result(timeout=45)
-                except Exception:
-                    results[name] = None
-
-        self.info = results["info"] or {}
-        self.prices = results["prices"]
-        if self.prices is not None and not self.prices.empty:
-            self.prices.index = self.prices.index.tz_localize(None)
-
-        self.inc_a, self.inc_q = results["inc_a"], results["inc_q"]
-        self.bs_a, self.bs_q = results["bs_a"], results["bs_q"]
-        self.cf_a, self.cf_q = results["cf_a"], results["cf_q"]
-
-        self.dividends = results["dividends"]
-        if self.dividends is not None and not self.dividends.empty:
-            self.dividends.index = self.dividends.index.tz_localize(None)
-
-        self.calendar = results["calendar"] or {}
-
-        self.shares = results["shares"]
-        if self.shares is not None and not self.shares.empty:
-            self.shares.index = self.shares.index.tz_localize(None)
-            self.shares = self.shares[~self.shares.index.duplicated(keep="last")]
-
-        self.recommendations = results["recommendations"]
-        self.earnings_estimate = results["earnings_estimate"]
-        self.revenue_estimate = results["revenue_estimate"]
-        self.earnings_dates = results["earnings_dates"]
-        self.insider_transactions = results["insider_transactions"]
-        self.institutional_holders = results["institutional_holders"]
-        self.news = results["news"]
-
-    @staticmethod
-    def _safe(fn):
-        try:
-            out = fn()
-            if out is None:
-                return None
-            if hasattr(out, "empty") and out.empty:
-                return None
-            return out
-        except Exception:
-            return None
+        self.provider = data.get("provider", "unknown")
+        self.info = data.get("info") or {}
+        self.prices = data.get("prices")
+        self.inc_a = data.get("inc_a")
+        self.inc_q = data.get("inc_q")
+        self.bs_a = data.get("bs_a")
+        self.bs_q = data.get("bs_q")
+        self.cf_a = data.get("cf_a")
+        self.cf_q = data.get("cf_q")
+        self.dividends = data.get("dividends")
+        self.calendar = data.get("calendar") or {}
+        self.shares = data.get("shares")
+        self.recommendations = data.get("recommendations")
+        self.earnings_estimate = data.get("earnings_estimate")
+        self.revenue_estimate = data.get("revenue_estimate")
+        self.earnings_dates = data.get("earnings_dates")
+        self.insider_transactions = data.get("insider_transactions")
+        self.institutional_holders = data.get("institutional_holders")
+        self.news = data.get("news")
 
     def is_valid(self) -> bool:
         return self.prices is not None and not self.prices.empty
+
 
 
 def nasdaq_history(symbol, start, end, interval="1d"):

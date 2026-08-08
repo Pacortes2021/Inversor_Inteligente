@@ -1,0 +1,91 @@
+"""Proveedor de datos Yahoo Finance (yfinance) como fallback."""
+
+import logging
+import pandas as pd
+import yfinance as yf
+from concurrent.futures import ThreadPoolExecutor
+from typing import Dict, Any
+from .base import BaseDataProvider
+
+logger = logging.getLogger(__name__)
+
+class YFinanceProvider(BaseDataProvider):
+
+    @staticmethod
+    def _safe(fn):
+        try:
+            out = fn()
+            if out is None:
+                return None
+            if hasattr(out, "empty") and out.empty:
+                return None
+            return out
+        except Exception:
+            return None
+
+    def fetch_raw_data(self, symbol: str) -> Dict[str, Any]:
+        symbol = symbol.upper().strip()
+        start = (pd.Timestamp.now() - pd.DateOffset(years=10)).strftime("%Y-%m-%d")
+
+        def T():
+            return yf.Ticker(symbol)
+
+        tasks = {
+            "info": lambda: T().info or {},
+            "prices": lambda: T().history(period="max", interval="1d", auto_adjust=True),
+            "inc_a": lambda: T().income_stmt,
+            "inc_q": lambda: T().quarterly_income_stmt,
+            "bs_a": lambda: T().balance_sheet,
+            "bs_q": lambda: T().quarterly_balance_sheet,
+            "cf_a": lambda: T().cashflow,
+            "cf_q": lambda: T().quarterly_cashflow,
+            "dividends": lambda: T().dividends,
+            "calendar": lambda: T().calendar,
+            "shares": lambda: T().get_shares_full(start=start),
+            "recommendations": lambda: T().recommendations,
+            "earnings_estimate": lambda: T().earnings_estimate,
+            "revenue_estimate": lambda: T().revenue_estimate,
+            "earnings_dates": lambda: T().earnings_dates,
+            "insider_transactions": lambda: T().insider_transactions,
+            "institutional_holders": lambda: T().institutional_holders,
+            "news": lambda: T().news,
+        }
+
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            futures = {name: ex.submit(self._safe, fn) for name, fn in tasks.items()}
+            results = {name: fut.result() for name, fut in futures.items()}
+
+        prices = results["prices"]
+        if prices is not None and not prices.empty:
+            prices.index = prices.index.tz_localize(None)
+
+        dividends = results["dividends"]
+        if dividends is not None and not dividends.empty:
+            dividends.index = dividends.index.tz_localize(None)
+
+        shares = results["shares"]
+        if shares is not None and not shares.empty:
+            shares.index = shares.index.tz_localize(None)
+            shares = shares[~shares.index.duplicated(keep="last")]
+
+        return {
+            "provider": "yfinance",
+            "info": results["info"] or {},
+            "prices": prices,
+            "inc_a": results["inc_a"],
+            "inc_q": results["inc_q"],
+            "bs_a": results["bs_a"],
+            "bs_q": results["bs_q"],
+            "cf_a": results["cf_a"],
+            "cf_q": results["cf_q"],
+            "dividends": dividends,
+            "calendar": results["calendar"] or {},
+            "shares": shares,
+            "recommendations": results["recommendations"],
+            "earnings_estimate": results["earnings_estimate"],
+            "revenue_estimate": results["revenue_estimate"],
+            "earnings_dates": results["earnings_dates"],
+            "insider_transactions": results["insider_transactions"],
+            "institutional_holders": results["institutional_holders"],
+            "news": results["news"],
+        }

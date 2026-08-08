@@ -817,27 +817,7 @@ export function renderWidgetBoard(d) {
     </div>`);
   }
 
-  if (ih.holders && ih.holders.length) {
-    const rows = ih.holders.slice(0, 5).map(h => {
-      const chg = h.pctChange != null
-        ? `<span class="k-mono ${pctClass(h.pctChange)}">${h.pctChange > 0 ? "▲" : "▼"}${fmtNum(Math.abs(h.pctChange), 1)}%</span>`
-        : "";
-      return `<div class="kw-row" title="${escHtml(h.holder)}"><span class="kw-name">${escHtml(h.holder)}</span><span class="k-mono">${h.value ? fmtBig(h.value) : "—"}</span>${chg}</div>`;
-    }).join("");
-    cards.push(`<div class="kw-card">
-      <h4>Top Institucionales <span class="kw-sub">${ih.institutionPercent != null ? `· ${fmtNum(ih.institutionPercent, 1)}% accionistas` : ""}</span></h4>
-      ${rows}
-    </div>`);
-  }
 
-  if (ih.insiders && ih.insiders.length) {
-    const rows = ih.insiders.slice(0, 4).map(x => {
-      const t = String(x.transaction || "");
-      const col = /purchase|buy/i.test(t) ? "#1ca58d" : /sale/i.test(t) ? "#f4555c" : "#94a3b8";
-      return `<div class="kw-row"><span class="kw-name" title="${escHtml(x.insider)}">${escHtml(x.insider.split(",")[0])}</span><span class="k-mono">${x.value ? fmtBig(x.value) : (x.shares ? `${fmtNum(x.shares, 0)} sh` : "—")}</span><span class="kw-chg" style="color:${col}">${x.date || ""}</span></div>`;
-    }).join("");
-    cards.push(`<div class="kw-card"><h4>Transacciones de Directivos</h4>${rows}</div>`);
-  }
 
   const peSeries = (d.history && d.history.peTtm) || [];
   if (peSeries.length > 20) {

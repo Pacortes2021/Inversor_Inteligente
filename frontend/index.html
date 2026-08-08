@@ -233,8 +233,8 @@
       <button class="a-tab active" data-pane="summary" role="tab" aria-selected="true" aria-controls="pane-summary"><svg class="h-ico "><use href="#i-chart"/></svg>Resumen Ejecutivo</button>
       <button class="a-tab" data-pane="valuation" role="tab" aria-selected="false" aria-controls="pane-valuation"><svg class="h-ico "><use href="#i-diamond"/></svg>Centro de Valoración & Proyecciones</button>
       <button class="a-tab" data-pane="financials-hub" role="tab" aria-selected="false" aria-controls="pane-financials-hub"><svg class="h-ico "><use href="#i-trend-up"/></svg>Financieros & Métricas</button>
-      <button class="a-tab" data-pane="ownership" role="tab" aria-selected="false" aria-controls="pane-ownership"><svg class="h-ico "><use href="#i-briefcase"/></svg>Propietarios & Datos Corporativos</button>
     </nav>
+
 
     <!-- AVISOS DE CALIDAD DE DATOS (colapsable) -->
     <div id="data-warnings" class="warnings hidden">
@@ -1215,63 +1215,14 @@
       </section>
     </div>
 
-    <!-- 4. MASTER PANE: PROPIETARIOS & DATOS CORPORATIVOS -->
+    <!-- 4. MASTER PANE: PERFIL CORPORATIVO & ENLACES SEC -->
     <div id="pane-ownership" class="tab-pane hidden" role="tabpanel" aria-labelledby="tab-ownership">
-      <section class="card">
-        <h2><svg class="h-ico "><use href="#i-briefcase"/></svg>Estructura de Propiedad Accionaria</h2>
-        <div class="ratios-checks-grid grid-2col">
-          <div class="u-empty-card" >
-            <span class="u-label-xs" >% Propiedad de Directivos (Insiders)</span>
-            <div class="u-h-28-primary" id="ins-pct-val" >—</div>
-          </div>
-          <div class="u-empty-card" >
-            <span class="u-label-xs" >% Propiedad de Fondos Institucionales</span>
-            <div class="u-h-28-cyan" id="inst-pct-val" >—</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2><svg class="h-ico "><use href="#i-doc"/></svg>Últimas Transacciones de Directivos (Insiders)</h2>
-        <div class="table-wrap">
-          <table class="data-table" id="ins-table">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Insider (Persona)</th>
-                <th>Cargo / Transacción</th>
-                <th class="num">Acciones</th>
-                <th class="num">Valor Total ($)</th>
-              </tr>
-            </thead>
-            <tbody id="ins-tbody"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>Principales Fondos Accionistas (Institutional Holders)</h2>
-        <div class="table-wrap">
-          <table class="data-table" id="holders-table">
-            <thead>
-              <tr>
-                <th>Fondo Accionista</th>
-                <th class="num">Acciones Poseídas</th>
-                <th class="num">Valor Total ($)</th>
-                <th class="num">Cambio Reciente</th>
-                <th>Fecha Reportada</th>
-              </tr>
-            </thead>
-            <tbody id="holders-tbody"></tbody>
-          </table>
-        </div>
-      </section>
-
       <section class="card">
         <h2><svg class="h-ico "><use href="#i-clipboard"/></svg>Perfil Corporativo y Enlaces Oficiales SEC EDGAR</h2>
         <div class="u-mt16" id="additional-details" >—</div>
       </section>
     </div>
+
 
     <p id="co-summary" class="summary muted"></p>
   </div> <!-- analysis-content -->

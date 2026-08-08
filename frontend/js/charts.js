@@ -1483,10 +1483,9 @@ export function renderKoyfinLayout(data) {
 
   // ── 3-7. RIGHT SIDEBAR widgets (graceful no-op if elements absent) ─
   _koyRenderAnalyst(data, cc, isDark);
-  _koyRenderHolders(ih, cc);
-  _koyRenderInsiders(ih, cc);
   _koyRenderPeers(data, cc);
   _koyRenderPeMini(data, cc);
+
 }
 
 /* ─────────────────────────── helpers internos ─────────────────────── */
