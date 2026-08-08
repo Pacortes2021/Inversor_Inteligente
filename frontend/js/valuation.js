@@ -878,8 +878,9 @@ export function renderEstimates(est) {
 export function renderInsidersHolders(ih) {
   if (!ih) return;
 
-  $("ins-pct-val").textContent = ih.insiderPercent != null ? fmtPct(ih.insiderPercent, 2) : "—";
-  $("inst-pct-val").textContent = ih.institutionPercent != null ? fmtPct(ih.institutionPercent, 2) : "—";
+  if ($("ins-pct-val")) $("ins-pct-val").textContent = ih.insiderPercent != null ? fmtPct(ih.insiderPercent, 2) : "—";
+  if ($("inst-pct-val")) $("inst-pct-val").textContent = ih.institutionPercent != null ? fmtPct(ih.institutionPercent, 2) : "—";
+
 
   // Insiders Table
   const insBody = $("ins-tbody");

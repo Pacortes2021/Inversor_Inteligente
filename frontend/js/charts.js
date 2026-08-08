@@ -1594,19 +1594,22 @@ function _koyRenderInsiders(ih, cc) {
     return;
   }
   el.innerHTML = insiders.map(x => {
+    if (!x) return '';
     const t   = String(x.transaction || '');
     const isBuy  = /purchase|buy/i.test(t);
     const isSell = /sale/i.test(t);
     const tagCls = isBuy ? 'buy' : isSell ? 'sell' : 'other';
-    const tagLbl = isBuy ? 'BUY' : isSell ? 'SELL' : t.slice(0, 6);
-    const name   = (x.insider || '—').split(',')[0].slice(0, 20);
+    const tagLbl = isBuy ? 'BUY' : isSell ? 'SELL' : (t ? t.slice(0, 6) : '—');
+    const rawName = (x.insider || x.name) ? String(x.insider || x.name) : '—';
+    const name   = rawName.split(',')[0].slice(0, 20);
     const val    = x.value ? fmtBig(x.value) : (x.shares ? fmtNum(x.shares, 0) + ' sh' : '—');
     return `<div class="koy-insider-row">
-      <span class="koy-insider-name" title="${escHtml(x.insider || '')}">${escHtml(name)}</span>
+      <span class="koy-insider-name" title="${escHtml(rawName)}">${escHtml(name)}</span>
       <span class="koy-insider-meta">${val}</span>
       <span class="koy-insider-tag ${tagCls}">${escHtml(tagLbl)}</span>
     </div>`;
   }).join('');
+
 }
 
 /** Peer/comparable table in right sidebar */

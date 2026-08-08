@@ -80,11 +80,12 @@ export function route() {
       pane.classList.toggle("hidden", !isActive);
     });
 
-    if (sym !== state.symbol) {
+    if (sym !== state.symbol || !state.data) {
       loadSymbol(sym);
     } else if (state.data) {
       triggerTabSpecificActions(masterTab);
     }
+
   }
 }
 

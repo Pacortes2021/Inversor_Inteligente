@@ -40,7 +40,6 @@ async function fetchStock(symbol, token) {
 
 export async function loadSymbol(symbol) {
   const token = ++_loadToken;
-  state.symbol = symbol;
   $("analysis-content").classList.add("hidden");
   $("error-box").classList.add("hidden");
   $("loading").classList.remove("hidden");
@@ -55,9 +54,12 @@ export async function loadSymbol(symbol) {
   try {
     const r = await fetchStock(symbol, token);
     if (token !== _loadToken) return;
-    state.data = await r.json();
+    const json = await r.json();
     if (token !== _loadToken) return;
+    state.symbol = symbol;
+    state.data = json;
     renderAnalysis(state.data);
+    $("analysis-content").classList.remove("hidden");
   } catch (e) {
     if (token !== _loadToken) return;
     const retryBtn = $("error-box");
@@ -72,3 +74,4 @@ export async function loadSymbol(symbol) {
     $("loading").classList.add("hidden");
   }
 }
+
