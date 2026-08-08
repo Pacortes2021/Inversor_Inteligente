@@ -13,9 +13,7 @@ logger = logging.getLogger(__name__)
 
 from pathlib import Path
 import json
-
 from pathlib import Path
-import json
 
 FMP_STABLE_URL = "https://financialmodelingprep.com/stable"
 FMP_V3_URL = "https://financialmodelingprep.com/api/v3"
@@ -25,13 +23,14 @@ FMP_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 _fmp_cache: Dict[str, Any] = {}
 _last_fmp_req_time: float = 0.0
+_fmp_429_until: float = 0.0
 
 def _throttle_fmp():
     global _last_fmp_req_time
     now = time.time()
     elapsed = now - _last_fmp_req_time
-    if elapsed < 0.12:
-        time.sleep(0.12 - elapsed)
+    if elapsed < 0.1:
+        time.sleep(0.1 - elapsed)
     _last_fmp_req_time = time.time()
 
 class FMPProvider(BaseDataProvider):
@@ -42,7 +41,13 @@ class FMPProvider(BaseDataProvider):
         return bool(self.api_key)
 
     def _get(self, endpoint: str, params: Optional[dict] = None, base_url: str = FMP_STABLE_URL) -> Optional[Any]:
+        global _fmp_429_until
         if not self.api_key:
+            return None
+
+        # Si el circuit breaker de rate limit está activo (FMP superó su cuota diaria/minuto),
+        # retornar None inmediatamente para que factory.py use yfinance al instante en 2ms.
+        if time.time() < _fmp_429_until:
             return None
 
         p = {"apikey": self.api_key}
@@ -71,14 +76,16 @@ class FMPProvider(BaseDataProvider):
 
         url = f"{base_url}/{endpoint}"
 
-        for attempt in range(4):
+        for attempt in range(2):
             _throttle_fmp()
             try:
-                resp = requests.get(url, params=p, timeout=10)
+                resp = requests.get(url, params=p, timeout=5)
                 if resp.status_code == 200:
                     data = resp.json()
                     if isinstance(data, dict) and ("Error Message" in data or "error" in data):
                         logger.warning(f"FMP Error en {endpoint}: {data}")
+                        if "Limit Reach" in str(data):
+                            _fmp_429_until = time.time() + 300  # 5 minutos de pausa
                         return None
                     _fmp_cache[cache_key] = data
                     try:
@@ -87,39 +94,17 @@ class FMPProvider(BaseDataProvider):
                         pass
                     return data
                 elif resp.status_code == 429:
-                    wait_time = 1.2 * (attempt + 1)
-                    logger.warning(f"FMP HTTP 429 (Rate Limit). Reintentando intento {attempt+1} en {wait_time}s...")
-                    time.sleep(wait_time)
+                    logger.warning(f"FMP HTTP 429 Rate Limit. Activando respaldo rápido por 5m.")
+                    _fmp_429_until = time.time() + 300
+                    return None
                 else:
                     logger.warning(f"FMP HTTP {resp.status_code} para {endpoint}")
                     return None
             except Exception as e:
                 logger.error(f"Error conectando a FMP {endpoint}: {e}")
-                time.sleep(0.5)
+                time.sleep(0.2)
 
-                if resp.status_code == 200:
-                    data = resp.json()
-                    if isinstance(data, dict) and ("Error Message" in data or "error" in data):
-                        logger.warning(f"FMP Error en {endpoint}: {data}")
-                        return None
-                    _fmp_cache[cache_key] = data
-                    try:
-                        cache_file.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-                    except Exception:
-                        pass
-                    return data
-                elif resp.status_code == 429:
-                    wait_time = 1.0 * (attempt + 1)
-                    logger.warning(f"FMP HTTP 429 (Rate Limit). Reintentando intento {attempt+1} en {wait_time}s...")
-                    time.sleep(wait_time)
-                else:
-                    logger.warning(f"FMP HTTP {resp.status_code} para {endpoint}")
-                    return None
-            except Exception as e:
-                logger.error(f"Error conectando a FMP {endpoint}: {e}")
-                time.sleep(0.5)
-
-        # Si expiró el rate limit pero existe caché viejo en disco, usarlo como respaldo
+        # Usar caché viejo si existe
         if cache_file.exists():
             try:
                 data = json.loads(cache_file.read_text(encoding="utf-8"))
@@ -128,6 +113,7 @@ class FMPProvider(BaseDataProvider):
             except Exception:
                 pass
         return None
+
 
 
     def fetch_raw_data(self, symbol: str) -> Dict[str, Any]:
