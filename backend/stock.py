@@ -704,7 +704,10 @@ def build_payload(symbol: str, refresh: bool = False):
         },
         "annuals": annuals,
         "quarterlies": quarterlies,
+        "provider": getattr(raw, "provider", "Financial Modeling Prep (FMP)"),
+        "isFallback": getattr(raw, "is_fallback", False) if hasattr(raw, "is_fallback") else False,
         "news": raw.news if hasattr(raw, "news") else None,
+
         "growthTable": _growth_table(annuals),
         "valuation": valuation,
         "scorecard": scorecard,
