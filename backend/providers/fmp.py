@@ -1,6 +1,7 @@
-"""Proveedor de datos Financial Modeling Prep (FMP) API (/stable/ & /v3/)."""
+"""Proveedor de datos Financial Modeling Prep (FMP) API (/stable/)."""
 
 import os
+import time
 import logging
 import requests
 import pandas as pd
@@ -9,9 +10,11 @@ from .base import BaseDataProvider
 
 logger = logging.getLogger(__name__)
 
+
 FMP_STABLE_URL = "https://financialmodelingprep.com/stable"
 FMP_V3_URL = "https://financialmodelingprep.com/api/v3"
-FMP_V4_URL = "https://financialmodelingprep.com/api/v4"
+
+_fmp_cache: Dict[str, Any] = {}
 
 class FMPProvider(BaseDataProvider):
     def __init__(self, api_key: Optional[str] = None):
@@ -23,37 +26,52 @@ class FMPProvider(BaseDataProvider):
     def _get(self, endpoint: str, params: Optional[dict] = None, base_url: str = FMP_STABLE_URL) -> Optional[Any]:
         if not self.api_key:
             return None
-        url = f"{base_url}/{endpoint}"
+
+        # Standardize symbol parameter for FMP (/stable/ expects ?symbol=TICKER)
         p = {"apikey": self.api_key}
         if params:
             p.update(params)
-        try:
-            resp = requests.get(url, params=p, timeout=10)
-            if resp.status_code == 200:
-                data = resp.json()
-                if isinstance(data, dict) and ("Error Message" in data or "error" in data):
-                    logger.warning(f"FMP Error on {endpoint}: {data}")
+
+        cache_key = f"{base_url}/{endpoint}:{sorted(p.items())}"
+        if cache_key in _fmp_cache:
+            return _fmp_cache[cache_key]
+
+        url = f"{base_url}/{endpoint}"
+
+        for attempt in range(3):
+            try:
+                resp = requests.get(url, params=p, timeout=8)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if isinstance(data, dict) and ("Error Message" in data or "error" in data):
+                        logger.warning(f"FMP Error on {endpoint}: {data}")
+                        return None
+                    _fmp_cache[cache_key] = data
+                    return data
+                elif resp.status_code == 429:
+                    logger.warning(f"FMP HTTP 429 (Rate Limit). Reintentando en {0.4 * (attempt + 1)}s...")
+                    time.sleep(0.4 * (attempt + 1))
+                else:
+                    logger.warning(f"FMP HTTP {resp.status_code} para {endpoint}")
                     return None
-                return data
-            else:
-                logger.warning(f"FMP HTTP {resp.status_code} for {endpoint}")
-                return None
-        except Exception as e:
-            logger.error(f"Error connecting to FMP {endpoint}: {e}")
-            return None
+            except Exception as e:
+                logger.error(f"Error conectando a FMP {endpoint}: {e}")
+                time.sleep(0.3)
+        return None
 
     def fetch_raw_data(self, symbol: str) -> Dict[str, Any]:
-        symbol = symbol.upper().strip()
+        raw_symbol = symbol.upper().strip()
+        fmp_symbol = raw_symbol.replace("-", ".")
 
-        # Try /stable/ first, fall back to /v3/ if empty
-        profiles = self._get("profile", params={"symbol": symbol}) or self._get(f"profile/{symbol}", base_url=FMP_V3_URL)
+        # Profile and Quote
+        profiles = self._get("profile", params={"symbol": fmp_symbol}) or self._get("profile", params={"symbol": raw_symbol}) or self._get(f"profile/{raw_symbol}", base_url=FMP_V3_URL)
         profile = profiles[0] if profiles and isinstance(profiles, list) else {}
 
-        quotes = self._get("quote", params={"symbol": symbol}) or self._get(f"quote/{symbol}", base_url=FMP_V3_URL)
+        quotes = self._get("quote", params={"symbol": fmp_symbol}) or self._get("quote", params={"symbol": raw_symbol}) or self._get(f"quote/{raw_symbol}", base_url=FMP_V3_URL)
         quote = quotes[0] if quotes and isinstance(quotes, list) else {}
 
         info = {
-            "symbol": symbol,
+            "symbol": raw_symbol,
             "shortName": profile.get("companyName") or quote.get("name"),
             "longName": profile.get("companyName") or quote.get("name"),
             "sector": profile.get("sector"),
@@ -79,7 +97,7 @@ class FMPProvider(BaseDataProvider):
         }
 
         # Historical Prices
-        hist_raw = self._get(f"historical-price-full/{symbol}") or self._get(f"historical-price-full/{symbol}", base_url=FMP_V3_URL)
+        hist_raw = self._get(f"historical-price-full/{raw_symbol}", base_url=FMP_V3_URL) or self._get("historical-price-full", params={"symbol": fmp_symbol})
         prices_df = None
         if hist_raw and isinstance(hist_raw, dict) and "historical" in hist_raw:
             df = pd.DataFrame(hist_raw["historical"])
@@ -118,8 +136,8 @@ class FMPProvider(BaseDataProvider):
             "eps": "Basic EPS", "epsdiluted": "Diluted EPS", "ebitda": "EBITDA",
             "weightedAverageShsOut": "Basic Average Shares", "weightedAverageShsOutDil": "Diluted Average Shares",
         }
-        inc_a_list = self._get("income-statement", params={"symbol": symbol, "limit": 15}) or self._get(f"income-statement/{symbol}", params={"limit": 15}, base_url=FMP_V3_URL)
-        inc_q_list = self._get("income-statement", params={"symbol": symbol, "period": "quarter", "limit": 20}) or self._get(f"income-statement/{symbol}", params={"period": "quarter", "limit": 20}, base_url=FMP_V3_URL)
+        inc_a_list = self._get("income-statement", params={"symbol": fmp_symbol, "limit": 15}) or self._get(f"income-statement/{raw_symbol}", params={"limit": 15}, base_url=FMP_V3_URL)
+        inc_q_list = self._get("income-statement", params={"symbol": fmp_symbol, "period": "quarter", "limit": 20}) or self._get(f"income-statement/{raw_symbol}", params={"period": "quarter", "limit": 20}, base_url=FMP_V3_URL)
         inc_a = stmt_to_df(inc_a_list, inc_map)
         inc_q = stmt_to_df(inc_q_list, inc_map)
 
@@ -128,8 +146,8 @@ class FMPProvider(BaseDataProvider):
             "totalStockholdersEquity": "Stockholders Equity", "cashAndCashEquivalents": "Cash And Cash Equivalents",
             "totalDebt": "Total Debt", "netDebt": "Net Debt", "commonStock": "Common Stock", "retainedEarnings": "Retained Earnings",
         }
-        bs_a_list = self._get("balance-sheet-statement", params={"symbol": symbol, "limit": 15}) or self._get(f"balance-sheet-statement/{symbol}", params={"limit": 15}, base_url=FMP_V3_URL)
-        bs_q_list = self._get("balance-sheet-statement", params={"symbol": symbol, "period": "quarter", "limit": 20}) or self._get(f"balance-sheet-statement/{symbol}", params={"period": "quarter", "limit": 20}, base_url=FMP_V3_URL)
+        bs_a_list = self._get("balance-sheet-statement", params={"symbol": fmp_symbol, "limit": 15}) or self._get(f"balance-sheet-statement/{raw_symbol}", params={"limit": 15}, base_url=FMP_V3_URL)
+        bs_q_list = self._get("balance-sheet-statement", params={"symbol": fmp_symbol, "period": "quarter", "limit": 20}) or self._get(f"balance-sheet-statement/{raw_symbol}", params={"period": "quarter", "limit": 20}, base_url=FMP_V3_URL)
         bs_a = stmt_to_df(bs_a_list, bs_map)
         bs_q = stmt_to_df(bs_q_list, bs_map)
 
@@ -137,13 +155,13 @@ class FMPProvider(BaseDataProvider):
             "operatingCashFlow": "Operating Cash Flow", "capitalExpenditure": "Capital Expenditure",
             "freeCashFlow": "Free Cash Flow", "dividendsPaid": "Common Stock Dividend Paid", "netChangeInCash": "Changes In Cash",
         }
-        cf_a_list = self._get("cash-flow-statement", params={"symbol": symbol, "limit": 15}) or self._get(f"cash-flow-statement/{symbol}", params={"limit": 15}, base_url=FMP_V3_URL)
-        cf_q_list = self._get("cash-flow-statement", params={"symbol": symbol, "period": "quarter", "limit": 20}) or self._get(f"cash-flow-statement/{symbol}", params={"period": "quarter", "limit": 20}, base_url=FMP_V3_URL)
+        cf_a_list = self._get("cash-flow-statement", params={"symbol": fmp_symbol, "limit": 15}) or self._get(f"cash-flow-statement/{raw_symbol}", params={"limit": 15}, base_url=FMP_V3_URL)
+        cf_q_list = self._get("cash-flow-statement", params={"symbol": fmp_symbol, "period": "quarter", "limit": 20}) or self._get(f"cash-flow-statement/{raw_symbol}", params={"period": "quarter", "limit": 20}, base_url=FMP_V3_URL)
         cf_a = stmt_to_df(cf_a_list, cf_map)
         cf_q = stmt_to_df(cf_q_list, cf_map)
 
-        # Ratios TTM
-        ratios_ttm = self._get("ratios-ttm", params={"symbol": symbol}) or self._get(f"ratios-ttm/{symbol}", base_url=FMP_V3_URL)
+        # Ratios TTM & Key Metrics
+        ratios_ttm = self._get("ratios-ttm", params={"symbol": fmp_symbol}) or self._get(f"ratios-ttm/{raw_symbol}", base_url=FMP_V3_URL)
         if ratios_ttm and isinstance(ratios_ttm, list) and ratios_ttm[0]:
             rt = ratios_ttm[0]
             if rt.get("peRatioTTM"): info["trailingPE"] = rt.get("peRatioTTM")
@@ -151,13 +169,13 @@ class FMPProvider(BaseDataProvider):
             if rt.get("priceToSalesRatioTTM"): info["priceToSalesTrailing12Months"] = rt.get("priceToSalesRatioTTM")
 
         # Analyst Consensus Recommendations
-        recs = self._get("analyst-stock-recommendations", params={"symbol": symbol}) or self._get(f"analyst-stock-recommendations/{symbol}", base_url=FMP_V3_URL)
+        recs = self._get("analyst-estimates", params={"symbol": fmp_symbol}) or self._get(f"analyst-stock-recommendations/{raw_symbol}", base_url=FMP_V3_URL)
         recs_df = None
         if recs and isinstance(recs, list) and recs:
             recs_df = pd.DataFrame(recs)
 
         return {
-            "provider": "FMP",
+            "provider": "Financial Modeling Prep (FMP)",
             "info": info,
             "prices": prices_df,
             "inc_a": inc_a,
@@ -177,3 +195,4 @@ class FMPProvider(BaseDataProvider):
             "institutional_holders": None,
             "news": None
         }
+
