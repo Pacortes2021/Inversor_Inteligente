@@ -667,9 +667,13 @@ export function renderRatiosCharts(d, range = "all") {
 }
 
 export function triggerTabSpecificActions(tab) {
+  if (state.data) {
+    try { renderRatiosGrid(state.data); } catch(e) {}
+  }
   if (tab === "summary") {
     chartPriceSummary(state.data);
   } else if (tab === "valuation") {
+
     renderEstimates(state.data?.estimates);
     renderEpsEstimatesChart(state.data?.estimates);
     requestAnimationFrame(() => Object.values(charts).forEach(ch => ch.resize()));

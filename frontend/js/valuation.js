@@ -327,12 +327,13 @@ export function renderRatiosGrid(d) {
   const px = d.quote.price;
 
   // Actualizar títulos de símbolo
-  $("th-sym-left").textContent = d.symbol;
-  $("th-sym-5y-left").textContent = `${d.symbol} 5Y Avg.`;
-  $("th-sym-right").textContent = d.symbol;
-  $("th-sym-5y-right").textContent = `${d.symbol} 5Y Avg.`;
-  $("th-sym-right3").textContent = d.symbol;
-  $("th-sym-5y-right3").textContent = `${d.symbol} 5Y Avg.`;
+  if ($("th-sym-left")) $("th-sym-left").textContent = d.symbol;
+  if ($("th-sym-5y-left")) $("th-sym-5y-left").textContent = "Prom. 5Y";
+  if ($("th-sym-right")) $("th-sym-right").textContent = d.symbol;
+  if ($("th-sym-5y-right")) $("th-sym-5y-right").textContent = "Prom. 5Y";
+  if ($("th-sym-right3")) $("th-sym-right3").textContent = d.symbol;
+  if ($("th-sym-5y-right3")) $("th-sym-5y-right3").textContent = "Prom. 5Y";
+
 
   // Helper para formato de diferencias porcentuales
   const fmtDiff = (comp, compRef) => {
@@ -349,7 +350,7 @@ export function renderRatiosGrid(d) {
 
   const populateRowLeft = (rowId, metricData, isMarginOrYield = false) => {
     const row = $(rowId);
-    if (!row) return;
+    if (!row || !metricData) return;
     const compVal = metricData.val;
     const sectVal = metricData.sector;
     const avg5yVal = metricData.avg5y;
@@ -360,36 +361,40 @@ export function renderRatiosGrid(d) {
     const avg5yCell = row.querySelector(".val-5y");
     const diff5yCell = row.querySelector(".val-diff-5y");
 
-    compCell.textContent = compVal != null ? (isMarginOrYield ? fmtPct(compVal, 2) : compVal.toFixed(2)) : "—";
-    sectCell.textContent = sectVal != null ? (isMarginOrYield ? fmtPct(sectVal, 2) : sectVal.toFixed(2)) : "—";
-    avg5yCell.textContent = avg5yVal != null ? (isMarginOrYield ? fmtPct(avg5yVal, 2) : avg5yVal.toFixed(2)) : "—";
+    if (compCell) compCell.textContent = compVal != null ? (isMarginOrYield ? fmtPct(compVal, 2) : compVal.toFixed(2)) : "—";
+    if (sectCell) sectCell.textContent = sectVal != null ? (isMarginOrYield ? fmtPct(sectVal, 2) : sectVal.toFixed(2)) : "—";
+    if (avg5yCell) avg5yCell.textContent = avg5yVal != null ? (isMarginOrYield ? fmtPct(avg5yVal, 2) : avg5yVal.toFixed(2)) : "—";
 
     // Diferencia vs Sector
     const diffSec = fmtDiff(compVal, sectVal);
-    if (diffSec !== "—") {
-      diffSectCell.textContent = diffSec.text;
-      const isGreen = isMarginOrYield ? diffSec.val >= 0 : diffSec.val <= 0;
-      diffSectCell.className = "text-right " + (isGreen ? "up" : "down");
-    } else {
-      diffSectCell.textContent = "—";
-      diffSectCell.className = "text-right";
+    if (diffSectCell) {
+      if (diffSec !== "—") {
+        diffSectCell.textContent = diffSec.text;
+        const isGreen = isMarginOrYield ? diffSec.val >= 0 : diffSec.val <= 0;
+        diffSectCell.className = "text-right " + (isGreen ? "up" : "down");
+      } else {
+        diffSectCell.textContent = "—";
+        diffSectCell.className = "text-right";
+      }
     }
 
     // Diferencia vs 5Y Avg
     const diff5y = fmtDiff(compVal, avg5yVal);
-    if (diff5y !== "—") {
-      diff5yCell.textContent = diff5y.text;
-      const isGreen = isMarginOrYield ? diff5y.val >= 0 : diff5y.val <= 0;
-      diff5yCell.className = "text-right " + (isGreen ? "up" : "down");
-    } else {
-      diff5yCell.textContent = "—";
-      diff5yCell.className = "text-right";
+    if (diff5yCell) {
+      if (diff5y !== "—") {
+        diff5yCell.textContent = diff5y.text;
+        const isGreen = isMarginOrYield ? diff5y.val >= 0 : diff5y.val <= 0;
+        diff5yCell.className = "text-right " + (isGreen ? "up" : "down");
+      } else {
+        diff5yCell.textContent = "—";
+        diff5yCell.className = "text-right";
+      }
     }
   };
 
   const populateRowRight = (rowId, metricData, isRoe = false, isMultipleOrDebt = false) => {
     const row = $(rowId);
-    if (!row) return;
+    if (!row || !metricData) return;
     const compVal = metricData.val;
     const avg5yVal = metricData.avg5y;
 
@@ -397,19 +402,22 @@ export function renderRatiosGrid(d) {
     const avg5yCell = row.querySelector(".val-5y");
     const diffCell = row.querySelector(".val-diff");
 
-    compCell.textContent = compVal != null ? (isRoe ? fmtPct(compVal, 2) : compVal.toFixed(2)) : "—";
-    avg5yCell.textContent = avg5yVal != null ? (isRoe ? fmtPct(avg5yVal, 2) : avg5yVal.toFixed(2)) : "—";
+    if (compCell) compCell.textContent = compVal != null ? (isRoe ? fmtPct(compVal, 2) : compVal.toFixed(2)) : "—";
+    if (avg5yCell) avg5yCell.textContent = avg5yVal != null ? (isRoe ? fmtPct(avg5yVal, 2) : avg5yVal.toFixed(2)) : "—";
 
     const diff = fmtDiff(compVal, avg5yVal);
-    if (diff !== "—") {
-      diffCell.textContent = diff.text;
-      const isGreen = isMultipleOrDebt ? diff.val <= 0 : (isRoe ? diff.val >= 0 : diff.val >= 0);
-      diffCell.className = "text-right " + (isGreen ? "up" : "down");
-    } else {
-      diffCell.textContent = "—";
-      diffCell.className = "text-right";
+    if (diffCell) {
+      if (diff !== "—") {
+        diffCell.textContent = diff.text;
+        const isGreen = isMultipleOrDebt ? diff.val <= 0 : (isRoe ? diff.val >= 0 : diff.val >= 0);
+        diffCell.className = "text-right " + (isGreen ? "up" : "down");
+      } else {
+        diffCell.textContent = "—";
+        diffCell.className = "text-right";
+      }
     }
   };
+
 
   // Rellenar tabla izquierda
   populateRowLeft("row-tbl-pe", r.pe);
