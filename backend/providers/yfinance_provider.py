@@ -1,6 +1,9 @@
 """Proveedor de datos Yahoo Finance (yfinance) como fallback."""
 
 import logging
+import time
+import pickle
+from pathlib import Path
 import pandas as pd
 import yfinance as yf
 from concurrent.futures import ThreadPoolExecutor
@@ -8,6 +11,9 @@ from typing import Dict, Any
 from .base import BaseDataProvider
 
 logger = logging.getLogger(__name__)
+
+YF_CACHE_DIR = Path(__file__).resolve().parent.parent.parent / "cache" / "yf"
+YF_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 class YFinanceProvider(BaseDataProvider):
 
@@ -25,6 +31,17 @@ class YFinanceProvider(BaseDataProvider):
 
     def fetch_raw_data(self, symbol: str) -> Dict[str, Any]:
         symbol = symbol.upper().strip()
+        cache_file = YF_CACHE_DIR / f"{symbol.replace('/', '_')}.pkl"
+
+        # 1. Leer de caché en disco (válido por 6 horas)
+        if cache_file.exists():
+            try:
+                if time.time() - cache_file.stat().st_mtime < 21600:
+                    with open(cache_file, "rb") as f:
+                        return pickle.load(f)
+            except Exception as e:
+                logger.warning(f"Error leyendo caché yf para {symbol}: {e}")
+
         start = (pd.Timestamp.now() - pd.DateOffset(years=10)).strftime("%Y-%m-%d")
 
         def T():
