@@ -566,7 +566,8 @@ def build_payload(symbol: str, refresh: bool = False):
     payout_val = M._f(info.get("payoutRatio"))
     if payout_val is None and annuals:
         last_a = annuals[-1]
-        if _ok(last_a.get("dividendPS")) and _ok(last_a.get("eps")) and last_a["eps"] > 0:
+        if last_a.get("dividendPS") is not None and last_a.get("eps") is not None and last_a["eps"] > 0:
+
             payout_val = last_a["dividendPS"] / last_a["eps"]
 
     roe_val = M._f(info.get("returnOnEquity"))
