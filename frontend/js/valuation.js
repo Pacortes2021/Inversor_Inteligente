@@ -39,9 +39,10 @@ export function dcfJs(inp, growth, discount, terminal) {
 }
 
 export function renderValuationCard(d) {
-  const inp = d.valuation.dcfInputs;
-  if (!inp) return;
-  if (!$("sl-growth")) return; // Salir si los sliders no están presentes en el DOM actual
+  renderModels(d, null);
+  const inp = d.valuation ? d.valuation.dcfInputs : null;
+  if (!inp || !$("sl-growth")) return;
+
   const lsKey = `dcf_${d.symbol}`;
   const sliders = { growth: $("sl-growth"), discount: $("sl-discount"), terminal: $("sl-terminal") };
 
@@ -141,7 +142,8 @@ export function renderModels(d, dcfLive) {
     mos = (consensus / price - 1) * 100;
   }
 
-  const termKey = { dcf: "dcf", reversion: "reversion", graham: "graham", graham_intrinsic: "graham", epv: "epv" };
+  const termKey = { dcf: "dcf", reversion: "reversion", graham: "graham", graham_intrinsic: "graham", epv: "epv", peter_lynch: "peg", ddm: "ddm" };
+
   const rows = models.map(m => `
     <tr>
       <td>${termify(m.name, termKey[m.id])}</td>
