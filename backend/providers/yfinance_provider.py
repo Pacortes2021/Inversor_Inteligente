@@ -44,31 +44,30 @@ class YFinanceProvider(BaseDataProvider):
 
         start = (pd.Timestamp.now() - pd.DateOffset(years=10)).strftime("%Y-%m-%d")
 
-        def T():
-            return yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol)
+        info_data = self._safe(lambda: ticker.info) or {}
 
         tasks = {
-            "info": lambda: T().info or {},
-            "prices": lambda: T().history(period="max", interval="1d", auto_adjust=True),
-            "inc_a": lambda: T().income_stmt,
-            "inc_q": lambda: T().quarterly_income_stmt,
-            "bs_a": lambda: T().balance_sheet,
-            "bs_q": lambda: T().quarterly_balance_sheet,
-            "cf_a": lambda: T().cashflow,
-            "cf_q": lambda: T().quarterly_cashflow,
-            "dividends": lambda: T().dividends,
-            "calendar": lambda: T().calendar,
-            "shares": lambda: T().get_shares_full(start=start),
-            "recommendations": lambda: T().recommendations,
-            "earnings_estimate": lambda: T().earnings_estimate,
-            "revenue_estimate": lambda: T().revenue_estimate,
-            "earnings_dates": lambda: T().earnings_dates,
-            "insider_transactions": lambda: T().insider_transactions,
-            "institutional_holders": lambda: T().institutional_holders,
-            "news": lambda: T().news,
+            "prices": lambda: ticker.history(period="max", interval="1d", auto_adjust=True),
+            "inc_a": lambda: ticker.income_stmt,
+            "inc_q": lambda: ticker.quarterly_income_stmt,
+            "bs_a": lambda: ticker.balance_sheet,
+            "bs_q": lambda: ticker.quarterly_balance_sheet,
+            "cf_a": lambda: ticker.cashflow,
+            "cf_q": lambda: ticker.quarterly_cashflow,
+            "dividends": lambda: ticker.dividends,
+            "calendar": lambda: ticker.calendar,
+            "shares": lambda: ticker.get_shares_full(start=start),
+            "recommendations": lambda: ticker.recommendations,
+            "earnings_estimate": lambda: ticker.earnings_estimate,
+            "revenue_estimate": lambda: ticker.revenue_estimate,
+            "earnings_dates": lambda: ticker.earnings_dates,
+            "insider_transactions": lambda: ticker.insider_transactions,
+            "institutional_holders": lambda: ticker.institutional_holders,
+            "news": lambda: ticker.news,
         }
 
-        with ThreadPoolExecutor(max_workers=8) as ex:
+        with ThreadPoolExecutor(max_workers=6) as ex:
             futures = {name: ex.submit(self._safe, fn) for name, fn in tasks.items()}
             results = {name: fut.result() for name, fut in futures.items()}
 
@@ -85,9 +84,9 @@ class YFinanceProvider(BaseDataProvider):
             shares.index = shares.index.tz_localize(None)
             shares = shares[~shares.index.duplicated(keep="last")]
 
-        return {
+        res = {
             "provider": "yfinance",
-            "info": results["info"] or {},
+            "info": info_data,
             "prices": prices,
             "inc_a": results["inc_a"],
             "inc_q": results["inc_q"],
@@ -106,3 +105,13 @@ class YFinanceProvider(BaseDataProvider):
             "institutional_holders": results["institutional_holders"],
             "news": results["news"],
         }
+
+        if info_data and len(info_data) > 5:
+            try:
+                with open(cache_file, "wb") as f:
+                    pickle.dump(res, f)
+            except Exception as e:
+                logger.warning(f"Error escribiendo caché yf para {symbol}: {e}")
+
+        return res
+

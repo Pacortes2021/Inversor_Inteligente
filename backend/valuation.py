@@ -259,9 +259,9 @@ def _now_year():
 def build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=None):
     """Arma el bloque de valoración completo, con insumos para recalcular
     el DCF en el navegador (sliders)."""
-    shares = info.get("sharesOutstanding")
-    eps = info.get("trailingEps")
-    bvps = info.get("bookValue")
+    shares = info.get("sharesOutstanding") or (annuals[-1].get("sharesOut") if annuals else None)
+    eps = info.get("trailingEps") or (annuals[-1].get("eps") if annuals else None)
+    bvps = info.get("bookValue") or (annuals[-1].get("bvps") if annuals else (annuals[-1].get("equity") / shares if (annuals and shares and annuals[-1].get("equity")) else None))
 
     # FCF base normalizado (owner earnings): mediana entre el TTM de Yahoo,
     # el último anual y el promedio de 3 años, para suavizar cargos puntuales
@@ -276,9 +276,10 @@ def build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=None):
         cands.append(sum(fcfs[-3:]) / 3)
     base_fcf = sorted(cands)[len(cands) // 2] if cands else None
 
-    cash = info.get("totalCash") or 0
-    debt = info.get("totalDebt") or 0
+    cash = info.get("totalCash") or (annuals[-1].get("cash") if annuals else 0) or 0
+    debt = info.get("totalDebt") or (annuals[-1].get("debt") if annuals else 0) or 0
     net_cash = (cash - debt) if (_ok(cash) and _ok(debt)) else 0
+
 
     fcf_per_share = (base_fcf / shares) if (_ok(base_fcf) and _ok(shares) and shares > 0) else None
 

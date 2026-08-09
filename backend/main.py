@@ -400,9 +400,19 @@ class NoCacheStaticFiles(StaticFiles):
         return False
 
     async def get_response(self, path, scope):
-        response = await super().get_response(path, scope)
+        # Strip conditional headers from request scope so StaticFiles never returns 304
+        headers = [(k, v) for k, v in scope.get("headers", [])
+                   if k.lower() not in (b"if-none-match", b"if-modified-since")]
+        scope_copy = dict(scope, headers=headers)
+
+        response = await super().get_response(path, scope_copy)
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        if "etag" in response.headers:
+            del response.headers["etag"]
+        if "last-modified" in response.headers:
+            del response.headers["last-modified"]
         return response
 
 app.mount("/", NoCacheStaticFiles(directory=str(FRONTEND), html=True), name="static")
