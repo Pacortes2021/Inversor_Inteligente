@@ -114,12 +114,28 @@ def dividend_discount_model(info, annuals, discount=0.10):
         return None
 
     roe = info.get("returnOnEquity") or 0.12
+    if _ok(roe) and roe > 1.0:
+        roe /= 100.0
     payout = info.get("payoutRatio") or 0.40
+    if _ok(payout) and payout > 1.0:
+        payout /= 100.0
+
     g = max(0.01, min(0.06, roe * (1 - payout))) if (_ok(roe) and _ok(payout) and payout < 1) else 0.03
 
     if discount <= g:
         return None
     return dps * (1 + g) / (discount - g)
+
+
+def peter_lynch_fair_value(eps, growth, div_yield=0.0):
+    """Valor Justo de Peter Lynch: EPS * (G + Dividend Yield) para PEG = 1.0."""
+    if not _ok(eps) or eps <= 0 or not _ok(growth) or growth <= 0:
+        return None
+    g_pct = growth * 100.0
+    yield_pct = div_yield if _ok(div_yield) else 0.0
+    fair_pe = min(g_pct + yield_pct, 40.0)
+    return eps * fair_pe
+
 
 
 def epv_greenwald(info, annuals, discount=0.10, tax_rate=0.21):
@@ -296,6 +312,11 @@ def build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=None):
     if growth > 0.15:
         epv = None
     ddm = dividend_discount_model(info, annuals, discount) if is_financial else None
+    div_yield_val = info.get("trailingAnnualDividendYield") or info.get("dividendYield")
+    if _ok(div_yield_val) and div_yield_val < 0.25:
+        div_yield_val *= 100.0
+    lynch_fv = peter_lynch_fair_value(eps, growth, div_yield=div_yield_val)
+
 
     models = []
     if dcf and not is_financial:
@@ -307,16 +328,20 @@ def build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=None):
         label = f"Reversión al PE mediano ({pe_target}x)"
         if pe_med > MAX_TARGET_PE:
             label = f"Reversión al PE mediano (capado a {pe_target}x)"
-        weight = 0.35 if is_financial else 0.20
+        weight = 0.30 if is_financial else 0.20
         models.append({"id": "reversion", "name": label, "fair": reversion, "weight": weight})
-    if epv:
-        models.append({"id": "epv", "name": "EPV Greenwald (cero crecimiento)", "fair": epv, "weight": 0.15})
-    if graham_int:
+    if lynch_fv:
         weight = 0.20 if is_financial else 0.15
+        models.append({"id": "peter_lynch", "name": "Valor Justo Peter Lynch (PEG 1.0)", "fair": lynch_fv, "weight": weight})
+    if epv:
+        models.append({"id": "epv", "name": "EPV Greenwald (cero crecimiento)", "fair": epv, "weight": 0.10})
+    if graham_int:
+        weight = 0.10 if is_financial else 0.10
         models.append({"id": "graham_intrinsic", "name": "Valor Intrínseco de Graham (rev.)", "fair": graham_int, "weight": weight})
     if graham:
-        weight = 0.15 if is_financial else 0.15
+        weight = 0.10 if is_financial else 0.10
         models.append({"id": "graham", "name": "Número de Graham", "fair": graham, "weight": weight})
+
 
     consensus, mos = None, None
     if models and _ok(price) and price > 0:

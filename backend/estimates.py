@@ -314,14 +314,17 @@ def _build_growth_grid(symbol, raw, info, annuals=None, price=None, fmp_rows=Non
         fcf_all[py] = cur_fcf
         div_all[py] = cur_div
 
-        if base_fwd_pe and base_fwd_pe > 0:
+        if price_val and cur_eps and cur_eps > 0:
+            fwd_pe_all[py] = round(price_val / cur_eps, 2)
+        elif base_fwd_pe and base_fwd_pe > 0:
             if idx == 0:
                 fwd_pe_all[py] = base_fwd_pe
             else:
                 prev_pe = fwd_pe_all[proj_years[idx - 1]]
-                fwd_pe_all[py] = prev_pe / (1 + g_e) if (1 + g_e) > 0 else prev_pe
+                fwd_pe_all[py] = round(prev_pe / (1 + g_e), 2) if (1 + g_e) > 0 else prev_pe
         else:
-            fwd_pe_all[py] = (price_val / cur_eps) if (price_val and cur_eps > 0) else None
+            fwd_pe_all[py] = None
+
 
     year_headers = [str(y) if y <= last_y else f"{y}E" for y in all_years]
 

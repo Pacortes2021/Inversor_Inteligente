@@ -563,24 +563,51 @@ def build_payload(symbol: str, refresh: bool = False):
     f_score = V.piotroski_f_score(annuals)
     roc = V.greenblatt_roc(info, annuals)
 
+    payout_val = M._f(info.get("payoutRatio"))
+    if payout_val is None and annuals:
+        last_a = annuals[-1]
+        if _ok(last_a.get("dividendPS")) and _ok(last_a.get("eps")) and last_a["eps"] > 0:
+            payout_val = last_a["dividendPS"] / last_a["eps"]
+
+    roe_val = M._f(info.get("returnOnEquity"))
+    if roe_val is None and annuals and annuals[-1].get("roe") is not None:
+        roe_val = annuals[-1]["roe"] / 100.0 if annuals[-1]["roe"] > 1.0 else annuals[-1]["roe"]
+
+    roa_val = M._f(info.get("returnOnAssets"))
+    if roa_val is None and annuals and annuals[-1].get("netIncome") and annuals[-1].get("assets"):
+        roa_val = annuals[-1]["netIncome"] / annuals[-1]["assets"]
+
+    gm_val = M._f(info.get("grossMargins"))
+    if gm_val is None and annuals and annuals[-1].get("grossMargin") is not None:
+        gm_val = annuals[-1]["grossMargin"] / 100.0 if annuals[-1]["grossMargin"] > 1.0 else annuals[-1]["grossMargin"]
+
+    om_val = M._f(info.get("operatingMargins"))
+    if om_val is None and annuals and annuals[-1].get("opMargin") is not None:
+        om_val = annuals[-1]["opMargin"] / 100.0 if annuals[-1]["opMargin"] > 1.0 else annuals[-1]["opMargin"]
+
+    nm_val = M._f(info.get("profitMargins"))
+    if nm_val is None and annuals and annuals[-1].get("netMargin") is not None:
+        nm_val = annuals[-1]["netMargin"] / 100.0 if annuals[-1]["netMargin"] > 1.0 else annuals[-1]["netMargin"]
+
+    fpe_val = M._f(info.get("forwardPE"))
+    if fpe_val is None and price and info.get("forwardEps") and info["forwardEps"] > 0:
+        fpe_val = price / info["forwardEps"]
+
     current = {
         "pe": M._f(info.get("trailingPE")),
-        "forwardPe": M._f(info.get("forwardPE")),
+        "forwardPe": fpe_val,
         "ps": M._f(info.get("priceToSalesTrailing12Months")),
         "pb": M._f(info.get("priceToBook")),
         "evEbitda": M._f(info.get("enterpriseToEbitda")),
         "evRevenue": M._f(info.get("enterpriseToRevenue")),
         "peg": M._f(info.get("trailingPegRatio") or info.get("pegRatio")),
-        # trailingAnnualDividendYield viene como fracción; dividendYield ya viene en %
-        "divYield": (M._f(info.get("trailingAnnualDividendYield")) * 100
-                     if M._f(info.get("trailingAnnualDividendYield")) is not None
-                     else M._f(info.get("dividendYield"))),
-        "payout": M._f(info.get("payoutRatio")),
-        "roe": M._f(info.get("returnOnEquity")),
-        "roa": M._f(info.get("returnOnAssets")),
-        "grossMargin": M._f(info.get("grossMargins")),
-        "opMargin": M._f(info.get("operatingMargins")),
-        "netMargin": M._f(info.get("profitMargins")),
+        "divYield": div_yield_ttm,
+        "payout": payout_val,
+        "roe": roe_val,
+        "roa": roa_val,
+        "grossMargin": gm_val,
+        "opMargin": om_val,
+        "netMargin": nm_val,
         "debtToEquity": M._f(info.get("debtToEquity")),
         "currentRatio": M._f(info.get("currentRatio")),
         "quickRatio": M._f(info.get("quickRatio")),
@@ -588,6 +615,7 @@ def build_payload(symbol: str, refresh: bool = False):
         "eps": M._f(info.get("trailingEps")),
         "epsForward": M._f(info.get("forwardEps")),
         "bvps": M._f(info.get("bookValue")),
+
         "revenueGrowth": M._f(info.get("revenueGrowth")),
         "earningsGrowth": M._f(info.get("earningsGrowth")),
         "fcf": fcf_now,

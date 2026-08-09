@@ -481,7 +481,8 @@ export function renderRatiosGrid(d) {
   const divYield = d.current.divYield;
   const payoutRaw = d.current.payout;
   const hasDividend = divYield != null && divYield > 0.001;
-  const payout = payoutRaw != null ? payoutRaw * 100 : 0.0;
+  const payout = payoutRaw != null ? (payoutRaw > 1.0 ? payoutRaw : payoutRaw * 100) : 0.0;
+
   let payoutPass, payoutValText;
   if (!hasDividend) {
     payoutPass = null; // N/A
