@@ -659,12 +659,17 @@ export function renderRatiosCharts(d, range = "all") {
     };
   };
 
-  chartRatio("ch-pe", pePairs, getStats(pePairs), C.blue, "PE (TTM)");
-  chartRatio("ch-ps", psPairs, getStats(psPairs), C.violet, "P/Ventas (TTM)");
-  chartRatio("ch-pb", pbPairs, getStats(pbPairs), C.cyan, "P/Valor libro");
-  chartRatio("ch-pcf", pcfPairs, getStats(pcfPairs), C.amber, "P/Cash Flow");
+  const validArrays = [pePairs, psPairs, pbPairs, pcfPairs].filter(arr => arr && arr.length > 2);
+  const minTs = validArrays.length ? Math.min(...validArrays.map(arr => arr[0][0])) : null;
+  const maxTs = validArrays.length ? Math.max(...validArrays.map(arr => arr[arr.length - 1][0])) : null;
+
+  chartRatio("ch-pe", pePairs, getStats(pePairs), C.blue, "PE (TTM)", minTs, maxTs);
+  chartRatio("ch-ps", psPairs, getStats(psPairs), C.violet, "P/Ventas (TTM)", minTs, maxTs);
+  chartRatio("ch-pb", pbPairs, getStats(pbPairs), C.cyan, "P/Valor libro", minTs, maxTs);
+  chartRatio("ch-pcf", pcfPairs, getStats(pcfPairs), C.amber, "P/Cash Flow", minTs, maxTs);
   requestAnimationFrame(() => Object.values(charts).forEach(ch => ch.resize()));
 }
+
 
 export function triggerTabSpecificActions(tab) {
   if (state.data) {

@@ -407,7 +407,7 @@ export function chartPrice(data, id = 'ch-price', customPts = null) {
 }
 
 /* ----------------------------------------------- ratios PE / PS / PB */
-export function chartRatio(id, pairs, stats, color, name) {
+export function chartRatio(id, pairs, stats, color, name, minTs = null, maxTs = null) {
   if (!pairs || pairs.length < 6) return hideCard(id);
   showCard(id);
   const cc = getChartColors();
@@ -430,18 +430,19 @@ export function chartRatio(id, pairs, stats, color, name) {
   if (stats && stats.p75 != null) {
     markLineData.push({ yAxis: stats.p75, lineStyle: { color: cc.muted, type: 'dotted', width: 1, opacity: 0.55 }, label: { show: false } });
   }
+
   if (stats && stats.median != null) {
     markLineData.push({
       yAxis: stats.median,
       lineStyle: { color: cc.gold, type: 'dashed', width: 1.5 },
-      label: { color: cc.gold, fontSize: 10.5, fontWeight: 700, position: 'insideEndTop', formatter: `Mediana ${stats.median}x`, fontFamily: 'Inter' },
+      label: { show: false },
     });
   }
   if (lastVal != null) {
     markLineData.push({
       yAxis: lastVal,
       lineStyle: { color: cc.green, type: 'solid', width: 1.8 },
-      label: { color: cc.green, fontSize: 10.5, fontWeight: 700, position: 'insideEndBottom', formatter: `Hoy ${lastVal.toFixed(1)}x` },
+      label: { show: false },
     });
   }
   const markLine = markLineData.length ? { silent: true, symbol: 'none', data: markLineData } : undefined;
@@ -455,8 +456,14 @@ export function chartRatio(id, pairs, stats, color, name) {
     ? ((lastVal - stats.median) / stats.median) * 100
     : null;
 
+  const xAxisOpt = Object.assign({ type: 'time' }, baseAxisStyle(cc), {
+    axisLabel: { color: cc.muted, fontSize: 10.5 }
+  });
+  if (minTs) xAxisOpt.min = minTs;
+  if (maxTs) xAxisOpt.max = maxTs;
+
   makeChart(id, timeOption({
-    grid: { left: 48, right: 22, top: 26, bottom: 34 },
+    grid: { left: 48, right: 28, top: 20, bottom: 34 },
     tooltip: {
       trigger: 'axis',
       backgroundColor: cc.panel, borderColor: cc.border,
@@ -482,6 +489,7 @@ export function chartRatio(id, pairs, stats, color, name) {
             <b style="font-family:'Inter';font-size:14px;color:${color}">${v.toFixed(1)}x</b></div>${vs}`;
       },
     },
+    xAxis: xAxisOpt,
     yAxis: Object.assign({ type: 'value', scale: true }, baseAxisStyle(cc), {
       axisLabel: { color: cc.muted, fontSize: 11, formatter: '{value}x' },
     }),
@@ -492,15 +500,13 @@ export function chartRatio(id, pairs, stats, color, name) {
         { offset: 0, color: color + '3c' }, { offset: 1, color: color + '00' },
       ]) },
       emphasis: { focus: 'series', lineStyle: { width: 3.5 } },
-      endLabel: {
-        show: lastVal != null,
-        color, fontSize: 12, fontWeight: 800, fontFamily: 'Inter',
-        formatter: lastVal != null ? `${lastVal.toFixed(1)}x` : '',
-      },
+      endLabel: { show: false },
       markLine, markArea,
       tooltip: { valueFormatter: v => fmtRatio(v, 1) },
     }],
   }));
+
+
 
   // ── Chips de estadísticas bajo el gráfico ──
   const statEl = document.getElementById('stat-' + id.replace('ch-', ''));
@@ -1298,9 +1304,18 @@ export function renderAllCharts(data) {
   chartDividends(data);
   chartMos(data);
 
+  // Sincronización de cursor entre los 4 gráficos de múltiplos
+  try {
+    const ratioCharts = ['ch-pe', 'ch-ps', 'ch-pb', 'ch-pcf'].map(id => charts[id]).filter(Boolean);
+    if (ratioCharts.length > 1) {
+      echarts.connect(ratioCharts);
+    }
+  } catch (e) {}
+
   // Badge PE fuera de banda histórica
   _renderPeBandBadge(data.history.peStats, data.current.pe);
 }
+
 
 function _renderPeBandBadge(peStats, peCurrent) {
   const headEl = document.querySelector('#ch-pe')?.closest('.chart-card')?.querySelector('h3');
