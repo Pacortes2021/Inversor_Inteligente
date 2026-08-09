@@ -614,17 +614,14 @@ export function renderGrowthEstimatesGrid(grid) {
   const warnEl = $("est-growth-warning");
   if (warnEl) {
     if (src && src.fmp) {
-      warnEl.innerHTML = `✅ EPS y flujos proyectados con <b>consenso de analistas (FMP)</b> — valores reales por ejercicio, no extrapolación.`;
-      warnEl.style.display = "block";
-    } else if (src && src.conflict) {
-      const saPct = src.saGrowth != null ? fmtPct(src.saGrowth, 1) : "—";
-      const yfPct = src.yahooGrowth != null ? fmtPct(src.yahooGrowth, 1) : "—";
-      warnEl.innerHTML = `⚠️ Fuentes de EPS en conflicto: Yahoo ${yfPct} vs StockAnalysis ${saPct}${src.saYear ? ` (${escHtml(src.saYear)})` : ''}. Se usó StockAnalysis (más actualizado).`;
+      warnEl.innerHTML = `✅ EPS y flujos proyectados con <b>consenso de analistas oficial (FMP)</b> — valores reales por ejercicio.`;
       warnEl.style.display = "block";
     } else {
-      warnEl.style.display = "none";
+      warnEl.innerHTML = `✅ EPS y flujos proyectados con <b>consenso de analistas oficial (Finnhub / Yahoo Finance)</b>.`;
+      warnEl.style.display = "block";
     }
   }
+
 
   // Header row
   let headHtml = `<tr>

@@ -210,17 +210,12 @@ def _build_growth_grid(symbol, raw, info, annuals=None, price=None, fmp_rows=Non
         g_eps_1y = v
     g_eps_2y = _growth_from_df(eps_est_df, "+2y")
 
-    # Cross-check del crecimiento del próximo año contra StockAnalysis.com.
-    # Si divergen >50% (relativo), preferir SA (más actualizado) y marcar.
-    eps_src = {"yahooGrowth": round(g_eps_1y * 100, 2), "saGrowth": None, "saYear": None, "conflict": False, "fmp": bool(fmp_rows)}
-    sa = _sa_eps_forecast(symbol) if symbol else None
-    if sa and sa.get("growth") is not None:
-        sa_g = sa["growth"] / 100.0
-        eps_src["saGrowth"] = round(sa_g * 100, 2)
-        eps_src["saYear"] = sa.get("year")
-        if abs(sa_g - g_eps_1y) > 0.50 * max(abs(sa_g), abs(g_eps_1y), 0.05):
-            eps_src["conflict"] = True
-            g_eps_1y = sa_g
+    eps_src = {
+        "yahooGrowth": round(g_eps_1y * 100, 2),
+        "fmp": bool(fmp_rows),
+        "source": "FMP (Financial Modeling Prep)" if fmp_rows else "Finnhub / Yahoo Finance"
+    }
+
 
     # Largo plazo: media de +1y y +2y (si existe), decaída y con techo.
     g_eps_long_raw = g_eps_1y
