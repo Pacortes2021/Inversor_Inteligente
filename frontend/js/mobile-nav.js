@@ -3,7 +3,7 @@
  * Módulo ES6: los handlers se registran al importarse (desde init.js).
  */
 
-import { go } from "./router.js?v=76";
+import { go } from "./router.js?v=77";
 
 const hamburger = document.getElementById('hamburger-btn');
 const mobileNav = document.getElementById('mobile-nav');

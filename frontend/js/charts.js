@@ -1,7 +1,7 @@
 /* Gráficos ECharts con tema propio — El Inversor Inteligente */
 
-import { fmtBig, fmtPrice, fmtPct, fmtRatio, fmtNum } from "./format.js?v=76";
-import { state } from "./state.js?v=76";
+import { fmtBig, fmtPrice, fmtPct, fmtRatio, fmtNum } from "./format.js?v=77";
+import { state } from "./state.js?v=77";
 
 /** Colores que se adaptan al tema claro/oscuro en tiempo de ejecución */
 export function getChartColors() {
@@ -1908,270 +1908,294 @@ export function renderQualityScorecardCharts(data) {
   };
 
   // 1. ROIC & ROE (ch-qual-roic)
-  const aRoic = a.filter(x => x.roic != null || x.roe != null);
-  if (aRoic.length >= 2) {
-    const years = aRoic.map(x => String(x.year));
-    const roicVals = aRoic.map(x => x.roic != null ? +x.roic.toFixed(1) : null);
-    const roeVals = aRoic.map(x => (x.roe != null && (x.equity == null || x.equity > 0)) ? +x.roe.toFixed(1) : null);
+  try {
+    const aRoic = a.filter(x => x.roic != null || x.roe != null);
+    if (aRoic.length >= 2) {
+      showCard('ch-qual-roic');
+      const years = aRoic.map(x => String(x.year));
+      const roicVals = aRoic.map(x => x.roic != null ? +x.roic.toFixed(1) : null);
+      const roeVals = aRoic.map(x => (x.roe != null && (x.equity == null || x.equity > 0)) ? +x.roe.toFixed(1) : null);
 
-    makeChart('ch-qual-roic', yearsOption(years, {
-      grid: { left: 45, right: 18, top: 28, bottom: 26 },
-      yAxis: Object.assign({ type: 'value', scale: true }, ba, { axisLabel: { color: cc.muted, fontSize: 10.5, formatter: '{value}%' } }),
-      series: [
-        {
-          type: 'line', name: 'ROIC', data: roicVals, smooth: 0.25,
-          lineStyle: { color: cc.green, width: 2.8 }, itemStyle: { color: cc.green }, symbolSize: 6,
-          areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: cc.green + '33' }, { offset: 1, color: cc.green + '00' }
-          ]) },
-          markLine: {
-            silent: true, symbol: 'none',
-            lineStyle: { color: cc.green, type: 'dashed', width: 1.2 },
-            data: [{ yAxis: 12, label: { formatter: 'Umbral ROIC 12%', color: cc.green, fontSize: 10, position: 'insideEndTop' } }]
+      makeChart('ch-qual-roic', yearsOption(years, {
+        grid: { left: 45, right: 18, top: 28, bottom: 26 },
+        yAxis: Object.assign({ type: 'value', scale: true }, ba, { axisLabel: { color: cc.muted, fontSize: 10.5, formatter: '{value}%' } }),
+        series: [
+          {
+            type: 'line', name: 'ROIC', data: roicVals, smooth: 0.25, connectNulls: true,
+            lineStyle: { color: cc.green, width: 2.8 }, itemStyle: { color: cc.green }, symbolSize: 6,
+            areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: cc.green + '33' }, { offset: 1, color: cc.green + '00' }
+            ]) },
+            markLine: {
+              silent: true, symbol: 'none',
+              lineStyle: { color: cc.green, type: 'dashed', width: 1.2 },
+              data: [{ yAxis: 12, label: { formatter: 'Umbral ROIC 12%', color: cc.green, fontSize: 10, position: 'end' } }]
+            },
+            tooltip: { valueFormatter: v => fmtPct(v) },
           },
-          tooltip: { valueFormatter: v => fmtPct(v) },
-        },
-        {
-          type: 'line', name: 'ROE', data: roeVals, smooth: 0.25,
-          lineStyle: { color: cc.gold, width: 2.2 }, itemStyle: { color: cc.gold }, symbolSize: 5,
-          markLine: {
-            silent: true, symbol: 'none',
-            lineStyle: { color: cc.gold, type: 'dotted', width: 1 },
-            data: [{ yAxis: 15, label: { formatter: 'Umbral ROE 15%', color: cc.gold, fontSize: 10, position: 'insideStartTop' } }]
-          },
-          tooltip: { valueFormatter: v => fmtPct(v) },
-        }
-      ]
-    }));
+          {
+            type: 'line', name: 'ROE', data: roeVals, smooth: 0.25, connectNulls: true,
+            lineStyle: { color: cc.gold, width: 2.2 }, itemStyle: { color: cc.gold }, symbolSize: 5,
+            markLine: {
+              silent: true, symbol: 'none',
+              lineStyle: { color: cc.gold, type: 'dotted', width: 1 },
+              data: [{ yAxis: 15, label: { formatter: 'Umbral ROE 15%', color: cc.gold, fontSize: 10, position: 'start' } }]
+            },
+            tooltip: { valueFormatter: v => fmtPct(v) },
+          }
+        ]
+      }));
 
-    const roicChk = chkMap['roic'] || {};
-    const roeChk = chkMap['roe'] || {};
-    setBadge('badge-qual-roic', roicChk.passed, roicChk.passed ? `✓ ROIC ${roicChk.value}%` : `✗ ROIC ${roicChk.value || '—'}%`);
-    setStatChips('stat-qual-roic', [
-      [cc.green, `ROIC 5A: <b>${roicChk.value != null ? roicChk.value + '%' : '—'}</b>`],
-      [cc.gold, `ROE 5A: <b>${roeChk.value != null ? roeChk.value + '%' : '—'}</b>`],
-      [cc.blue, `Último ROIC: <b>${roicVals[roicVals.length - 1] != null ? roicVals[roicVals.length - 1] + '%' : '—'}</b>`],
-      [roicChk.passed ? cc.green : cc.red, `Moat: <b>${roicChk.passed ? 'Sólido' : 'Débil'}</b>`]
-    ]);
-  }
+      const roicChk = chkMap['roic'] || {};
+      const roeChk = chkMap['roe'] || {};
+      setBadge('badge-qual-roic', roicChk.passed, roicChk.passed ? `✓ ROIC ${roicChk.value}%` : `✗ ROIC ${roicChk.value || '—'}%`);
+      setStatChips('stat-qual-roic', [
+        [cc.green, `ROIC 5A: <b>${roicChk.value != null ? roicChk.value + '%' : '—'}</b>`],
+        [cc.gold, `ROE 5A: <b>${roeChk.value != null ? roeChk.value + '%' : '—'}</b>`],
+        [cc.blue, `Último ROIC: <b>${roicVals.filter(v=>v!=null).slice(-1)[0] != null ? roicVals.filter(v=>v!=null).slice(-1)[0] + '%' : '—'}</b>`],
+        [roicChk.passed ? cc.green : cc.red, `Moat: <b>${roicChk.passed ? 'Sólido' : 'Débil'}</b>`]
+      ]);
+    }
+  } catch (err) { console.error("Error rendering ch-qual-roic:", err); }
 
   // 2. Márgenes y Pricing Power (ch-qual-margins)
-  const aMargins = a.filter(x => x.grossMargin != null || x.netMargin != null);
-  if (aMargins.length >= 2) {
-    const years = aMargins.map(x => String(x.year));
-    const gmVals = aMargins.map(x => x.grossMargin != null ? +x.grossMargin.toFixed(1) : null);
-    const nmVals = aMargins.map(x => x.netMargin != null ? +x.netMargin.toFixed(1) : null);
+  try {
+    const aMargins = a.filter(x => x.grossMargin != null || x.netMargin != null);
+    if (aMargins.length >= 2) {
+      showCard('ch-qual-margins');
+      const years = aMargins.map(x => String(x.year));
+      const gmVals = aMargins.map(x => x.grossMargin != null ? +x.grossMargin.toFixed(1) : null);
+      const nmVals = aMargins.map(x => x.netMargin != null ? +x.netMargin.toFixed(1) : null);
 
-    makeChart('ch-qual-margins', yearsOption(years, {
-      grid: { left: 45, right: 18, top: 28, bottom: 26 },
-      yAxis: Object.assign({ type: 'value', scale: true }, ba, { axisLabel: { color: cc.muted, fontSize: 10.5, formatter: '{value}%' } }),
-      series: [
-        {
-          type: 'line', name: 'Margen Bruto', data: gmVals, smooth: 0.25,
-          lineStyle: { color: cc.cyan, width: 2.8 }, itemStyle: { color: cc.cyan }, symbolSize: 6,
-          areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: cc.cyan + '33' }, { offset: 1, color: cc.cyan + '00' }
-          ]) },
-          markLine: {
-            silent: true, symbol: 'none',
-            lineStyle: { color: cc.cyan, type: 'dashed', width: 1.2 },
-            data: [{ yAxis: 40, label: { formatter: 'Poder Precios 40%', color: cc.cyan, fontSize: 10, position: 'insideEndTop' } }]
+      makeChart('ch-qual-margins', yearsOption(years, {
+        grid: { left: 45, right: 18, top: 28, bottom: 26 },
+        yAxis: Object.assign({ type: 'value', scale: true }, ba, { axisLabel: { color: cc.muted, fontSize: 10.5, formatter: '{value}%' } }),
+        series: [
+          {
+            type: 'line', name: 'Margen Bruto', data: gmVals, smooth: 0.25, connectNulls: true,
+            lineStyle: { color: cc.cyan, width: 2.8 }, itemStyle: { color: cc.cyan }, symbolSize: 6,
+            areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: cc.cyan + '33' }, { offset: 1, color: cc.cyan + '00' }
+            ]) },
+            markLine: {
+              silent: true, symbol: 'none',
+              lineStyle: { color: cc.cyan, type: 'dashed', width: 1.2 },
+              data: [{ yAxis: 40, label: { formatter: 'Poder Precios 40%', color: cc.cyan, fontSize: 10, position: 'end' } }]
+            },
+            tooltip: { valueFormatter: v => fmtPct(v) },
           },
-          tooltip: { valueFormatter: v => fmtPct(v) },
-        },
-        {
-          type: 'line', name: 'Margen Neto', data: nmVals, smooth: 0.25,
-          lineStyle: { color: cc.green, width: 2.2 }, itemStyle: { color: cc.green }, symbolSize: 5,
-          markLine: {
-            silent: true, symbol: 'none',
-            lineStyle: { color: cc.green, type: 'dotted', width: 1 },
-            data: [{ yAxis: 10, label: { formatter: 'Mínimo 10%', color: cc.green, fontSize: 10, position: 'insideStartTop' } }]
-          },
-          tooltip: { valueFormatter: v => fmtPct(v) },
-        }
-      ]
-    }));
+          {
+            type: 'line', name: 'Margen Neto', data: nmVals, smooth: 0.25, connectNulls: true,
+            lineStyle: { color: cc.green, width: 2.2 }, itemStyle: { color: cc.green }, symbolSize: 5,
+            markLine: {
+              silent: true, symbol: 'none',
+              lineStyle: { color: cc.green, type: 'dotted', width: 1 },
+              data: [{ yAxis: 10, label: { formatter: 'Mínimo 10%', color: cc.green, fontSize: 10, position: 'start' } }]
+            },
+            tooltip: { valueFormatter: v => fmtPct(v) },
+          }
+        ]
+      }));
 
-    const gmChk = chkMap['gross'] || {};
-    const nmChk = chkMap['net'] || {};
-    setBadge('badge-qual-margins', gmChk.passed, gmChk.passed ? `✓ Bruto ${gmChk.value}%` : `✗ Bruto ${gmChk.value || '—'}%`);
-    setStatChips('stat-qual-margins', [
-      [cc.cyan, `Bruto 5A: <b>${gmChk.value != null ? gmChk.value + '%' : '—'}</b>`],
-      [cc.green, `Neto 5A: <b>${nmChk.value != null ? nmChk.value + '%' : '—'}</b>`],
-      [gmChk.passed ? cc.green : cc.amber, `Pricing Power: <b>${gmChk.passed ? 'Excelente' : 'Moderado'}</b>`]
-    ]);
-  }
+      const gmChk = chkMap['gross'] || {};
+      const nmChk = chkMap['net'] || {};
+      setBadge('badge-qual-margins', gmChk.passed, gmChk.passed ? `✓ Bruto ${gmChk.value}%` : `✗ Bruto ${gmChk.value || '—'}%`);
+      setStatChips('stat-qual-margins', [
+        [cc.cyan, `Bruto 5A: <b>${gmChk.value != null ? gmChk.value + '%' : '—'}</b>`],
+        [cc.green, `Neto 5A: <b>${nmChk.value != null ? nmChk.value + '%' : '—'}</b>`],
+        [gmChk.passed ? cc.green : cc.amber, `Pricing Power: <b>${gmChk.passed ? 'Excelente' : 'Moderado'}</b>`]
+      ]);
+    }
+  } catch (err) { console.error("Error rendering ch-qual-margins:", err); }
 
   // 3. FCF y Conversión (ch-qual-fcf)
-  const aFcf = a.filter(x => x.fcf != null || x.netIncome != null);
-  if (aFcf.length >= 2) {
-    const years = aFcf.map(x => String(x.year));
-    const fcfVals = aFcf.map(x => x.fcf);
-    const niVals = aFcf.map(x => x.netIncome);
-    const convVals = aFcf.map(x => (x.fcf != null && x.netIncome && x.netIncome > 0) ? +(x.fcf / x.netIncome * 100).toFixed(1) : null);
+  try {
+    const aFcf = a.filter(x => x.fcf != null || x.netIncome != null);
+    if (aFcf.length >= 2) {
+      showCard('ch-qual-fcf');
+      const years = aFcf.map(x => String(x.year));
+      const fcfVals = aFcf.map(x => x.fcf);
+      const niVals = aFcf.map(x => x.netIncome);
+      const convVals = aFcf.map(x => (x.fcf != null && x.netIncome && x.netIncome > 0) ? +(x.fcf / x.netIncome * 100).toFixed(1) : null);
 
-    makeChart('ch-qual-fcf', yearsOption(years, {
-      grid: { left: 52, right: 48, top: 28, bottom: 26 },
-      yAxis: [
-        Object.assign({ type: 'value' }, ba, { axisLabel: { color: cc.muted, fontSize: 10.5, formatter: v => fmtBig(v) } }),
-        Object.assign({ type: 'value', min: 0, max: 200 }, ba, { splitLine: { show: false }, axisLabel: { color: cc.muted, fontSize: 10.5, formatter: '{value}%' } }),
-      ],
-      series: [
-        { type: 'bar', name: 'FCF', data: fcfVals, itemStyle: { color: cc.green, borderRadius: [4,4,0,0] }, barMaxWidth: 26, tooltip: { valueFormatter: v => fmtBig(v, cur) } },
-        { type: 'bar', name: 'Utilidad neta', data: niVals, itemStyle: { color: cc.blue, borderRadius: [4,4,0,0] }, barMaxWidth: 26, tooltip: { valueFormatter: v => fmtBig(v, cur) } },
-        {
-          type: 'line', name: 'Conversión FCF/NI', yAxisIndex: 1, data: convVals,
-          lineStyle: { color: cc.gold, width: 2.2 }, itemStyle: { color: cc.gold }, symbolSize: 5,
-          markLine: {
-            silent: true, symbol: 'none',
-            lineStyle: { color: cc.gold, type: 'dashed', width: 1.2 },
-            data: [{ yAxis: 80, label: { formatter: 'Umbral 80%', color: cc.gold, fontSize: 10 } }]
-          },
-          tooltip: { valueFormatter: v => fmtPct(v) },
-        }
-      ]
-    }));
+      makeChart('ch-qual-fcf', yearsOption(years, {
+        grid: { left: 52, right: 48, top: 28, bottom: 26 },
+        yAxis: [
+          Object.assign({ type: 'value' }, ba, { axisLabel: { color: cc.muted, fontSize: 10.5, formatter: v => fmtBig(v) } }),
+          Object.assign({ type: 'value', min: 0, max: 200 }, ba, { splitLine: { show: false }, axisLabel: { color: cc.muted, fontSize: 10.5, formatter: '{value}%' } }),
+        ],
+        series: [
+          { type: 'bar', name: 'FCF', data: fcfVals, itemStyle: { color: cc.green, borderRadius: [4,4,0,0] }, barMaxWidth: 26, tooltip: { valueFormatter: v => fmtBig(v, cur) } },
+          { type: 'bar', name: 'Utilidad neta', data: niVals, itemStyle: { color: cc.blue, borderRadius: [4,4,0,0] }, barMaxWidth: 26, tooltip: { valueFormatter: v => fmtBig(v, cur) } },
+          {
+            type: 'line', name: 'Conversión FCF/NI', yAxisIndex: 1, data: convVals, connectNulls: true,
+            lineStyle: { color: cc.gold, width: 2.2 }, itemStyle: { color: cc.gold }, symbolSize: 5,
+            markLine: {
+              silent: true, symbol: 'none',
+              lineStyle: { color: cc.gold, type: 'dashed', width: 1.2 },
+              data: [{ yAxis: 80, label: { formatter: 'Umbral 80%', color: cc.gold, fontSize: 10 } }]
+            },
+            tooltip: { valueFormatter: v => fmtPct(v) },
+          }
+        ]
+      }));
 
-    const convChk = chkMap['fcf_conversion'] || {};
-    const fcfChk = chkMap['fcf'] || {};
-    setBadge('badge-qual-fcf', convChk.passed, convChk.passed ? `✓ Conversión ${convChk.value}%` : `Conversión ${convChk.value || '—'}%`);
-    setStatChips('stat-qual-fcf', [
-      [cc.gold, `Conversión 5A: <b>${convChk.value != null ? convChk.value + '%' : '—'}</b>`],
-      [cc.green, `Racha FCF+: <b>${fcfChk.value != null ? fcfChk.value + ' años' : '—'}</b>`],
-      [convChk.passed ? cc.green : cc.amber, `Calidad Ganancias: <b>${convChk.passed ? 'Alta' : 'Moderada'}</b>`]
-    ]);
-  }
+      const convChk = chkMap['fcf_conversion'] || {};
+      const fcfChk = chkMap['fcf'] || {};
+      setBadge('badge-qual-fcf', convChk.passed, convChk.passed ? `✓ Conversión ${convChk.value}%` : `Conversión ${convChk.value || '—'}%`);
+      setStatChips('stat-qual-fcf', [
+        [cc.gold, `Conversión 5A: <b>${convChk.value != null ? convChk.value + '%' : '—'}</b>`],
+        [cc.green, `Racha FCF+: <b>${fcfChk.value != null ? fcfChk.value + ' años' : '—'}</b>`],
+        [convChk.passed ? cc.green : cc.amber, `Calidad Ganancias: <b>${convChk.passed ? 'Alta' : 'Moderada'}</b>`]
+      ]);
+    }
+  } catch (err) { console.error("Error rendering ch-qual-fcf:", err); }
 
   // 4. Deuda y Capacidad de Pago (ch-qual-debt)
-  const aDebt = a.filter(x => x.totalDebt != null || x.cash != null);
-  if (aDebt.length >= 2) {
-    const years = aDebt.map(x => String(x.year));
-    const cashVals = aDebt.map(x => x.cash || 0);
-    const debtVals = aDebt.map(x => x.totalDebt || 0);
+  try {
+    const aDebt = a.filter(x => x.totalDebt != null || x.cash != null);
+    if (aDebt.length >= 2) {
+      showCard('ch-qual-debt');
+      const years = aDebt.map(x => String(x.year));
+      const cashVals = aDebt.map(x => x.cash || 0);
+      const debtVals = aDebt.map(x => x.totalDebt || 0);
 
-    makeChart('ch-qual-debt', yearsOption(years, {
-      grid: { left: 52, right: 24, top: 28, bottom: 26 },
-      yAxis: Object.assign({ type: 'value' }, ba, { axisLabel: { color: cc.muted, fontSize: 10.5, formatter: v => fmtBig(v) } }),
-      series: [
-        { type: 'bar', name: 'Caja', data: cashVals, itemStyle: { color: cc.green, borderRadius: [4,4,0,0] }, barMaxWidth: 28, tooltip: { valueFormatter: v => fmtBig(v, cur) } },
-        { type: 'bar', name: 'Deuda Total', data: debtVals, itemStyle: { color: cc.red, borderRadius: [4,4,0,0] }, barMaxWidth: 28, tooltip: { valueFormatter: v => fmtBig(v, cur) } },
-      ]
-    }));
+      makeChart('ch-qual-debt', yearsOption(years, {
+        grid: { left: 52, right: 24, top: 28, bottom: 26 },
+        yAxis: Object.assign({ type: 'value' }, ba, { axisLabel: { color: cc.muted, fontSize: 10.5, formatter: v => fmtBig(v) } }),
+        series: [
+          { type: 'bar', name: 'Caja', data: cashVals, itemStyle: { color: cc.green, borderRadius: [4,4,0,0] }, barMaxWidth: 28, tooltip: { valueFormatter: v => fmtBig(v, cur) } },
+          { type: 'bar', name: 'Deuda Total', data: debtVals, itemStyle: { color: cc.red, borderRadius: [4,4,0,0] }, barMaxWidth: 28, tooltip: { valueFormatter: v => fmtBig(v, cur) } },
+        ]
+      }));
 
-    const debtChk = chkMap['debt'] || {};
-    const intChk = chkMap['interest'] || {};
-    setBadge('badge-qual-debt', debtChk.passed, debtChk.passed ? `✓ ${debtChk.value}` : `✗ ${debtChk.value || 'Deuda alta'}`);
-    setStatChips('stat-qual-debt', [
-      [debtChk.passed ? cc.green : cc.red, `Deuda/Pago: <b>${debtChk.value || '—'}</b>`],
-      [intChk.passed ? cc.green : cc.amber, `Cob. Intereses: <b>${intChk.value != null ? (typeof intChk.value === 'number' ? intChk.value + 'x' : intChk.value) : '—'}</b>`],
-      [debtChk.passed ? cc.green : cc.red, `Solidez: <b>${debtChk.passed ? 'Segura' : 'Apalancada'}</b>`]
-    ]);
-  }
+      const debtChk = chkMap['debt'] || {};
+      const intChk = chkMap['interest'] || {};
+      setBadge('badge-qual-debt', debtChk.passed, debtChk.passed ? `✓ ${debtChk.value}` : `✗ ${debtChk.value || 'Deuda alta'}`);
+      setStatChips('stat-qual-debt', [
+        [debtChk.passed ? cc.green : cc.red, `Deuda/Pago: <b>${debtChk.value || '—'}</b>`],
+        [intChk.passed ? cc.green : cc.amber, `Cob. Intereses: <b>${intChk.value != null ? (typeof intChk.value === 'number' ? intChk.value + 'x' : intChk.value) : '—'}</b>`],
+        [debtChk.passed ? cc.green : cc.red, `Solidez: <b>${debtChk.passed ? 'Segura' : 'Apalancada'}</b>`]
+      ]);
+    }
+  } catch (err) { console.error("Error rendering ch-qual-debt:", err); }
 
   // 5. Crecimiento de Ventas y EPS (ch-qual-growth)
-  const aGrowth = a.filter(x => x.revenue != null || x.eps != null);
-  if (aGrowth.length >= 2) {
-    const years = aGrowth.map(x => String(x.year));
-    const revVals = aGrowth.map(x => x.revenue);
-    const epsVals = aGrowth.map(x => x.eps);
+  try {
+    const aGrowth = a.filter(x => x.revenue != null || x.eps != null);
+    if (aGrowth.length >= 2) {
+      showCard('ch-qual-growth');
+      const years = aGrowth.map(x => String(x.year));
+      const revVals = aGrowth.map(x => x.revenue);
+      const epsVals = aGrowth.map(x => x.eps);
 
-    makeChart('ch-qual-growth', yearsOption(years, {
-      grid: { left: 52, right: 48, top: 28, bottom: 26 },
-      yAxis: [
-        Object.assign({ type: 'value' }, ba, { axisLabel: { color: cc.muted, fontSize: 10.5, formatter: v => fmtBig(v) } }),
-        Object.assign({ type: 'value' }, ba, { splitLine: { show: false }, axisLabel: { color: cc.muted, fontSize: 10.5, formatter: v => '$' + v } }),
-      ],
-      series: [
-        { type: 'bar', name: 'Ingresos', data: revVals, itemStyle: { color: cc.blue, borderRadius: [4,4,0,0] }, barMaxWidth: 28, tooltip: { valueFormatter: v => fmtBig(v, cur) } },
-        { type: 'line', name: 'EPS', yAxisIndex: 1, data: epsVals, lineStyle: { color: cc.green, width: 2.5 }, itemStyle: { color: cc.green }, symbolSize: 6, tooltip: { valueFormatter: v => fmtNum(v, 2) } }
-      ]
-    }));
+      makeChart('ch-qual-growth', yearsOption(years, {
+        grid: { left: 52, right: 48, top: 28, bottom: 26 },
+        yAxis: [
+          Object.assign({ type: 'value' }, ba, { axisLabel: { color: cc.muted, fontSize: 10.5, formatter: v => fmtBig(v) } }),
+          Object.assign({ type: 'value' }, ba, { splitLine: { show: false }, axisLabel: { color: cc.muted, fontSize: 10.5, formatter: v => '$' + v } }),
+        ],
+        series: [
+          { type: 'bar', name: 'Ingresos', data: revVals, itemStyle: { color: cc.blue, borderRadius: [4,4,0,0] }, barMaxWidth: 28, tooltip: { valueFormatter: v => fmtBig(v, cur) } },
+          { type: 'line', name: 'EPS', yAxisIndex: 1, data: epsVals, connectNulls: true, lineStyle: { color: cc.green, width: 2.5 }, itemStyle: { color: cc.green }, symbolSize: 6, tooltip: { valueFormatter: v => fmtNum(v, 2) } }
+        ]
+      }));
 
-    const gChk = chkMap['growth'] || {};
-    const epsChk = chkMap['eps'] || {};
-    setBadge('badge-qual-growth', epsChk.passed, epsChk.passed ? `✓ CAGR EPS ${epsChk.value}%` : `CAGR EPS ${epsChk.value || '—'}%`);
-    setStatChips('stat-qual-growth', [
-      [cc.blue, `CAGR Ventas 5A: <b>${gChk.value != null ? gChk.value + '%' : '—'}</b>`],
-      [cc.green, `CAGR EPS 5A: <b>${epsChk.value != null ? epsChk.value + '%' : '—'}</b>`],
-      [epsChk.passed ? cc.green : cc.amber, `Consistencia: <b>${epsChk.passed ? 'Creciente' : 'Cíclica'}</b>`]
-    ]);
-  }
+      const gChk = chkMap['growth'] || {};
+      const epsChk = chkMap['eps'] || {};
+      setBadge('badge-qual-growth', epsChk.passed, epsChk.passed ? `✓ CAGR EPS ${epsChk.value}%` : `CAGR EPS ${epsChk.value || '—'}%`);
+      setStatChips('stat-qual-growth', [
+        [cc.blue, `CAGR Ventas 5A: <b>${gChk.value != null ? gChk.value + '%' : '—'}</b>`],
+        [cc.green, `CAGR EPS 5A: <b>${epsChk.value != null ? epsChk.value + '%' : '—'}</b>`],
+        [epsChk.passed ? cc.green : cc.amber, `Consistencia: <b>${epsChk.passed ? 'Creciente' : 'Cíclica'}</b>`]
+      ]);
+    }
+  } catch (err) { console.error("Error rendering ch-qual-growth:", err); }
 
   // 6. Acciones en Circulación / Recompras (ch-qual-shares)
-  const aShares = a.filter(x => x.sharesOut != null);
-  if (aShares.length >= 2) {
-    const years = aShares.map(x => String(x.year));
-    const shVals = aShares.map(x => x.sharesOut);
+  try {
+    const aShares = a.filter(x => x.sharesOut != null);
+    if (aShares.length >= 2) {
+      showCard('ch-qual-shares');
+      const years = aShares.map(x => String(x.year));
+      const shVals = aShares.map(x => x.sharesOut);
 
-    makeChart('ch-qual-shares', yearsOption(years, {
-      grid: { left: 52, right: 24, top: 28, bottom: 26 },
-      yAxis: Object.assign({ type: 'value', scale: true }, ba, { axisLabel: { color: cc.muted, fontSize: 10.5, formatter: v => fmtBig(v) } }),
-      series: [
-        {
-          type: 'line', name: 'Acciones en Circulación', data: shVals, smooth: 0.2,
-          lineStyle: { color: cc.violet, width: 2.8 }, itemStyle: { color: cc.violet }, symbolSize: 6,
-          areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: cc.violet + '33' }, { offset: 1, color: cc.violet + '00' }
-          ]) },
-          tooltip: { valueFormatter: v => fmtBig(v) }
-        }
-      ]
-    }));
+      makeChart('ch-qual-shares', yearsOption(years, {
+        grid: { left: 52, right: 24, top: 28, bottom: 26 },
+        yAxis: Object.assign({ type: 'value', scale: true }, ba, { axisLabel: { color: cc.muted, fontSize: 10.5, formatter: v => fmtBig(v) } }),
+        series: [
+          {
+            type: 'line', name: 'Acciones en Circulación', data: shVals, smooth: 0.2, connectNulls: true,
+            lineStyle: { color: cc.violet, width: 2.8 }, itemStyle: { color: cc.violet }, symbolSize: 6,
+            areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: cc.violet + '33' }, { offset: 1, color: cc.violet + '00' }
+            ]) },
+            tooltip: { valueFormatter: v => fmtBig(v) }
+          }
+        ]
+      }));
 
-    const bbChk = chkMap['buyback'] || {};
-    setBadge('badge-qual-shares', bbChk.passed, bbChk.passed ? `✓ Recompras (${bbChk.value}%)` : `Dilución (${bbChk.value || '—'}%)`);
-    setStatChips('stat-qual-shares', [
-      [bbChk.passed ? cc.green : cc.red, `Variación Acumulada: <b>${bbChk.value != null ? bbChk.value + '%' : '—'}</b>`],
-      [cc.violet, `Acciones Hoy: <b>${fmtBig(shVals[shVals.length - 1])}</b>`],
-      [bbChk.passed ? cc.green : cc.amber, `Directiva: <b>${bbChk.passed ? 'Pro-Accionista' : 'Dilutiva'}</b>`]
-    ]);
-  }
+      const bbChk = chkMap['buyback'] || {};
+      setBadge('badge-qual-shares', bbChk.passed, bbChk.passed ? `✓ Recompras (${bbChk.value}%)` : `Dilución (${bbChk.value || '—'}%)`);
+      setStatChips('stat-qual-shares', [
+        [bbChk.passed ? cc.green : cc.red, `Variación Acumulada: <b>${bbChk.value != null ? bbChk.value + '%' : '—'}</b>`],
+        [cc.violet, `Acciones Hoy: <b>${fmtBig(shVals[shVals.length - 1])}</b>`],
+        [bbChk.passed ? cc.green : cc.amber, `Directiva: <b>${bbChk.passed ? 'Pro-Accionista' : 'Dilutiva'}</b>`]
+      ]);
+    }
+  } catch (err) { console.error("Error rendering ch-qual-shares:", err); }
 
   // 7. Razón Corriente y Liquidez (ch-qual-liquidity)
-  const aLiq = a.filter(x => x.currentRatio != null);
-  if (aLiq.length >= 2) {
-    const years = aLiq.map(x => String(x.year));
-    const crVals = aLiq.map(x => +x.currentRatio.toFixed(2));
+  try {
+    const aLiq = a.filter(x => x.currentRatio != null);
+    if (aLiq.length >= 2) {
+      showCard('ch-qual-liquidity');
+      const years = aLiq.map(x => String(x.year));
+      const crVals = aLiq.map(x => +x.currentRatio.toFixed(2));
 
-    makeChart('ch-qual-liquidity', yearsOption(years, {
-      grid: { left: 45, right: 18, top: 28, bottom: 26 },
-      yAxis: Object.assign({ type: 'value', scale: true }, ba, { axisLabel: { color: cc.muted, fontSize: 10.5, formatter: '{value}x' } }),
-      series: [
-        {
-          type: 'line', name: 'Razón Corriente', data: crVals, smooth: 0.2,
-          lineStyle: { color: cc.blue, width: 2.5 }, itemStyle: { color: cc.blue }, symbolSize: 6,
-          areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: cc.blue + '28' }, { offset: 1, color: cc.blue + '00' }
-          ]) },
-          markLine: {
-            silent: true, symbol: 'none',
-            lineStyle: { color: cc.blue, type: 'dashed', width: 1.2 },
-            data: [{ yAxis: 1.2, label: { formatter: 'Umbral 1.2x', color: cc.blue, fontSize: 10, position: 'insideEndTop' } }]
-          },
-          tooltip: { valueFormatter: v => fmtRatio(v, 2) }
-        }
-      ]
-    }));
+      makeChart('ch-qual-liquidity', yearsOption(years, {
+        grid: { left: 45, right: 18, top: 28, bottom: 26 },
+        yAxis: Object.assign({ type: 'value', scale: true }, ba, { axisLabel: { color: cc.muted, fontSize: 10.5, formatter: '{value}x' } }),
+        series: [
+          {
+            type: 'line', name: 'Razón Corriente', data: crVals, smooth: 0.2, connectNulls: true,
+            lineStyle: { color: cc.blue, width: 2.5 }, itemStyle: { color: cc.blue }, symbolSize: 6,
+            areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: cc.blue + '28' }, { offset: 1, color: cc.blue + '00' }
+            ]) },
+            markLine: {
+              silent: true, symbol: 'none',
+              lineStyle: { color: cc.blue, type: 'dashed', width: 1.2 },
+              data: [{ yAxis: 1.2, label: { formatter: 'Umbral 1.2x', color: cc.blue, fontSize: 10, position: 'end' } }]
+            },
+            tooltip: { valueFormatter: v => fmtRatio(v, 2) }
+          }
+        ]
+      }));
 
-    const liqChk = chkMap['liquidity'] || {};
-    setBadge('badge-qual-liquidity', liqChk.passed, liqChk.passed ? `✓ ${liqChk.value}x` : `${liqChk.value || '—'}x`);
-    setStatChips('stat-qual-liquidity', [
-      [liqChk.passed ? cc.green : cc.amber, `Razón Cte Hoy: <b>${liqChk.value != null ? liqChk.value + 'x' : '—'}</b>`],
-      [cc.blue, `Promedio: <b>${(crVals.reduce((a,b)=>a+b,0)/crVals.length).toFixed(2)}x</b>`],
-      [liqChk.passed ? cc.green : cc.muted, `Estado: <b>${liqChk.passed ? 'Solvente' : 'Capital Cte Negativo'}</b>`]
-    ]);
-  }
+      const liqChk = chkMap['liquidity'] || {};
+      setBadge('badge-qual-liquidity', liqChk.passed, liqChk.passed ? `✓ ${liqChk.value}x` : `${liqChk.value || '—'}x`);
+      setStatChips('stat-qual-liquidity', [
+        [liqChk.passed ? cc.green : cc.amber, `Razón Cte Hoy: <b>${liqChk.value != null ? liqChk.value + 'x' : '—'}</b>`],
+        [cc.blue, `Promedio: <b>${(crVals.reduce((a,b)=>a+b,0)/crVals.length).toFixed(2)}x</b>`],
+        [liqChk.passed ? cc.green : cc.muted, `Estado: <b>${liqChk.passed ? 'Solvente' : 'Capital Cte Negativo'}</b>`]
+      ]);
+    }
+  } catch (err) { console.error("Error rendering ch-qual-liquidity:", err); }
 
   // 8. PE Histórico vs Mediana (ch-qual-pe)
-  if (data.history && data.history.peTtm) {
-    chartRatio('ch-qual-pe', data.history.peTtm, data.history.peStats, cc.blue, 'PE (TTM)');
-    const peChk = chkMap['pe'] || {};
-    const fcfYChk = chkMap['fcfyield'] || {};
-    setBadge('badge-qual-pe', peChk.passed, peChk.passed ? `✓ Descuento ${peChk.value}%` : `Sobreprecio ${peChk.value || '—'}%`);
-    setStatChips('stat-qual-pe', [
-      [cc.blue, `PE Hoy: <b>${data.current?.pe != null ? data.current.pe.toFixed(1) + 'x' : '—'}</b>`],
-      [cc.gold, `Mediana 15A: <b>${data.history.peStats?.median != null ? data.history.peStats.median + 'x' : '—'}</b>`],
-      [cc.green, `FCF Yield: <b>${fcfYChk.value != null ? fcfYChk.value + '%' : '—'}</b>`]
-    ]);
-  }
+  try {
+    if (data.history && data.history.peTtm && data.history.peTtm.length >= 2) {
+      showCard('ch-qual-pe');
+      chartRatio('ch-qual-pe', data.history.peTtm, data.history.peStats, cc.blue, 'PE (TTM)');
+      const peChk = chkMap['pe'] || {};
+      const fcfYChk = chkMap['fcfyield'] || {};
+      setBadge('badge-qual-pe', peChk.passed, peChk.passed ? `✓ Descuento ${peChk.value}%` : `Sobreprecio ${peChk.value || '—'}%`);
+      setStatChips('stat-qual-pe', [
+        [cc.blue, `PE Hoy: <b>${data.current?.pe != null ? data.current.pe.toFixed(1) + 'x' : '—'}</b>`],
+        [cc.gold, `Mediana 15A: <b>${data.history.peStats?.median != null ? data.history.peStats.median + 'x' : '—'}</b>`],
+        [cc.green, `FCF Yield: <b>${fcfYChk.value != null ? fcfYChk.value + '%' : '—'}</b>`]
+      ]);
+    }
+  } catch (err) { console.error("Error rendering ch-qual-pe:", err); }
 }
