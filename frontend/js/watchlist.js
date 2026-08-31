@@ -1,9 +1,9 @@
 /* Watchlist: acciones seguidas con margen de seguridad objetivo. */
 
-import { $, toast, apiFetch } from "./dom.js?v=74";
-import { state } from "./state.js?v=74";
-import { setStarState } from "./analysis.js?v=74";
-import { fmtBig, fmtPrice, fmtPct, escHtml } from "./format.js?v=74";
+import { $, toast, apiFetch } from "./dom.js?v=75";
+import { state } from "./state.js?v=75";
+import { setStarState } from "./analysis.js?v=75";
+import { fmtBig, fmtPrice, fmtPct, escHtml } from "./format.js?v=75";
 
 export let wlLoaded = false;
 let wlItems = [];

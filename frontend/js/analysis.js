@@ -2,18 +2,18 @@
    cualitativas, scorecard Buffett, tabla de crecimiento, sidebar y
    orquestación de pestañas de acción. */
 
-import { $, toast, apiFetch } from "./dom.js?v=74";
-import { state, currentPeriodYears, currentMultiplesRange, setCurrentMultiplesRange } from "./state.js?v=74";
-import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, escHtml, pctClass } from "./format.js?v=74";
-import { termify } from "./glossary.js?v=74";
-import { chartPrice, chartRatio, chartDividends, chartEps, chartEarningsSurprise, renderAllCharts, renderPriceOverlay, renderKoyfinLayout, C, charts } from "./charts.js?v=74";
+import { $, toast, apiFetch } from "./dom.js?v=75";
+import { state, currentPeriodYears, currentMultiplesRange, setCurrentMultiplesRange } from "./state.js?v=75";
+import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, escHtml, pctClass } from "./format.js?v=75";
+import { termify } from "./glossary.js?v=75";
+import { chartPrice, chartRatio, chartDividends, chartEps, chartEarningsSurprise, renderAllCharts, renderPriceOverlay, renderKoyfinLayout, C, charts } from "./charts.js?v=75";
 
-import { checkStockAlerts } from "./alerts.js?v=74";
+import { checkStockAlerts } from "./alerts.js?v=75";
 import {
   renderValuationCard, renderRatiosGrid, renderEstimates, renderEpsEstimatesChart,
   renderInsidersHolders, renderFinancialStatements, renderEpsFv, renderDcfFv,
   renderDdmFv, renderHistoricalRatios, renderAdditional, renderScenarios, renderFcfHistory,
-} from "./valuation.js?v=74";
+} from "./valuation.js?v=75";
 
 /* ---------------------------------------------------------- render */
 export function renderAnalysis(d) {
@@ -572,6 +572,8 @@ export function renderBuffettScorecard(sc) {
         else valStr = String(c.value);
       }
 
+      const sparklineHtml = renderScorecardSparkline(c.history, c.passed, c.fmt);
+
       return `
         <div class="scorecard-item-row">
           <div class="scorecard-item-left">
@@ -581,6 +583,9 @@ export function renderBuffettScorecard(sc) {
               <span class="scorecard-item-desc">${escHtml(c.desc)}</span>
             </div>
           </div>
+          <div class="scorecard-item-sparkline">
+            ${sparklineHtml}
+          </div>
           <div class="scorecard-item-right">
             <span class="scorecard-item-value">${valStr}</span>
           </div>
@@ -588,6 +593,64 @@ export function renderBuffettScorecard(sc) {
       `;
     }).join("");
   }
+}
+
+export function renderScorecardSparkline(history, passed, fmt = "pct") {
+  if (!history || history.length < 2) {
+    return `<div class="scorecard-spark-empty" style="color:var(--muted); font-size:11px; text-align:center; min-width:90px;">—</div>`;
+  }
+
+  const w = 110, h = 26, padTop = 4, padBottom = 4, padX = 4;
+  const vals = history.map(p => (Array.isArray(p) ? p[1] : p)).filter(v => v != null && isFinite(v));
+  if (vals.length < 2) return `<div class="scorecard-spark-empty" style="color:var(--muted); font-size:11px; text-align:center; min-width:90px;">—</div>`;
+
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const span = max - min || (max === 0 ? 1 : Math.abs(max) * 0.1);
+
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const color = passed === true ? "#10b981" : passed === false ? "#ef4444" : "#64748b";
+  const gradId = "spk-g-" + Math.random().toString(36).slice(2, 7);
+
+  const pts = vals.map((v, i) => {
+    const x = padX + (i / (vals.length - 1)) * (w - 2 * padX);
+    const y = padTop + (1 - (v - min) / span) * (h - padTop - padBottom);
+    return [x, y];
+  });
+
+  const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+  const areaD = `${pathD} L ${pts[pts.length - 1][0].toFixed(1)} ${h} L ${pts[0][0].toFixed(1)} ${h} Z`;
+
+  const firstPt = pts[0];
+  const lastPt = pts[pts.length - 1];
+
+  // Tooltip interactivo con los valores históricos ordenados cronológicamente
+  const tooltipText = history.map(p => {
+    const yr = Array.isArray(p) ? p[0] : '';
+    const v = Array.isArray(p) ? p[1] : p;
+    let vStr = (typeof v === 'number') ? v.toLocaleString('es-CL', { maximumFractionDigits: 1 }) : String(v);
+    if (fmt === "pct") vStr += "%";
+    else if (fmt === "x") vStr += "x";
+    else if (fmt === "$") vStr = "$" + vStr;
+    return yr ? `${yr}: ${vStr}` : vStr;
+  }).join('  →  ');
+
+  return `
+    <div class="scorecard-spark-wrap" title="Evolución histórica: ${escHtml(tooltipText)}" style="display:flex; align-items:center; cursor:help;">
+      <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="overflow:visible;">
+        <defs>
+          <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${color}" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
+          </linearGradient>
+        </defs>
+        <path d="${areaD}" fill="url(#${gradId})" />
+        <path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        <circle cx="${firstPt[0].toFixed(1)}" cy="${firstPt[1].toFixed(1)}" r="2" fill="${color}" opacity="0.6" />
+        <circle cx="${lastPt[0].toFixed(1)}" cy="${lastPt[1].toFixed(1)}" r="2.8" fill="${color}" stroke="${isDark ? '#0f172a' : '#ffffff'}" stroke-width="1" />
+      </svg>
+    </div>
+  `;
 }
 
 /* ----------------------------------------------- tabla crecimiento */

@@ -414,15 +414,16 @@ def verdict_from_mos(mos):
 
 # ----------------------------------------------------------------- scorecard
 
-def _check(cid, name, desc, value, passed, fmt="x"):
+def _check(cid, name, desc, value, passed, fmt="x", history=None):
     return {"id": cid, "name": name, "desc": desc,
-            "value": value, "passed": passed, "fmt": fmt}
+            "value": value, "passed": passed, "fmt": fmt,
+            "history": history or []}
 
 
-def buffett_scorecard(info, annuals, pe_stats):
+def buffett_scorecard(info, annuals, pe_stats, pe_pairs=None, price=None):
     """Criterios cuantitativos de élite inspirados en la filosofía de Warren Buffett
     y Charlie Munger (14 puntos de calidad de negocio, foso defensivo y solidez).
-    passed puede ser True, False o None (sin datos: no cuenta para el puntaje)."""
+    Incluye series históricas completas para gráficos de tendencia (sparklines)."""
     checks = []
 
     def avg(key, last_n=5):
@@ -432,29 +433,37 @@ def buffett_scorecard(info, annuals, pe_stats):
     # 1. ROIC Promedio 5A ≥ 12% (Ventaja competitiva duradera / Moat según Charlie Munger)
     roics = [a["roic"] for a in annuals[-5:] if _ok(a.get("roic"))]
     roic_avg = (sum(roics) / len(roics)) if roics else None
+    roic_hist = [[a["year"], round(a["roic"], 1)] for a in annuals[-10:] if _ok(a.get("roic"))]
     checks.append(_check("roic", "ROIC ≥ 12%", "Retorno sobre capital invertido (Moat / Munger)",
                          round(roic_avg, 1) if roic_avg is not None else None,
-                         roic_avg >= 12.0 if roic_avg is not None else None, "pct"))
+                         roic_avg >= 12.0 if roic_avg is not None else None, "pct",
+                         history=roic_hist))
 
     # 2. ROE Promedio 5A ≥ 15% (Retorno sobre patrimonio en empresas con capital positivo)
     roe = avg("roe")
     eq_latest = annuals[-1].get("equity") if annuals else None
     roe_valid = roe if (eq_latest is None or eq_latest > 0) else None
+    roe_hist = [[a["year"], round(a["roe"], 1)] for a in annuals[-10:] if _ok(a.get("roe")) and (a.get("equity") is None or a["equity"] > 0)]
     checks.append(_check("roe", "ROE ≥ 15%", "Retorno sobre patrimonio promedio (capital positivo)",
                          round(roe_valid, 1) if roe_valid is not None else None,
-                         roe_valid >= 15.0 if roe_valid is not None else None, "pct"))
+                         roe_valid >= 15.0 if roe_valid is not None else None, "pct",
+                         history=roe_hist))
 
     # 3. Margen Bruto ≥ 40% (Poder de fijación de precios / Pricing Power)
     gm = avg("grossMargin")
+    gm_hist = [[a["year"], round(a["grossMargin"], 1)] for a in annuals[-10:] if _ok(a.get("grossMargin"))]
     checks.append(_check("gross", "Margen bruto ≥ 40%", "Poder de fijación de precios (ventaja competitiva)",
                          round(gm, 1) if gm is not None else None,
-                         gm >= 40.0 if gm is not None else None, "pct"))
+                         gm >= 40.0 if gm is not None else None, "pct",
+                         history=gm_hist))
 
     # 4. Margen Neto ≥ 10% (Rentabilidad final consistente)
     nm = avg("netMargin")
+    nm_hist = [[a["year"], round(a["netMargin"], 1)] for a in annuals[-10:] if _ok(a.get("netMargin"))]
     checks.append(_check("net", "Margen neto ≥ 10%", "Rentabilidad final consistente (promedio 5 años)",
                          round(nm, 1) if nm is not None else None,
-                         nm >= 10.0 if nm is not None else None, "pct"))
+                         nm >= 10.0 if nm is not None else None, "pct",
+                         history=nm_hist))
 
     # 5. Endeudamiento Conservador (Deuda/Patrimonio < 1.0 ó Deuda Neta/FCF < 4 años)
     tot_debt = info.get("totalDebt") or (annuals[-1].get("totalDebt") if annuals else 0) or 0
@@ -487,8 +496,16 @@ def buffett_scorecard(info, annuals, pe_stats):
         debt_display = f"{round(years_to_pay, 1)}a FCF"
         debt_fmt = "text"
 
+    debt_hist = []
+    if de is not None and de > 0:
+        debt_hist = [[a["year"], round(a["debtToEquity"], 2)] for a in annuals[-10:] if _ok(a.get("debtToEquity")) and a["debtToEquity"] > 0]
+    else:
+        debt_hist = [[a["year"], round((a.get("totalDebt", 0) - a.get("cash", 0)) / a["fcf"], 1)]
+                     for a in annuals[-10:] if _ok(a.get("fcf")) and a["fcf"] > 0]
+
     checks.append(_check("debt", "Deuda conservadora", "Deuda/Patrimonio < 1x ó Deuda Neta/FCF < 4 años",
-                         debt_display, debt_pass, debt_fmt))
+                         debt_display, debt_pass, debt_fmt,
+                         history=debt_hist))
 
     # 6. Cobertura de Intereses > 5x (o Caja Neta / Cero Deuda)
     ic = None
@@ -508,14 +525,18 @@ def buffett_scorecard(info, annuals, pe_stats):
         int_display = round(ic, 1)
         int_fmt = "x"
 
+    ic_hist = [[a["year"], round(a["interestCoverage"], 1)] for a in annuals[-10:] if _ok(a.get("interestCoverage")) and a["interestCoverage"] > 0]
     checks.append(_check("interest", "Cobertura de intereses > 5x", "EBIT sobre intereses (o Caja Neta)",
-                         int_display, int_pass, int_fmt))
+                         int_display, int_pass, int_fmt,
+                         history=ic_hist))
 
     # 7. FCF Positivo todos los años disponibles
     fcfs = [a["fcf"] for a in annuals if a.get("fcf") is not None]
     fcf_pos = all(f > 0 for f in fcfs) if len(fcfs) >= 3 else None
+    fcf_hist = [[a["year"], round(a["fcf"] / 1e6, 1)] for a in annuals[-10:] if _ok(a.get("fcf"))]
     checks.append(_check("fcf", "FCF positivo todos los años", "Genera caja real de forma consistente",
-                         len(fcfs) if fcfs else None, fcf_pos, "años"))
+                         len(fcfs) if fcfs else None, fcf_pos, "años",
+                         history=fcf_hist))
 
     # 8. Calidad de Ganancias (Conversión FCF / Utilidad Neta ≥ 80%)
     pairs = [(a["fcf"], a["netIncome"]) for a in annuals[-5:]
@@ -524,18 +545,23 @@ def buffett_scorecard(info, annuals, pe_stats):
     if pairs:
         ratios = [f / ni * 100 for f, ni in pairs]
         fcf_conv = sum(ratios) / len(ratios)
+    fcf_conv_hist = [[a["year"], round(a["fcf"] / a["netIncome"] * 100, 1)]
+                     for a in annuals[-10:] if _ok(a.get("fcf")) and _ok(a.get("netIncome")) and a["netIncome"] > 0]
     checks.append(_check("fcf_conversion", "Conversión a FCF ≥ 80%", "Calidad de ganancias (FCF / Utilidad promedio 5A)",
                          round(fcf_conv, 1) if fcf_conv is not None else None,
-                         fcf_conv >= 80.0 if fcf_conv is not None else None, "pct"))
+                         fcf_conv >= 80.0 if fcf_conv is not None else None, "pct",
+                         history=fcf_conv_hist))
 
     # 9. Crecimiento de Ingresos ≥ 5% (CAGR 5 años)
     revs5 = [a["revenue"] for a in annuals[-5:] if _ok(a.get("revenue")) and a["revenue"] > 0]
     rev_g5 = None
     if len(revs5) >= 3:
         rev_g5 = ((revs5[-1] / revs5[0]) ** (1 / (len(revs5) - 1)) - 1) * 100
+    rev_hist = [[a["year"], round(a["revenue"] / 1e6, 1)] for a in annuals[-10:] if _ok(a.get("revenue"))]
     checks.append(_check("growth", "Crecimiento ingresos ≥ 5%", "CAGR de ventas últimos 5 años",
                          round(rev_g5, 1) if rev_g5 is not None else None,
-                         rev_g5 >= 5.0 if rev_g5 is not None else None, "pct"))
+                         rev_g5 >= 5.0 if rev_g5 is not None else None, "pct",
+                         history=rev_hist))
 
     # 10. Crecimiento EPS consistente (CAGR 5A ≥ 5%)
     epss5 = [a["eps"] for a in annuals[-5:] if _ok(a.get("eps")) and a["eps"] > 0]
@@ -543,9 +569,11 @@ def buffett_scorecard(info, annuals, pe_stats):
     if len(epss5) >= 3 and epss5[0] > 0:
         eps_g5 = ((epss5[-1] / epss5[0]) ** (1 / (len(epss5) - 1)) - 1) * 100
     eps_pass = (eps_g5 >= 5.0) if eps_g5 is not None else (epss5[-1] > epss5[0] if len(epss5) >= 2 else None)
+    eps_hist = [[a["year"], round(a["eps"], 2)] for a in annuals[-10:] if _ok(a.get("eps"))]
     checks.append(_check("eps", "Crecimiento EPS ≥ 5%", "CAGR de beneficio por acción en 5 años",
                          round(eps_g5, 1) if eps_g5 is not None else (round(epss5[-1], 2) if epss5 else None),
-                         eps_pass, "pct" if eps_g5 is not None else "$"))
+                         eps_pass, "pct" if eps_g5 is not None else "$",
+                         history=eps_hist))
 
     # 11. Recompra de Acciones / No Dilución (disciplina de capital de la directiva)
     sh = [a["sharesOut"] for a in annuals if _ok(a.get("sharesOut"))]
@@ -554,8 +582,10 @@ def buffett_scorecard(info, annuals, pe_stats):
     if len(sh) >= 3 and sh[0] > 0:
         buyback = sh[-1] <= sh[0] * 1.005  # tolera emisiones mínimas (<0.5%)
         pct_chg = (sh[-1] / sh[0] - 1) * 100
+    sh_hist = [[a["year"], round(a["sharesOut"] / 1e6, 1)] for a in annuals[-10:] if _ok(a.get("sharesOut"))]
     checks.append(_check("buyback", "Recompra de acciones", "Acciones en circulación no diluyen al accionista",
-                         round(pct_chg, 1) if pct_chg is not None else None, buyback, "pct"))
+                         round(pct_chg, 1) if pct_chg is not None else None, buyback, "pct",
+                         history=sh_hist))
 
     # 12. Razón Corriente ≥ 1.2x (Liquidez de corto plazo)
     cr = None
@@ -564,16 +594,20 @@ def buffett_scorecard(info, annuals, pe_stats):
         cr = crs[-1]
     elif _ok(info.get("currentRatio")):
         cr = info["currentRatio"]
+    cr_hist = [[a["year"], round(a["currentRatio"], 2)] for a in annuals[-10:] if _ok(a.get("currentRatio"))]
     checks.append(_check("liquidity", "Razón corriente ≥ 1.2", "Liquidez de corto plazo",
                          round(cr, 2) if cr is not None else None,
-                         cr >= 1.2 if cr is not None else None, "x"))
+                         cr >= 1.2 if cr is not None else None, "x",
+                         history=cr_hist))
 
     # 13. Valoración: PE bajo su Mediana Histórica 15A
     pe_disc = None
     if pe_stats and pe_stats.get("vsMedian") is not None:
         pe_disc = pe_stats["vsMedian"]
+    pe_hist = [[int(pt[0]), round(pt[1], 1)] for pt in (pe_pairs[-20:] if pe_pairs else []) if _ok(pt[1]) and 0 < pt[1] < 150]
     checks.append(_check("pe", "PE bajo su mediana histórica", "El precio actual cotiza con descuento vs mediana 15A",
-                         pe_disc, pe_disc < 0 if pe_disc is not None else None, "pct"))
+                         pe_disc, pe_disc < 0 if pe_disc is not None else None, "pct",
+                         history=pe_hist))
 
     # 14. FCF Yield ≥ 4% (Rentabilidad de caja sobre precio de mercado)
     fcf_yield = None
@@ -581,9 +615,14 @@ def buffett_scorecard(info, annuals, pe_stats):
     fcf_now = info.get("freeCashflow") or (annuals[-1].get("fcf") if annuals else None)
     if _ok(mc) and _ok(fcf_now) and mc > 0:
         fcf_yield = fcf_now / mc * 100
+    fcf_yield_hist = []
+    if price and price > 0:
+        fcf_yield_hist = [[a["year"], round(a["fcf"] / (a.get("sharesOut", 1) * price) * 100, 2)]
+                          for a in annuals[-10:] if _ok(a.get("fcf")) and _ok(a.get("sharesOut")) and a["sharesOut"] > 0]
     checks.append(_check("fcfyield", "FCF yield ≥ 4%", "Rentabilidad de caja sobre capitalización bursátil",
                          round(fcf_yield, 2) if fcf_yield is not None else None,
-                         fcf_yield >= 4.0 if fcf_yield is not None else None, "pct"))
+                         fcf_yield >= 4.0 if fcf_yield is not None else None, "pct",
+                         history=fcf_yield_hist))
 
     evaluated = [c for c in checks if c["passed"] is not None]
     passed = sum(1 for c in evaluated if c["passed"])

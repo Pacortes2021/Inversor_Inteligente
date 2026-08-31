@@ -1750,7 +1750,7 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
 .scorecard-title    { font-size: 16px; font-weight: 800; color: var(--text); margin: 0; font-family: 'Space Grotesk', 'Inter', sans-serif; }
 .scorecard-desc-text{ font-size: 13px; color: var(--muted); margin: 0; }
 
-.scorecard-list-container { display: flex; flex-direction: column; gap: 4px; }
+.scorecard-list-container { display: flex; flex-direction: column; gap: 6px; }
 .scorecard-item-row {
   display: flex;
   align-items: center;
@@ -1760,14 +1760,16 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   border-radius: 8px;
   border: 1px solid var(--border);
   transition: all 0.2s ease;
+  gap: 12px;
 }
-.scorecard-item-row:hover { border-color: var(--border-glow); transform: translateX(2px); }
-.scorecard-item-left { display: flex; align-items: center; gap: 12px; }
+.scorecard-item-row:hover { border-color: var(--border-glow); transform: translateX(2px); background: var(--panel-2); }
+.scorecard-item-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 190px; }
 .scorecard-item-badge {
   display: flex; align-items: center; justify-content: center;
   width: 26px; height: 26px;
   border-radius: 8px;
   font-size: 14px; font-weight: 700;
+  flex-shrink: 0;
 }
 .scorecard-item-badge.pass { background: var(--green-soft); color: var(--green-text); }
 .scorecard-item-badge.fail { background: var(--red-soft);   color: var(--red-text); }
@@ -1775,7 +1777,29 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
 .scorecard-item-info { display: flex; flex-direction: column; }
 .scorecard-item-name { font-size: 13.5px; font-weight: 600; color: var(--text); }
 .scorecard-item-desc { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
-.scorecard-item-right { display: flex; align-items: center; gap: 14px; }
+
+.scorecard-item-sparkline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  flex-shrink: 0;
+}
+.scorecard-spark-wrap svg {
+  transition: transform 0.2s ease;
+}
+.scorecard-item-row:hover .scorecard-spark-wrap svg {
+  transform: scale(1.04);
+}
+
+.scorecard-item-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 90px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
 .scorecard-item-value {
   font-size: 13px; font-weight: 700;
   color: var(--text);
@@ -1784,6 +1808,8 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   border-radius: 6px;
   border: 1px solid var(--border);
   font-family: inherit; font-variant-numeric: tabular-nums;
+  text-align: right;
+  min-width: 60px;
 }
 
 /* =====================================================================

@@ -1,7 +1,7 @@
 /* Gráficos ECharts con tema propio — El Inversor Inteligente */
 
-import { fmtBig, fmtPrice, fmtPct, fmtRatio, fmtNum } from "./format.js?v=74";
-import { state } from "./state.js?v=74";
+import { fmtBig, fmtPrice, fmtPct, fmtRatio, fmtNum } from "./format.js?v=75";
+import { state } from "./state.js?v=75";
 
 /** Colores que se adaptan al tema claro/oscuro en tiempo de ejecución */
 export function getChartColors() {

@@ -1,14 +1,14 @@
 /* Routing por hash + búsqueda global + navegación delegada. */
 
-import { $ } from "./dom.js?v=74";
-import { state } from "./state.js?v=74";
-import { escHtml } from "./format.js?v=74";
-import { loadSymbol } from "./loader.js?v=74";
-import { triggerTabSpecificActions } from "./analysis.js?v=74";
-import { loadDashboard } from "./dashboard.js?v=74";
-import { loadScreener } from "./screener.js?v=74";
-import { loadWatchlist } from "./watchlist.js?v=74";
-import { loadPortfolio } from "./portfolio.js?v=74";
+import { $ } from "./dom.js?v=75";
+import { state } from "./state.js?v=75";
+import { escHtml } from "./format.js?v=75";
+import { loadSymbol } from "./loader.js?v=75";
+import { triggerTabSpecificActions } from "./analysis.js?v=75";
+import { loadDashboard } from "./dashboard.js?v=75";
+import { loadScreener } from "./screener.js?v=75";
+import { loadWatchlist } from "./watchlist.js?v=75";
+import { loadPortfolio } from "./portfolio.js?v=75";
 
 export const VIEWS = ["inicio", "analisis", "screener", "comparar", "watchlist", "portafolio"];
 export const UNLOCKED_TABS = ["summary", "valuation", "financials-hub", "ownership", "financials", "ratios", "rating", "estimates", "insiders", "eps-fv", "dcf-fv", "ddm-fv", "historical-ratios", "dividends", "earnings", "qualitative", "additional"];

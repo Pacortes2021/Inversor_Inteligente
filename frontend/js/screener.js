@@ -1,8 +1,8 @@
 /* Screener de valor: modos rápido/profundo, universos, filtros y export CSV. */
 
-import { fmtPrice, fmtNum, fmtPct, escHtml, pctClass } from "./format.js?v=74";
-import { renderHeatmap } from "./charts.js?v=74";
-import { go } from "./router.js?v=74";
+import { fmtPrice, fmtNum, fmtPct, escHtml, pctClass } from "./format.js?v=75";
+import { renderHeatmap } from "./charts.js?v=75";
+import { go } from "./router.js?v=75";
 
 const scr = {
   universe: "us", mode: "quick", view: "table",

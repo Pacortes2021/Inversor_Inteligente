@@ -1,10 +1,10 @@
 /* Portafolio: posiciones, concentración por sector y respaldo de datos. */
 
-import { toast, apiFetch } from "./dom.js?v=74";
-import { fmtBig, fmtNum, fmtPct, fmtPrice, escHtml, pctClass } from "./format.js?v=74";
-import { getChartColors } from "./charts.js?v=74";
-import { refreshSidebar } from "./analysis.js?v=74";
-import { wlInvalidate } from "./watchlist.js?v=74";
+import { toast, apiFetch } from "./dom.js?v=75";
+import { fmtBig, fmtNum, fmtPct, fmtPrice, escHtml, pctClass } from "./format.js?v=75";
+import { getChartColors } from "./charts.js?v=75";
+import { refreshSidebar } from "./analysis.js?v=75";
+import { wlInvalidate } from "./watchlist.js?v=75";
 
 let pfLoaded = false;
 let pfSectorChartInstance = null;

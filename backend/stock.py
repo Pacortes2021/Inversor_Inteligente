@@ -709,7 +709,7 @@ def build_payload(symbol: str, refresh: bool = False):
     bond10y = bond_yield_10y()
     fmp_rows = F.fetch_analyst_estimates(symbol)
     valuation = V.build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=fmp_rows)
-    scorecard = V.buffett_scorecard(info, annuals, pe_stats)
+    scorecard = V.buffett_scorecard(info, annuals, pe_stats, pe_pairs=pe_pairs, price=price)
     next_earnings, next_earnings_est, sec_filings = _sec_context(symbol, raw.calendar)
 
     dividends_annual = M.dividend_history(raw, prices=prices)
