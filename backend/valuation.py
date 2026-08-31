@@ -500,7 +500,7 @@ def buffett_scorecard(info, annuals, pe_stats, pe_pairs=None, price=None):
     if de is not None and de > 0:
         debt_hist = [[a["year"], round(a["debtToEquity"], 2)] for a in annuals[-10:] if _ok(a.get("debtToEquity")) and a["debtToEquity"] > 0]
     else:
-        debt_hist = [[a["year"], round((a.get("totalDebt", 0) - a.get("cash", 0)) / a["fcf"], 1)]
+        debt_hist = [[a["year"], round(((a.get("totalDebt") or 0) - (a.get("cash") or 0)) / a["fcf"], 1)]
                      for a in annuals[-10:] if _ok(a.get("fcf")) and a["fcf"] > 0]
 
     checks.append(_check("debt", "Deuda conservadora", "Deuda/Patrimonio < 1x ó Deuda Neta/FCF < 4 años",
@@ -617,7 +617,7 @@ def buffett_scorecard(info, annuals, pe_stats, pe_pairs=None, price=None):
         fcf_yield = fcf_now / mc * 100
     fcf_yield_hist = []
     if price and price > 0:
-        fcf_yield_hist = [[a["year"], round(a["fcf"] / (a.get("sharesOut", 1) * price) * 100, 2)]
+        fcf_yield_hist = [[a["year"], round(a["fcf"] / (a["sharesOut"] * price) * 100, 2)]
                           for a in annuals[-10:] if _ok(a.get("fcf")) and _ok(a.get("sharesOut")) and a["sharesOut"] > 0]
     checks.append(_check("fcfyield", "FCF yield ≥ 4%", "Rentabilidad de caja sobre capitalización bursátil",
                          round(fcf_yield, 2) if fcf_yield is not None else None,
