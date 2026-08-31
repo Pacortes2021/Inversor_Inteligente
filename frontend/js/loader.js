@@ -1,8 +1,8 @@
 /* Carga del análisis de un símbolo con manejo de carga/error. */
 
-import { $ } from "./dom.js?v=77";
-import { state } from "./state.js?v=77";
-import { renderAnalysis } from "./analysis.js?v=77";
+import { $ } from "./dom.js?v=78";
+import { state } from "./state.js?v=78";
+import { renderAnalysis } from "./analysis.js?v=78";
 
 const LOADING_MSGS = [
   "Descargando fundamentales…",

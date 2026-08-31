@@ -1,11 +1,11 @@
 /* Valoración (DCF interactivo, modelos, sensibilidad), estimaciones,
    insiders, estados financieros y paneles de valoración standalone. */
 
-import { $, toast } from "./dom.js?v=77";
-import { state } from "./state.js?v=77";
-import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, fmtDate, escHtml, pctClass } from "./format.js?v=77";
-import { termify } from "./glossary.js?v=77";
-import { charts } from "./charts.js?v=77";
+import { $, toast } from "./dom.js?v=78";
+import { state } from "./state.js?v=78";
+import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, fmtDate, escHtml, pctClass } from "./format.js?v=78";
+import { termify } from "./glossary.js?v=78";
+import { charts } from "./charts.js?v=78";
 
 /* ------------------------------------------- valoración + DCF live */
 export function dcfJs(inp, growth, discount, terminal) {
@@ -638,13 +638,9 @@ export function renderGrowthEstimatesGrid(grid) {
     const mrq = grid.mostRecentQuarter ? fmtDate(grid.mostRecentQuarter) : null;
     const dateBadge = `<span class="badge badge-base" style="font-size:11px; margin-left:8px; font-weight:600; padding:2px 8px; border-radius:4px;" title="Fecha de captura y actualización de previsiones post-reporte de ganancias">📅 Previsiones: ${lastUp}${mrq ? ` | Último Reporte: ${mrq}` : ''}</span>`;
 
-    if (src && src.fmp) {
-      warnEl.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;"><span>✅ EPS y flujos proyectados con <b>consenso de analistas oficial (FMP)</b> — valores reales por ejercicio.</span> ${dateBadge}</div>`;
-      warnEl.style.display = "block";
-    } else {
-      warnEl.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;"><span>✅ EPS y flujos proyectados con <b>consenso de analistas oficial (Finnhub / Yahoo Finance)</b>.</span> ${dateBadge}</div>`;
-      warnEl.style.display = "block";
-    }
+    const srcLabel = src?.source || (src?.fmp ? "FMP (Financial Modeling Prep)" : "Yahoo Finance Official Consensus");
+    warnEl.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;"><span>✅ Proyecciones 100% directas de <b>${escHtml(srcLabel)}</b> — sin estimaciones inventadas.</span> ${dateBadge}</div>`;
+    warnEl.style.display = "block";
   }
 
 
