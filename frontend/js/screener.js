@@ -1,8 +1,8 @@
 /* Screener de valor: modos rápido/profundo, universos, filtros y export CSV. */
 
-import { fmtPrice, fmtNum, fmtPct, escHtml, pctClass } from "./format.js";
-import { renderHeatmap } from "./charts.js";
-import { go } from "./router.js";
+import { fmtPrice, fmtNum, fmtPct, escHtml, pctClass } from "./format.js?v=74";
+import { renderHeatmap } from "./charts.js?v=74";
+import { go } from "./router.js?v=74";
 
 const scr = {
   universe: "us", mode: "quick", view: "table",
@@ -160,8 +160,9 @@ function filteredRows() {
   if (text)         rows = rows.filter(r =>
     r.symbol.toLowerCase().includes(text) || (r.name || '').toLowerCase().includes(text));
   if (minMos       != null) rows = rows.filter(r => r.mos        != null && r.mos        >= minMos);
-  if (maxPe        != null) rows = rows.filter(r => r.pe         != null && r.pe         <= maxPe);
-  if (maxFwdPe     != null) rows = rows.filter(r => r.forwardPe  != null && r.forwardPe  <= maxFwdPe);
+  // FIX: exclude negative PEs — a company with PE=-5 is NOT "cheap" at PE <= 15, it's losing money
+  if (maxPe        != null) rows = rows.filter(r => r.pe         != null && r.pe > 0    && r.pe         <= maxPe);
+  if (maxFwdPe     != null) rows = rows.filter(r => r.forwardPe  != null && r.forwardPe > 0 && r.forwardPe  <= maxFwdPe);
   if (minRoe       != null) rows = rows.filter(r => r.roe        != null && r.roe        >= minRoe);
   if (minNetMargin != null) rows = rows.filter(r => r.netMargin  != null && r.netMargin  >= minNetMargin);
   if (minFcfYield  != null) rows = rows.filter(r => r.fcfYield   != null && r.fcfYield   >= minFcfYield);
@@ -236,15 +237,20 @@ function renderScreener() {
       const eps2030 = epsBase * (1.10 ** 4);
       r.eps2030 = Math.round(eps2030 * 100) / 100;
 
-      // 3. Precios objetivo
+      // 3. Precios objetivo — guard against negative EPS/targets that produce NaN CAGR
+      const safeCAGR = (target, price) => {
+        if (target <= 0 || price <= 0) return null;
+        return Math.round(((target / price) ** (1/4) - 1) * 1000) / 10;
+      };
+
       r.targetCons = Math.round(eps2030 * consPe * 100) / 100;
-      r.cagrCons   = Math.round((((r.targetCons / r.price) ** (1/4)) - 1) * 1000) / 10;
+      r.cagrCons   = safeCAGR(r.targetCons, r.price);
 
       r.targetBase = Math.round(eps2030 * basePe * 100) / 100;
-      r.cagrBase   = Math.round((((r.targetBase / r.price) ** (1/4)) - 1) * 1000) / 10;
+      r.cagrBase   = safeCAGR(r.targetBase, r.price);
 
       r.targetOpt  = Math.round(eps2030 * optPe * 100) / 100;
-      r.cagrOpt    = Math.round((((r.targetOpt / r.price) ** (1/4)) - 1) * 1000) / 10;
+      r.cagrOpt    = safeCAGR(r.targetOpt, r.price);
 
       // 4. Upside vs precio actual al objetivo base
       r.upsideBase = r.targetBase > 0 ? Math.round((r.targetBase / r.price - 1) * 1000) / 10 : null;

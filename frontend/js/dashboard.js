@@ -1,7 +1,7 @@
 /* Dashboard / Home: carga datos del mercado, watchlist, oversold, movers, portafolio. */
 
-import { $ } from "./dom.js";
-import { fmtPct, fmtNum, fmtPrice, fmtBig, escHtml } from "./format.js";
+import { $ } from "./dom.js?v=74";
+import { fmtPct, fmtNum, fmtPrice, fmtBig, escHtml } from "./format.js?v=74";
 
 const dash = { loaded: false };
 const IDX_ICONS = { "^GSPC": "i-trend-up", "^IXIC": "i-chart", "^DJI": "i-landmark", "^N225": "i-flag", "^VIX": "i-flame" };
@@ -230,7 +230,10 @@ function setupDashSearch() {
             <span class="name">${escHtml(it.name)}</span>
           </div>`).join("");
         results.classList.remove("hidden");
-      } catch { results.classList.add("hidden"); }
+      } catch (err) {
+        results.innerHTML = `<div class="dash-search-item" style="color:var(--muted);font-size:12px;">⚠ Error de búsqueda — intenta de nuevo</div>`;
+        results.classList.remove("hidden");
+      }
     }, 250);
   });
   input.addEventListener("blur", () => setTimeout(() => results.classList.add("hidden"), 200));

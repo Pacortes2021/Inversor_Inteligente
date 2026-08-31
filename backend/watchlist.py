@@ -80,18 +80,22 @@ def get_watchlist():
             if len(closes) >= 22: perf["1M"] = ((current / closes.iloc[-22]) - 1) * 100
             if len(closes) >= 250: perf["1Y"] = ((current / closes.iloc[0]) - 1) * 100
 
-            # RSI 14
+            # RSI 14 (Wilder's EWM — same as stock.py for consistency)
             if len(closes) >= 15:
-                delta = closes.diff()
-                gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-                loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-                last_g, last_l = gain.iloc[-1], loss.iloc[-1]
-                if last_l is not None and not math.isnan(last_l):
-                    if last_l == 0:
-                        perf["RSI"] = 100.0 if (last_g and last_g > 0) else 50.0
-                    else:
-                        rs = last_g / last_l
-                        perf["RSI"] = round(float(100 - (100 / (1 + rs))), 1)
+                try:
+                    delta = closes.diff()
+                    gain = delta.where(delta > 0, 0.0).ewm(alpha=1/14, adjust=False).mean()
+                    loss = (-delta.where(delta < 0, 0.0)).ewm(alpha=1/14, adjust=False).mean()
+                    g_val = float(gain.iloc[-1])
+                    l_val = float(loss.iloc[-1])
+                    if not math.isnan(l_val) and not math.isnan(g_val):
+                        if l_val == 0:
+                            perf["RSI"] = 100.0 if (g_val > 0) else 50.0
+                        else:
+                            rs = g_val / l_val
+                            perf["RSI"] = round(100.0 - (100.0 / (1.0 + rs)), 1)
+                except Exception:
+                    pass
 
             # Reemplazar precio cacheado por precio fresco
             out["price"] = current
@@ -114,6 +118,7 @@ def get_watchlist():
                 "targetBase": row.get("targetBase"),
                 "targetOpt": row.get("targetOpt"),
                 "cagrBase": row.get("cagrBase"),
+                "divYield": row.get("divYield"),
             })
             if "price" not in out or out["price"] is None:
                 out["price"] = row.get("price")

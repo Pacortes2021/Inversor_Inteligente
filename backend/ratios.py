@@ -216,13 +216,25 @@ def calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps_
     elif annuals:
         roe_ttm = annuals[-1].get("roe")
 
-    shares_now = M._f(info.get("sharesOutstanding"))
-    fcf_ps_ttm = (fcf_now / shares_now) if (fcf_now and shares_now and shares_now > 0) else None
+    def _calc_fcf_ps(fcf, sh):
+        if not fcf or not sh or sh <= 0:
+            return None
+        val = fcf / sh
+        if val > 500:
+            val = fcf / (sh * 1_000_000.0)
+        elif val > 50:
+            val = fcf / (sh * 1_000.0)
+        return round(val, 2) if (val and val > 0 and val < 500) else None
 
-    fcf_ps_5y_avg = None
-    fcf_ps_vals = [a["fcf"] / a["sharesOut"] for a in last_5_annuals if a.get("fcf") and a.get("sharesOut")]
-    if fcf_ps_vals:
-        fcf_ps_5y_avg = sum(fcf_ps_vals) / len(fcf_ps_vals)
+    shares_now = M._f(info.get("sharesOutstanding"))
+    fcf_ps_ttm = _calc_fcf_ps(fcf_now, shares_now) if (fcf_now and shares_now) else None
+
+    fcf_ps_vals = []
+    for a in last_5_annuals:
+        fps = _calc_fcf_ps(a.get("fcf"), a.get("sharesOut"))
+        if fps:
+            fcf_ps_vals.append(fps)
+    fcf_ps_5y_avg = round(sum(fcf_ps_vals) / len(fcf_ps_vals), 2) if fcf_ps_vals else None
 
     roc_ttm = V.greenblatt_roc(info, annuals)
 

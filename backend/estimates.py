@@ -366,9 +366,20 @@ def _build_growth_grid(symbol, raw, info, annuals=None, price=None, fmp_rows=Non
             "cagr": cagr,
         }
 
+    mrq_str = None
+    if info:
+        mrq_ts = info.get("mostRecentQuarter") or info.get("lastFiscalYearEnd")
+        if mrq_ts:
+            try:
+                mrq_str = time.strftime("%Y-%m-%d", time.gmtime(int(mrq_ts)))
+            except Exception:
+                mrq_str = str(mrq_ts)
+
     return jclean({
         "currency": curr,
         "years": year_headers,
+        "lastUpdated": time.strftime("%Y-%m-%d"),
+        "mostRecentQuarter": mrq_str,
         "rows": [
             build_metric_row("Revenues", rev_all, in_millions=True),
             build_metric_row("Ebitda", ebitda_all, in_millions=True),

@@ -1,9 +1,9 @@
 /* Watchlist: acciones seguidas con margen de seguridad objetivo. */
 
-import { $, toast, apiFetch } from "./dom.js";
-import { state } from "./state.js";
-import { setStarState } from "./analysis.js";
-import { fmtBig, fmtPrice, fmtPct, escHtml } from "./format.js";
+import { $, toast, apiFetch } from "./dom.js?v=74";
+import { state } from "./state.js?v=74";
+import { setStarState } from "./analysis.js?v=74";
+import { fmtBig, fmtPrice, fmtPct, escHtml } from "./format.js?v=74";
 
 export let wlLoaded = false;
 let wlItems = [];
@@ -27,7 +27,7 @@ export async function loadWatchlist(refresh = false) {
   }
 }
 
-let wlSortCol = 'inBuyZone';
+let wlSortCol = 'marketCap';
 let wlSortAsc = false;
 
 export function wlSort(col) {
@@ -41,23 +41,44 @@ export function wlSort(col) {
 }
 
 function updateSortHeaders() {
-  const cols = ['symbol', 'price', 'perf', 'marketCap', 'rsi', 'pe', 'forwardPe', 'targetBase', 'targetPessimistic', 'targetOpt', 'inBuyZone'];
+  const cols = ['symbol', 'price', 'perf', 'marketCap', 'rsi', 'pe', 'forwardPe', 'divYield', 'targetBase', 'targetPessimistic', 'targetOpt'];
   cols.forEach(c => {
     const el = document.getElementById('sort-' + c);
     if (el) el.innerText = (wlSortCol === c) ? (wlSortAsc ? ' ▲' : ' ▼') : '';
   });
 }
 
+function getDivAccumulated4y(it) {
+  const px = it.price || 0;
+  const y = it.divYield || 0;
+  if (y <= 0.05 || px <= 0) return 0;
+  const annualDiv = px * (y / 100);
+  let acc = 0;
+  let cur = annualDiv;
+  for (let i = 1; i <= 4; i++) {
+    cur *= 1.05;
+    acc += cur;
+  }
+  return acc;
+}
+
 function renderWatchlist() {
   const items = wlItems;
-  if (!items.length) {
+  if (!items || !items.length) {
     document.getElementById("wl-empty").classList.remove("hidden");
     document.getElementById("wl-table").classList.add("hidden");
     return;
   }
+
+  const chkWlDivs = document.getElementById("wl-chk-divs");
+  if (chkWlDivs && !chkWlDivs.dataset.bound) {
+    chkWlDivs.dataset.bound = "true";
+    chkWlDivs.addEventListener("change", () => renderWatchlist());
+  }
+  const includeDivs = chkWlDivs ? chkWlDivs.checked : false;
   
-  // Lógica de ordenamiento
-  items.sort((a, b) => {
+  // Lógica de ordenamiento segura sin mutación descontrolada
+  const sortedItems = [...items].sort((a, b) => {
     let valA, valB;
     if (wlSortCol === 'perf') {
       valA = a.perf?.[wlPeriod] ?? -999999;
@@ -66,36 +87,35 @@ function renderWatchlist() {
       valA = a.perf?.RSI ?? -999999;
       valB = b.perf?.RSI ?? -999999;
     } else if (wlSortCol === 'symbol') {
-      valA = a.symbol;
-      valB = b.symbol;
+      valA = a.symbol || "";
+      valB = b.symbol || "";
     } else {
       valA = a[wlSortCol] ?? -999999;
       valB = b[wlSortCol] ?? -999999;
-      // Para inBuyZone (true/false) convertir a numero para sort
-      if (typeof valA === 'boolean') valA = valA ? 1 : 0;
-      if (typeof valB === 'boolean') valB = valB ? 1 : 0;
     }
     
     if (typeof valA === 'string' && typeof valB === 'string') {
       return wlSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
     }
-    return wlSortAsc ? (valA - valB) : (valB - valA);
+    const numA = Number(valA) || -999999;
+    const numB = Number(valB) || -999999;
+    return wlSortAsc ? (numA - numB) : (numB - numA);
   });
   
   updateSortHeaders();
   const tbody = document.querySelector("#wl-table tbody");
-  tbody.innerHTML = items.map(it => {
-    const zone = it.inBuyZone === true
-      ? `<span class="zone-chip buy">EN ZONA DE COMPRA</span>`
-      : it.inBuyZone === false
-        ? `<span class="zone-chip wait">Esperando precio</span>`
-        : `<span class="zone-chip na">Sin datos</span>`;
-
+  if (!tbody) return;
+  tbody.innerHTML = sortedItems.map(it => {
     const cur = it.currency || "USD";
     const px = it.price;
     const mcap = it.marketCap ? fmtBig(it.marketCap, cur) : "—";
     const pe = it.pe ? it.pe.toFixed(1) : "—";
     const fpe = it.forwardPe ? it.forwardPe.toFixed(1) : "—";
+    const divYieldVal = it.divYield != null && it.divYield > 0.05 ? `${it.divYield.toFixed(2)}%` : "—";
+    const divYieldHtml = divYieldVal !== "—" 
+      ? `<span style="color:var(--primary, #10b981); font-weight:700;">${divYieldVal}</span>`
+      : `<span class="muted">—</span>`;
+    const div4y = getDivAccumulated4y(it);
     
     // Rendimiento actual según wlPeriod
     const perfData = it.perf || {};
@@ -113,17 +133,30 @@ function renderWatchlist() {
         rsiHtml = `<span style="color:${rsiColor}; font-weight:600;">${rsi.toFixed(1)}</span>`;
     }
 
-    // Targets por escenario con badge de distancia al precio actual
-    const tgtCell = (val, cls) => {
-      if (val == null || px == null) return `<td class="num">—</td>`;
-      const upside = ((val / px) - 1) * 100;
-      const isAbove = upside >= 0;
-      return `<td class="num" style="white-space:nowrap;">
-        <span style="font-weight:700;">${fmtPrice(val, cur)}</span>
-        <span style="font-size:10px; margin-left:3px; padding:1px 5px; border-radius:4px; font-weight:700;
-          background:${isAbove ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)'};
+    // Targets por escenario con badge de retorno anualizado (CAGR %/año) para fácil comparación con S&P 500 (~10%/a)
+    const tgtCell = (val) => {
+      if (val == null || px == null || px <= 0) return `<td class="num">—</td>`;
+      const finalVal = includeDivs ? (val + div4y) : val;
+      const totalReturnPct = ((finalVal - px) / px) * 100;
+
+      let cagrPct = 0;
+      if (finalVal > 0 && px > 0) {
+        cagrPct = (Math.pow(finalVal / px, 0.25) - 1) * 100;
+      } else {
+        cagrPct = totalReturnPct;
+      }
+
+      const isAbove = cagrPct >= 0;
+      const titleAttr = includeDivs && div4y > 0 
+        ? `Retorno Total 4A: ${totalReturnPct > 0 ? '+' : ''}${totalReturnPct.toFixed(1)}% | Precio 2030E (${fmtPrice(val, cur)}) + Dividendos (${fmtPrice(div4y, cur)})` 
+        : `Retorno Acumulado 4A: ${totalReturnPct > 0 ? '+' : ''}${totalReturnPct.toFixed(1)}% | Precio Objetivo 2030E (${fmtPrice(val, cur)})`;
+
+      return `<td class="num" style="white-space:nowrap;" title="${escHtml(titleAttr)}">
+        <span style="font-weight:700;">${fmtPrice(finalVal, cur)}</span>
+        <span style="font-size:10.5px; margin-left:3px; padding:2px 5px; border-radius:4px; font-weight:700;
+          background:${isAbove ? 'rgba(16,185,129,0.14)' : 'rgba(239,68,68,0.14)'};
           color:${isAbove ? 'var(--green)' : 'var(--red)'}">
-          ${isAbove ? '+' : ''}${upside.toFixed(0)}%
+          ${isAbove ? '+' : ''}${cagrPct.toFixed(1)}%/a
         </span>
       </td>`;
     };
@@ -139,10 +172,10 @@ function renderWatchlist() {
       <td class="num">${rsiHtml}</td>
       <td class="num" style="font-size:13px; font-weight:600;">${pe}</td>
       <td class="num" style="font-size:13px; font-weight:600;">${fpe}</td>
-      ${tgtCell(it.targetBase, 'base')}
-      ${tgtCell(it.targetPessimistic, 'cons')}
-      ${tgtCell(it.targetOpt, 'opt')}
-      <td class="center">${zone}</td>
+      <td class="num" style="font-size:13px;">${divYieldHtml}</td>
+      ${tgtCell(it.targetBase)}
+      ${tgtCell(it.targetPessimistic)}
+      ${tgtCell(it.targetOpt)}
       <td class="center">
           <button style="background:transparent; border:none; cursor:pointer; color:var(--muted); padding:6px; border-radius:50%; transition:all 0.2s;" 
                   onmouseover="this.style.background='var(--hover)'; this.style.color='var(--red)';"
@@ -156,14 +189,15 @@ function renderWatchlist() {
   document.getElementById("wl-table").classList.remove("hidden");
 }
 
-/* Event Listeners de los Toggles de Watchlist */
-document.querySelectorAll('#wl-perf-toggles .tg-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        document.querySelectorAll('#wl-perf-toggles .tg-btn').forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
-        wlPeriod = e.target.getAttribute('data-period');
-        renderWatchlist();
-    });
+/* Delegación de Eventos para Toggles de Periodo */
+document.addEventListener("click", e => {
+  const btn = e.target.closest('#wl-perf-toggles .tg-btn');
+  if (btn) {
+    document.querySelectorAll('#wl-perf-toggles .tg-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    wlPeriod = btn.getAttribute('data-period') || '1D';
+    renderWatchlist();
+  }
 });
 
 export async function wlAdd(symbol, targetMos = 25) {
@@ -245,7 +279,7 @@ document.addEventListener("click", e => {
 });
 
 /* Orden de columnas: los <th> de la tabla estática llevan data-k="col". */
-document.getElementById("wl-table")?.querySelector("thead").addEventListener("click", e => {
-  const th = e.target.closest("th[data-k]");
+document.addEventListener("click", e => {
+  const th = e.target.closest("#wl-table th[data-k]");
   if (th) wlSort(th.dataset.k);
 });

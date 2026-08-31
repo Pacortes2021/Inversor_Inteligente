@@ -83,6 +83,33 @@ def build_warnings(info, annuals, valuation, pe_pairs, edgar_hist):
             w.append(f"El P/E trailing sin ajustar de Yahoo ({raw_pe:.1f}x) presentó una distorsión contable por cargos atípicos. "
                      f"La app lo auditó y normalizó a {cur_pe:.1f}x según la utilidad neta TTM real.")
 
+    # 7. Valoración: margen de seguridad negativo significativo
+    mos = valuation.get("marginOfSafety")
+    consensus_price = valuation.get("consensus")
+    if _ok(mos) and _ok(consensus_price):
+        if mos < -20:
+            w.append(f"El precio actual supera en {abs(mos):.0f}% el valor intrínseco consensuado "
+                     f"(${consensus_price:.0f}) — la acción aparenta estar sobrevalorada según los modelos actuales.")
+        elif mos > 30:
+            w.append(f"El precio actual cotiza con un descuento de {mos:.0f}% sobre el valor intrínseco "
+                     f"(${consensus_price:.0f}) — puede haber una oportunidad de compra.")
+
+    # 8. PE actual en extremo superior del rango histórico
+    if pe_pairs and len(pe_pairs) > 20:
+        vals = [p[1] for p in pe_pairs if _ok(p[1]) and 0 < p[1] < 200]
+        if vals:
+            sorted_vals = sorted(vals)
+            p75 = sorted_vals[int(len(sorted_vals) * 0.75)]
+            p90 = sorted_vals[int(len(sorted_vals) * 0.90)]
+            current_pe = vals[-1] if vals else None
+            if _ok(current_pe):
+                if current_pe > p90:
+                    w.append(f"El P/E actual ({current_pe:.1f}x) está en el percentil 90 de su historia — "
+                             "históricamente ha precedido retornos inferiores al promedio.")
+                elif current_pe < sorted_vals[int(len(sorted_vals) * 0.10)]:
+                    w.append(f"El P/E actual ({current_pe:.1f}x) está en el percentil 10 de su historia — "
+                             "podría reflejar pesimismo excesivo del mercado.")
+
     return w
 
 

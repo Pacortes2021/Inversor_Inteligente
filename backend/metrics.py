@@ -327,8 +327,11 @@ def build_fundamentals(inc, bs, cf, dividends=None):
         roic = (ebit * (1 - tax_rate) / invested * 100) if (ebit is not None and invested and invested > 0) else None
 
         year = pd.Timestamp(col).year
+        month = pd.Timestamp(col).month
+        quarter = (month - 1) // 3 + 1  # 1-4 based on month
         out.append({
             "year": year,
+            "quarter": quarter,
             "endDate": _ts(col),
             "revenue": rev, "netIncome": ni, "eps": eps,
             "grossMargin": (gp / rev * 100) if (gp is not None and rev) else None,
@@ -395,11 +398,22 @@ def shares_series(raw: RawData):
 # -------------------------------------------------------------- historia larga
 # Dividendos anuales (historia larga de Yahoo)
 
-def dividend_history(raw: RawData, max_years=25):
+def dividend_history(raw, prices=None, max_years=25):
     if raw.dividends is None or raw.dividends.empty:
         return []
     ann = raw.dividends.groupby(raw.dividends.index.year).sum()
+    import pandas as pd
     cur_year = pd.Timestamp.now().year
     ann = ann[ann.index >= cur_year - max_years]
-    # el año en curso está incompleto: se marca aparte en el frontend
-    return [[int(y), round(float(v), 4)] for y, v in ann.items()]
+    
+    res = []
+    for y, v in ann.items():
+        yld = None
+        if prices is not None and not prices.empty:
+            px_yr = prices[prices.index.year == y]["Close"]
+            if not px_yr.empty:
+                avg_px = float(px_yr.mean())
+                if avg_px > 0:
+                    yld = round(float(v) / avg_px * 100, 2)
+        res.append([int(y), round(float(v), 4), yld])
+    return res

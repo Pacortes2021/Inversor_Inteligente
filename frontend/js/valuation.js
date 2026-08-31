@@ -1,11 +1,11 @@
 /* Valoración (DCF interactivo, modelos, sensibilidad), estimaciones,
    insiders, estados financieros y paneles de valoración standalone. */
 
-import { $, toast } from "./dom.js";
-import { state } from "./state.js";
-import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, escHtml, pctClass } from "./format.js";
-import { termify } from "./glossary.js";
-import { charts } from "./charts.js";
+import { $, toast } from "./dom.js?v=74";
+import { state } from "./state.js?v=74";
+import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, fmtDate, escHtml, pctClass } from "./format.js?v=74";
+import { termify } from "./glossary.js?v=74";
+import { charts } from "./charts.js?v=74";
 
 /* ------------------------------------------- valoración + DCF live */
 export function dcfJs(inp, growth, discount, terminal) {
@@ -127,9 +127,9 @@ export function renderValuationCard(d) {
 
 export function renderModels(d, dcfLive) {
   if (!$("models-table")) return;
-  const price = d.quote.price;
-  const cur = d.profile.currency;
-  const models = d.valuation.models.map(m => ({ ...m }));
+  const price = d.quote ? d.quote.price : 0;
+  const cur = d.profile ? d.profile.currency : "USD";
+  const models = (d.valuation && d.valuation.models) ? d.valuation.models.map(m => ({ ...m })) : [];
   const dcfModel = models.find(m => m.id === "dcf");
   if (dcfModel && dcfLive != null) {
     dcfModel.fair = dcfLive;
@@ -156,12 +156,12 @@ export function renderModels(d, dcfLive) {
       <tbody>
         ${rows}
         <tr class="consensus-row">
-          <td>Valor intrínseco (consenso ponderado)</td>
+          <td>${termify("Valor intrínseco (consenso ponderado)", "consenso")}</td>
           <td class="fair">${fmtPrice(consensus, cur)}</td>
           <td class="upside ${pctClass(mos)}">${fmtPct(mos, 1, true)}</td>
         </tr>
         <tr class="buy-price-row">
-          <td>Precio de compra aceptable <span class="muted" style="font-weight:400">(MoS 25%)</span></td>
+          <td>${termify("Precio de compra aceptable", "buyprice")} <span class="muted" style="font-weight:400">(MoS 25%)</span></td>
           <td class="fair">${fmtPrice(consensus / 1.25, cur)}</td>
           <td class="upside ${pctClass(consensus / 1.25 / price * 100 - 100)}">${fmtPct(consensus / 1.25 / price * 100 - 100, 1, true)}</td>
         </tr>
@@ -339,7 +339,7 @@ export function renderRatiosGrid(d) {
 
   // Helper para formato de diferencias porcentuales
   const fmtDiff = (comp, compRef) => {
-    if (comp == null || compRef == null || compRef === 0) return "—";
+    if (comp == null || compRef == null || compRef === 0 || !isFinite(comp) || !isFinite(compRef)) return null;
     const diff = ((comp - compRef) / Math.abs(compRef)) * 100;
     const up = diff >= 0;
     const sign = up ? "↑" : "↓";
@@ -350,7 +350,13 @@ export function renderRatiosGrid(d) {
     };
   };
 
-  const populateRowLeft = (rowId, metricData, isMarginOrYield = false) => {
+  const fmtVal = (val, isPct = false, isPbOrDe = false) => {
+    if (val == null || !isFinite(val)) return "—";
+    if (isPbOrDe && val < 0) return "N/A (Recompras)";
+    return isPct ? fmtPct(val, 2) : val.toFixed(2);
+  };
+
+  const populateRowLeft = (rowId, metricData, isMarginOrYield = false, isPb = false) => {
     const row = $(rowId);
     if (!row || !metricData) return;
     const compVal = metricData.val;
@@ -363,14 +369,14 @@ export function renderRatiosGrid(d) {
     const avg5yCell = row.querySelector(".val-5y");
     const diff5yCell = row.querySelector(".val-diff-5y");
 
-    if (compCell) compCell.textContent = compVal != null ? (isMarginOrYield ? fmtPct(compVal, 2) : compVal.toFixed(2)) : "—";
-    if (sectCell) sectCell.textContent = sectVal != null ? (isMarginOrYield ? fmtPct(sectVal, 2) : sectVal.toFixed(2)) : "—";
-    if (avg5yCell) avg5yCell.textContent = avg5yVal != null ? (isMarginOrYield ? fmtPct(avg5yVal, 2) : avg5yVal.toFixed(2)) : "—";
+    if (compCell) compCell.textContent = fmtVal(compVal, isMarginOrYield, isPb);
+    if (sectCell) sectCell.textContent = fmtVal(sectVal, isMarginOrYield, isPb);
+    if (avg5yCell) avg5yCell.textContent = fmtVal(avg5yVal, isMarginOrYield, isPb);
 
     // Diferencia vs Sector
-    const diffSec = fmtDiff(compVal, sectVal);
+    const diffSec = (compVal != null && compVal >= 0 && sectVal != null && sectVal >= 0) ? fmtDiff(compVal, sectVal) : null;
     if (diffSectCell) {
-      if (diffSec !== "—") {
+      if (diffSec) {
         diffSectCell.textContent = diffSec.text;
         const isGreen = isMarginOrYield ? diffSec.val >= 0 : diffSec.val <= 0;
         diffSectCell.className = "text-right " + (isGreen ? "up" : "down");
@@ -381,9 +387,9 @@ export function renderRatiosGrid(d) {
     }
 
     // Diferencia vs 5Y Avg
-    const diff5y = fmtDiff(compVal, avg5yVal);
+    const diff5y = (compVal != null && compVal >= 0 && avg5yVal != null && avg5yVal >= 0) ? fmtDiff(compVal, avg5yVal) : null;
     if (diff5yCell) {
-      if (diff5y !== "—") {
+      if (diff5y) {
         diff5yCell.textContent = diff5y.text;
         const isGreen = isMarginOrYield ? diff5y.val >= 0 : diff5y.val <= 0;
         diff5yCell.className = "text-right " + (isGreen ? "up" : "down");
@@ -404,14 +410,14 @@ export function renderRatiosGrid(d) {
     const avg5yCell = row.querySelector(".val-5y");
     const diffCell = row.querySelector(".val-diff");
 
-    if (compCell) compCell.textContent = compVal != null ? (isRoe ? fmtPct(compVal, 2) : compVal.toFixed(2)) : "—";
-    if (avg5yCell) avg5yCell.textContent = avg5yVal != null ? (isRoe ? fmtPct(avg5yVal, 2) : avg5yVal.toFixed(2)) : "—";
+    if (compCell) compCell.textContent = fmtVal(compVal, isRoe, isMultipleOrDebt);
+    if (avg5yCell) avg5yCell.textContent = fmtVal(avg5yVal, isRoe, isMultipleOrDebt);
 
-    const diff = fmtDiff(compVal, avg5yVal);
+    const diff = (compVal != null && compVal >= 0 && avg5yVal != null && avg5yVal >= 0) ? fmtDiff(compVal, avg5yVal) : null;
     if (diffCell) {
-      if (diff !== "—") {
+      if (diff) {
         diffCell.textContent = diff.text;
-        const isGreen = isMultipleOrDebt ? diff.val <= 0 : (isRoe ? diff.val >= 0 : diff.val >= 0);
+        const isGreen = isMultipleOrDebt ? diff.val <= 0 : diff.val >= 0;
         diffCell.className = "text-right " + (isGreen ? "up" : "down");
       } else {
         diffCell.textContent = "—";
@@ -423,7 +429,7 @@ export function renderRatiosGrid(d) {
 
   // Rellenar tabla izquierda
   populateRowLeft("row-tbl-pe", r.pe);
-  populateRowLeft("row-tbl-pb", r.pb);
+  populateRowLeft("row-tbl-pb", r.pb, false, true);
   populateRowLeft("row-tbl-ps", r.ps);
   populateRowLeft("row-tbl-pcf", r.pcf);
   populateRowLeft("row-tbl-margin", r.netMargin, true);
@@ -451,8 +457,18 @@ export function renderRatiosGrid(d) {
     }
     $(valId).textContent = valText;
     const iconCell = $(iconId);
-    iconCell.textContent = pass ? "👍" : "👎";
-    iconCell.style.color = pass ? "#10b981" : "#ef4444";
+    if (iconCell) {
+      if (pass === true) {
+        iconCell.textContent = "✅";
+        iconCell.style.color = "#10b981";
+      } else if (pass === false) {
+        iconCell.textContent = "❌";
+        iconCell.style.color = "#ef4444";
+      } else {
+        iconCell.textContent = "—";
+        iconCell.style.color = "var(--muted)";
+      }
+    }
   };
 
   // 1. P/E Ratio < Sector PE
@@ -483,14 +499,16 @@ export function renderRatiosGrid(d) {
   const divYield = d.current.divYield;
   const payoutRaw = d.current.payout;
   const hasDividend = divYield != null && divYield > 0.001;
-  const payout = payoutRaw != null ? (payoutRaw > 1.0 ? payoutRaw : payoutRaw * 100) : 0.0;
+  // API returns payout as decimal (0.40 = 40%). Multiply by 100 to get percentage.
+  // If somehow > 10 it's already in percentage (some fallback sources) — cap at reasonable max.
+  const payout = payoutRaw != null ? (payoutRaw > 10 ? Math.min(payoutRaw, 500) : payoutRaw * 100) : 0.0;
 
   let payoutPass, payoutValText;
   if (!hasDividend) {
     payoutPass = null; // N/A
     payoutValText = "Sin dividendo";
   } else {
-    payoutPass = payout < 50.0;
+    payoutPass = payout < 80.0;  // >80% is unsustainable; >50% is a yellow flag
     payoutValText = fmtPct(payout, 0);
   }
   updateCheckRow("chk-payout-row", null, "chk-payout-val", "chk-payout-icon", payoutPass,
@@ -616,11 +634,15 @@ export function renderGrowthEstimatesGrid(grid) {
   const src = grid.epsSources;
   const warnEl = $("est-growth-warning");
   if (warnEl) {
+    const lastUp = grid.lastUpdated ? fmtDate(grid.lastUpdated) : fmtDate(new Date());
+    const mrq = grid.mostRecentQuarter ? fmtDate(grid.mostRecentQuarter) : null;
+    const dateBadge = `<span class="badge badge-base" style="font-size:11px; margin-left:8px; font-weight:600; padding:2px 8px; border-radius:4px;" title="Fecha de captura y actualización de previsiones post-reporte de ganancias">📅 Previsiones: ${lastUp}${mrq ? ` | Último Reporte: ${mrq}` : ''}</span>`;
+
     if (src && src.fmp) {
-      warnEl.innerHTML = `✅ EPS y flujos proyectados con <b>consenso de analistas oficial (FMP)</b> — valores reales por ejercicio.`;
+      warnEl.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;"><span>✅ EPS y flujos proyectados con <b>consenso de analistas oficial (FMP)</b> — valores reales por ejercicio.</span> ${dateBadge}</div>`;
       warnEl.style.display = "block";
     } else {
-      warnEl.innerHTML = `✅ EPS y flujos proyectados con <b>consenso de analistas oficial (Finnhub / Yahoo Finance)</b>.`;
+      warnEl.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;"><span>✅ EPS y flujos proyectados con <b>consenso de analistas oficial (Finnhub / Yahoo Finance)</b>.</span> ${dateBadge}</div>`;
       warnEl.style.display = "block";
     }
   }
@@ -724,7 +746,7 @@ export function renderEpsValuationCalculator(d) {
     const cleanFpe = (d.current?.forwardPe && d.current.forwardPe > 0 && d.current.forwardPe <= 80) ? d.current.forwardPe : null;
     const epsCurrent = cleanPe ? (currentPrice / cleanPe) : null;
     const epsFwd = cleanFpe ? (currentPrice / cleanFpe) : null;
-    const epsBase = epsFwd ? epsFwd : (epsCurrent ? epsCurrent * (1 + growthEst) : null);
+    const epsBase = epsFwd ? epsFwd : (epsCurrent ? epsCurrent : (currentPrice / medianPe));
     if (epsBase && epsBase > 0) {
       eps2030 = epsBase * Math.pow(1 + growthEst, 4);
     }
@@ -744,11 +766,52 @@ export function renderEpsValuationCalculator(d) {
   // Optimistic PE = 20% above Historical Median PE
   const optPe = basePe * 1.20;
 
+  // ── Dividend calculation over 4 years (2026E-2030E) ──
+  const chkDivs = $("chk-include-divs");
+  const includeDivs = chkDivs ? chkDivs.checked : false;
+
+  let divAccumulated4y = 0;
+  let divYieldPct = d.current?.divYield || 0;
+  if (divYieldPct > 0 && currentPrice > 0) {
+    const annualDivBase = (d.current?.dividendRate && d.current.dividendRate > 0)
+      ? d.current.dividendRate
+      : (currentPrice * (divYieldPct / 100));
+
+    let divGrowth = 0.05;
+    const divHist = (d.annuals || []).map(a => a.dividend).filter(v => v != null && v > 0);
+    if (divHist.length >= 3 && divHist[0] > 0) {
+      const gCalc = (divHist[divHist.length - 1] / divHist[0]) ** (1 / (divHist.length - 1)) - 1;
+      if (gCalc >= 0 && gCalc <= 0.15) divGrowth = gCalc;
+    }
+
+    let curDiv = annualDivBase;
+    for (let yr = 1; yr <= 4; yr++) {
+      curDiv *= (1 + divGrowth);
+      divAccumulated4y += curDiv;
+    }
+  }
+
   function calcReturn(targetPe) {
     const targetPrice = eps2030 * targetPe;
-    const totalReturnPct = ((targetPrice - currentPrice) / currentPrice) * 100;
-    const cagrPct = currentPrice > 0 && targetPrice > 0 ? ((targetPrice / currentPrice) ** (1 / 4) - 1) * 100 : 0;
-    return { targetPrice, totalReturnPct, cagrPct };
+    const finalVal = includeDivs ? (targetPrice + divAccumulated4y) : targetPrice;
+    const totalReturnPct = ((finalVal - currentPrice) / currentPrice) * 100;
+    const cagrPct = currentPrice > 0 && finalVal > 0 ? ((finalVal / currentPrice) ** (1 / 4) - 1) * 100 : 0;
+    return { targetPrice, finalVal, totalReturnPct, cagrPct, divAccumulated4y };
+  }
+
+  // Update notification banner
+  const divNoteEl = $("est-pe-div-note");
+  if (divNoteEl) {
+    if (includeDivs && divAccumulated4y > 0) {
+      divNoteEl.innerHTML = `💰 <b>Retorno Total activado:</b> Se han acumulado <b>+${fmtPrice(divAccumulated4y, curr)}</b> en dividendos proyectados a 4 años (${divYieldPct.toFixed(2)}% yield base). El porcentaje exhibido corresponde a la rentabilidad real total del inversor.`;
+      divNoteEl.classList.remove("hidden");
+    } else {
+      divNoteEl.classList.add("hidden");
+    }
+  }
+
+  if (chkDivs) {
+    chkDivs.onchange = () => renderEpsValuationCalculator(d);
   }
 
   const consRes = calcReturn(consPe);
@@ -756,16 +819,16 @@ export function renderEpsValuationCalculator(d) {
   const optRes = calcReturn(optPe);
 
   if ($("est-pe-cons-label")) $("est-pe-cons-label").textContent = `Conservador (-20%: ${consPe.toFixed(1)}x)`;
-  if ($("est-pe-cons-price")) $("est-pe-cons-price").textContent = fmtPrice(consRes.targetPrice, curr);
+  if ($("est-pe-cons-price")) $("est-pe-cons-price").textContent = fmtPrice(includeDivs ? consRes.finalVal : consRes.targetPrice, curr);
   if ($("est-pe-cons-ret")) $("est-pe-cons-ret").innerHTML = `<span class="${consRes.totalReturnPct >= 0 ? 'up' : 'down'}">${fmtPct(consRes.totalReturnPct, 1, true)}</span> <span style="font-size:11px; font-weight:400; color:var(--muted);">(${fmtPct(consRes.cagrPct, 1, true)}/año)</span>`;
 
   const labelBaseText = isAdjusted ? `★ Base (Fwd PER: ${basePe.toFixed(1)}x)` : `★ Base (Mediana Histórica: ${basePe.toFixed(1)}x)`;
   if ($("est-pe-base-label")) $("est-pe-base-label").textContent = labelBaseText;
-  if ($("est-pe-base-price")) $("est-pe-base-price").textContent = fmtPrice(baseRes.targetPrice, curr);
+  if ($("est-pe-base-price")) $("est-pe-base-price").textContent = fmtPrice(includeDivs ? baseRes.finalVal : baseRes.targetPrice, curr);
   if ($("est-pe-base-ret")) $("est-pe-base-ret").innerHTML = `<span class="${baseRes.totalReturnPct >= 0 ? 'up' : 'down'}">${fmtPct(baseRes.totalReturnPct, 1, true)}</span> <span style="font-size:11px; font-weight:400; color:var(--muted);">(${fmtPct(baseRes.cagrPct, 1, true)}/año)</span>`;
 
   if ($("est-pe-opt-label")) $("est-pe-opt-label").textContent = `Optimista (+20% Mediana: ${optPe.toFixed(1)}x)`;
-  if ($("est-pe-opt-price")) $("est-pe-opt-price").textContent = fmtPrice(optRes.targetPrice, curr);
+  if ($("est-pe-opt-price")) $("est-pe-opt-price").textContent = fmtPrice(includeDivs ? optRes.finalVal : optRes.targetPrice, curr);
   if ($("est-pe-opt-ret")) $("est-pe-opt-ret").innerHTML = `<span class="${optRes.totalReturnPct >= 0 ? 'up' : 'down'}">${fmtPct(optRes.totalReturnPct, 1, true)}</span> <span style="font-size:11px; font-weight:400; color:var(--muted);">(${fmtPct(optRes.cagrPct, 1, true)}/año)</span>`;
 
   const slider = $("est-pe-slider");
@@ -777,7 +840,7 @@ export function renderEpsValuationCalculator(d) {
       if ($("est-pe-val")) $("est-pe-val").textContent = customPe.toFixed(1) + "x";
       const customRes = calcReturn(customPe);
 
-      if ($("est-pe-custom-price")) $("est-pe-custom-price").textContent = fmtPrice(customRes.targetPrice, curr);
+      if ($("est-pe-custom-price")) $("est-pe-custom-price").textContent = fmtPrice(includeDivs ? customRes.finalVal : customRes.targetPrice, curr);
 
       const totEl = $("est-pe-custom-tot");
       if (totEl) {
@@ -936,7 +999,16 @@ export function renderFinancialStatements(d, stmtType = currentFinStmt, freqType
   currentFinFreq = freqType;
 
   const series = freqType === "annual" ? (d.annuals || []) : (d.quarterlies || []);
-  const periods = series.map(a => freqType === "annual" ? a.year : new Date(a.endDate).toISOString().split('T')[0]);
+  const periods = series.map(a => {
+    if (freqType === "annual") return a.year;
+    // endDate is a Unix ms timestamp — convert to Q# YYYY label
+    const ts = a.endDate;
+    if (!ts) return a.year || "—";
+    const dt = new Date(ts);
+    const month = dt.getUTCMonth(); // 0-11
+    const q = Math.floor(month / 3) + 1;
+    return `Q${q} ${dt.getUTCFullYear()}`;
+  });
   const cur = d.profile.currency || "USD";
 
   // Botones activos de estado

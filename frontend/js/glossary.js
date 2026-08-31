@@ -27,10 +27,13 @@ const GLOSSARY = {
   divyield: { t: "Rendimiento del dividendo", d: "Cuánto te paga en dividendos al año como % del precio de hoy. Un yield muy alto puede ser trampa: revisa que el payout sea sostenible.", e: "Acción a $100 que paga $3 al año → yield 3%." },
   payout: { t: "Payout (% de utilidad repartida)", d: "Qué parte de la ganancia se reparte como dividendo. Bajo 60% deja espacio para crecer y aguantar años malos; sobre 80-90% el dividendo puede peligrar. Mejor aún medirlo sobre FCF.", e: "" },
   mos: { t: "Margen de seguridad", d: "El concepto central de Graham y Buffett: la distancia entre lo que VALE la empresa (valor intrínseco estimado) y lo que CUESTA hoy. Comprar con ≥25% de descuento te protege de errores de cálculo y mala suerte.", e: "Valor estimado $130, precio $100 → margen de seguridad +30%: hay colchón." },
-  dcf: { t: "DCF (flujo de caja descontado)", d: "Estima cuánto vale la empresa sumando toda la caja que generará en el futuro, 'descontada' a valor de hoy (porque $1 mañana vale menos que $1 hoy). Sensible a los supuestos — por eso los sliders y la matriz.", e: "" },
+  consenso: { t: "Valor intrínseco (consenso ponderado)", d: "La estimación canónica de la plataforma: promedia ponderadamente los modelos de valoración activos (DCF, PE mediano, Graham, etc.) para obtener una cifra sólida del valor real de la acción.", e: "Si el consenso da $150 y la acción cotiza a $120, hay un margen de seguridad del +25%." },
+  buyprice: { t: "Precio de compra aceptable (MoS 25%)", d: "El precio al que un inversor conservador estilo Warren Buffett buscaría comprar. Aplica un margen de seguridad estricto del 25% sobre el valor intrínseco de consenso (Consenso ÷ 1.25) para protegerse contra imprevistos.", e: "Si el valor justo es $100, el precio de compra aceptable es $80." },
+  dcf: { t: "DCF (flujo de caja descontado)", d: "Proyecta la capacidad real de generar efectivo libre (FCF) a 10 años y los trae a valor presente con el costo de capital (WACC). Es el modelo más directo para medir la generación de caja futura.", e: "" },
   reversedcf: { t: "Reverse DCF (DCF inverso)", d: "En vez de adivinar el crecimiento para obtener un valor, pregunta: ¿qué crecimiento necesita la empresa para justificar su precio ACTUAL? Si la respuesta es irrealista, está cara — sin discutir supuestos.", e: "Si el precio exige 25% anual por 10 años y la empresa crece al 8%, el mercado está soñando." },
-  graham: { t: "Número de Graham", d: "Fórmula clásica de Benjamin Graham (el maestro de Buffett): precio máximo 'razonable' = √(22.5 × EPS × valor libro). Muy conservadora — castiga a las empresas de marcas y software con pocos activos contables.", e: "" },
-  reversion: { t: "Reversión al PE mediano", d: "Si históricamente el mercado pagó PE 20 por esta empresa y hoy paga 12, este modelo estima el precio si volviera a su múltiplo 'normal'. Capado a 30x: no pagamos múltiplos de euforia aunque sean históricos.", e: "" },
+  graham: { t: "Número de Graham / Graham Revisado", d: "Fórmula clásica de Benjamin Graham (maestro de Buffett). La versión revisada usa utilidades y tasas de bonos ($V = EPS \times (8.5 + 2g) \times \frac{4.4}{Y}$). El Número estricto usa activos en libros $\sqrt{22.5 \times EPS \times BVPS}$.", e: "El Número estricto da muy bajo en empresas modernas de marcas o software con pocos activos contables." },
+  reversion: { t: "Reversión al PE mediano", d: "Estima el precio si la acción volviera a cotizar a su múltiplo P/E mediano histórico de los últimos 15 años (EPS actual × P/E Mediano). Capado a 30x máximo.", e: "Si históricamente cotizó a 20x y hoy está a 15x, proyecta la vuelta a 20x." },
+  peg: { t: "Valor Justo Peter Lynch (PEG 1.0)", d: "Formulado por Peter Lynch para empresas en crecimiento ($V = EPS \times (G + Dividend Yield)$). Diseñado para empresas 'growth' (15%+). En empresas defensivas de bajo crecimiento resulta ultra-conservador.", e: "" },
   epv: { t: "EPV Greenwald (cero crecimiento)", d: "¿Cuánto vale la empresa si NUNCA más crece? Capitaliza su ganancia operativa normalizada a perpetuidad. Es el ancla más conservadora: si el precio está bajo el EPV, el crecimiento te lo regalan.", e: "Si EPV = $80 y el precio es $60, pagas menos que un negocio congelado." },
   ey: { t: "Earnings yield (rendimiento de utilidades)", d: "El PE al revés: utilidad anual como % del precio (PE 20 → 5%). Permite comparar la acción contra un bono: si rinde menos que el bono del Tesoro, estás pagando por crecimiento futuro.", e: "" },
   cagr: { t: "CAGR (crecimiento anual compuesto)", d: "El ritmo de crecimiento 'parejo' equivalente entre dos años, como si cada año creciera lo mismo. Es la forma correcta de comparar crecimiento entre períodos y empresas.", e: "De $100 a $200 en 5 años → CAGR 14.9% anual (no 20%)." },
@@ -47,49 +50,63 @@ const GLOSSARY = {
 
 /* ------------------------------------------------------------- popover */
 export function termify(label, key) {
-  return GLOSSARY[key] ? `<span class="term" data-term="${key}">${label}</span>` : label;
+  return GLOSSARY[key] ? `<span class="term" data-term="${key}">${label} <span class="term-icon">ⓘ</span></span>` : label;
 }
 
-(function initGlossary() {
-  const pop = document.createElement("div");
-  pop.id = "glossary-pop";
-  pop.className = "glossary-pop hidden";
-  document.body.appendChild(pop);
-
-  function show(el, key) {
-    const g = GLOSSARY[key];
-    if (!g) return;
-    pop.innerHTML = `<h4>${g.t}</h4><p>${g.d}</p>` +
-      (g.e ? `<p class="gp-example">Ej: ${g.e}</p>` : "") +
-      `<span class="gp-close">✕</span>`;
-    pop.classList.remove("hidden");
-    const r = el.getBoundingClientRect();
-    const pw = 340;
-    let left = Math.min(r.left, window.innerWidth - pw - 16);
-    let top = r.bottom + 8;
-    pop.style.left = Math.max(8, left) + "px";
-    pop.style.top = top + "px";
-    // si no cabe abajo, arriba
-    requestAnimationFrame(() => {
-      const ph = pop.offsetHeight;
-      if (top + ph > window.innerHeight - 10 && r.top - ph - 8 > 0) {
-        pop.style.top = (r.top - ph - 8) + "px";
-      }
-    });
+function getPop() {
+  let pop = document.getElementById("glossary-pop");
+  if (!pop && document.body) {
+    pop = document.createElement("div");
+    pop.id = "glossary-pop";
+    pop.className = "glossary-pop hidden";
+    document.body.appendChild(pop);
   }
+  return pop;
+}
 
-  document.addEventListener("click", e => {
-    const t = e.target.closest("[data-term]");
-    if (t) {
-      e.stopPropagation();
-      show(t, t.dataset.term);
-    } else if (!e.target.closest("#glossary-pop")) {
-      pop.classList.add("hidden");
+function show(el, key) {
+  const g = GLOSSARY[key];
+  if (!g) return;
+  const pop = getPop();
+  if (!pop) return;
+  pop.innerHTML = `<h4>${g.t}</h4><p>${g.d}</p>` +
+    (g.e ? `<p class="gp-example">Ej: ${g.e}</p>` : "") +
+    `<span class="gp-close">✕</span>`;
+  pop.classList.remove("hidden");
+  const r = el.getBoundingClientRect();
+  const pw = 340;
+  let left = Math.min(r.left, window.innerWidth - pw - 16);
+  let top = r.bottom + 8;
+  pop.style.left = Math.max(8, left) + "px";
+  pop.style.top = top + "px";
+  requestAnimationFrame(() => {
+    const ph = pop.offsetHeight;
+    if (top + ph > window.innerHeight - 10 && r.top - ph - 8 > 0) {
+      pop.style.top = (r.top - ph - 8) + "px";
     }
-    if (e.target.classList && e.target.classList.contains("gp-close")) {
-      pop.classList.add("hidden");
-    }
-  }, true);
-  document.addEventListener("keydown", e => { if (e.key === "Escape") pop.classList.add("hidden"); });
-  window.addEventListener("scroll", () => pop.classList.add("hidden"), { passive: true });
-})();
+  });
+}
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-term]");
+  const pop = document.getElementById("glossary-pop");
+  if (t) {
+    e.stopPropagation();
+    show(t, t.dataset.term);
+  } else if (pop && !e.target.closest("#glossary-pop")) {
+    pop.classList.add("hidden");
+  }
+  if (pop && e.target.classList && e.target.classList.contains("gp-close")) {
+    pop.classList.add("hidden");
+  }
+}, true);
+
+document.addEventListener("keydown", e => {
+  const pop = document.getElementById("glossary-pop");
+  if (e.key === "Escape" && pop) pop.classList.add("hidden");
+});
+
+window.addEventListener("scroll", () => {
+  const pop = document.getElementById("glossary-pop");
+  if (pop) pop.classList.add("hidden");
+}, { passive: true });

@@ -1,8 +1,8 @@
 /* Comparador de empresas: hasta 4 lado a lado con gráficos superpuestos. */
 
-import { toast } from "./dom.js";
-import { fmtPrice, fmtBig, fmtPct, fmtRatio, escHtml, pctClass } from "./format.js";
-import { renderCompareCharts, charts } from "./charts.js";
+import { toast } from "./dom.js?v=74";
+import { fmtPrice, fmtBig, fmtPct, fmtRatio, escHtml, pctClass } from "./format.js?v=74";
+import { renderCompareCharts, charts } from "./charts.js?v=74";
 
 const cmp = { symbols: [], payloads: {}, adding: false };
 const CMP_COLORS = ["#d97706", "#0d9488", "#3b82f6", "#8b5cf6"];
@@ -61,7 +61,8 @@ const CMP_ROWS = [
   ["ROE (TTM)", d => d.current.roe != null ? fmtPct(d.current.roe * 100) : "—"],
   ["ROIC (5Y Avg.)", d => d.ratios && d.ratios.roic10yAvg != null ? fmtPct(d.ratios.roic10yAvg, 1) : "—"],
   ["ROC (Greenblatt)", d => d.ratios && d.ratios.roc && d.ratios.roc.val != null ? fmtPct(d.ratios.roc.val, 1) : "—"],
-  ["Deuda/Patrimonio", d => d.current.debtToEquity != null ? fmtRatio(d.current.debtToEquity / 100, 2) : "—"],
+  // FIX: debtToEquity from API is already a ratio (1.5 = 150%), do NOT divide by 100
+  ["Deuda/Patrimonio", d => d.current.debtToEquity != null ? fmtRatio(d.current.debtToEquity, 2) : "—"],
   ["FCF yield", d => fmtPct(d.current.fcfYield, 2)],
   ["Div. yield", d => fmtPct(d.current.divYield, 2)],
   ["Crec. ingresos (yoy)", d => spanPct(d.current.revenueGrowth != null ? d.current.revenueGrowth * 100 : null, true)],
@@ -101,7 +102,7 @@ function renderCompare() {
 
   /* Métricas numéricas donde "mejor" = mayor (retornos, márgenes, crecimiento) */
   const HIGHER_IS_BETTER = new Set(['Margen bruto','Margen neto','ROE (TTM)','ROIC (5Y Avg.)','ROC (Greenblatt)','FCF yield','Div. yield','CAGR Ingresos (5Y)','CAGR FCF (5Y)','Scorecard Buffett','Margen de seguridad']);
-  /* "mejor" = menor (múltiplos, deuda) */
+  /* "mejor" = menor pero solo con positive multiples (negative PE = losing money = worst, not best) */
   const LOWER_IS_BETTER  = new Set(['PE (TTM)','PE forward','PE mediana hist.','PE vs mediana','P/Ventas','P/Libro','EV/EBITDA','Deuda/Patrimonio']);
 
   const body = CMP_ROWS.map(([label, fn]) => {
@@ -112,6 +113,12 @@ function renderCompare() {
       if (typeof v === 'number') return v;
       if (typeof v === 'string') {
         const cleaned = v.replace(/<[^>]+>/g, '').replace(/[%x$,\s]/g,'');
+        // FIX: handle "5/9" fractions (Buffett scorecard) — convert to decimal
+        if (cleaned.includes('/')) {
+          const parts = cleaned.split('/');
+          const num = parseFloat(parts[0]), den = parseFloat(parts[1]);
+          return (!isNaN(num) && !isNaN(den) && den > 0) ? num / den : null;
+        }
         const n = parseFloat(cleaned);
         return isNaN(n) ? null : n;
       }
@@ -119,13 +126,21 @@ function renderCompare() {
     });
 
     let bestIdx = -1, worstIdx = -1;
+    // FIX: for LOWER_IS_BETTER metrics, exclude negative values from "best" selection
+    // (negative PE means company is losing money — it's the worst, not the best)
     const validNums = nums.filter(n => n != null);
+    const comparableNums = LOWER_IS_BETTER.has(label)
+      ? nums.map(n => (n != null && n > 0) ? n : null)  // only positive values for lower-is-better
+      : nums;
     if (validNums.length > 1 && (HIGHER_IS_BETTER.has(label) || LOWER_IS_BETTER.has(label))) {
-      const best  = HIGHER_IS_BETTER.has(label) ? Math.max(...validNums) : Math.min(...validNums);
-      const worst = HIGHER_IS_BETTER.has(label) ? Math.min(...validNums) : Math.max(...validNums);
-      bestIdx  = nums.indexOf(best);
-      worstIdx = nums.indexOf(worst);
-      if (bestIdx === worstIdx) worstIdx = -1; /* empate: no marcar */
+      const compValid = comparableNums.filter(n => n != null);
+      if (compValid.length > 1) {
+        const best  = HIGHER_IS_BETTER.has(label) ? Math.max(...compValid) : Math.min(...compValid);
+        const worst = HIGHER_IS_BETTER.has(label) ? Math.min(...compValid) : Math.max(...compValid);
+        bestIdx  = comparableNums.indexOf(best);
+        worstIdx = comparableNums.indexOf(worst);
+        if (bestIdx === worstIdx) worstIdx = -1; /* empate: no marcar */
+      }
     }
 
     const cells = rawVals.map((v, i) => {

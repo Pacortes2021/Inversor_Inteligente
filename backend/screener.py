@@ -239,19 +239,17 @@ def _calc_target_scenarios(price, pe, fpe, pe_median, info, eps2030_override=Non
     clean_pe = pe if (pe and 0 < pe <= 80 and (not fpe or pe <= 3 * fpe)) else None
     clean_fpe = fpe if (fpe and 0 < fpe <= 80) else None
     clean_med = pe_median if (pe_median and 0 < pe_median <= 80) else None
-    
-    # PE de salida: la mediana histórica (15a) incluye años de burbuja
-    # (PE 40-100x en tech de alto crecimiento); proyectarla a 2030 sobre el
-    # EPS ya crecido duplica el optimismo. Se limita al múltiplo vigente
-    # (forward, o trailing si no hay) — nunca por encima de lo que el
-    # mercado paga HOY por ese crecimiento.
-    current_pe = clean_fpe or clean_pe or 15.0
-    base_pe = min(clean_med or current_pe, current_pe)
-    if base_pe <= 0: base_pe = 20.0
-    
+
+    # Base PE: usar la Mediana Histórica del PER (si existe y es razonable).
+    # Si la mediana no está disponible o es atípica (>80x o >3x fwd PE), usar Forward PE (o trailing PE).
+    raw_med = clean_med or clean_fpe or clean_pe or 20.0
+    if clean_fpe and raw_med > 3 * clean_fpe:
+        raw_med = clean_fpe
+    base_pe = max(5.0, min(80.0, raw_med))
+
     cons_pe = max(5.0, base_pe * 0.80)
     opt_pe = base_pe * 1.20
-    
+
     if eps2030_override is not None and eps2030_override > 0:
         eps_2030 = eps2030_override
     else:
@@ -262,7 +260,7 @@ def _calc_target_scenarios(price, pe, fpe, pe_median, info, eps2030_override=Non
         eps_current = (price / clean_pe) if clean_pe else None
         eps_fwd = (price / clean_fpe) if clean_fpe else None
         
-        eps_base = eps_fwd if eps_fwd else (eps_current * (1 + growth_est) if eps_current else None)
+        eps_base = eps_fwd if eps_fwd else (eps_current if eps_current else (price / base_pe))
         if not eps_base or eps_base <= 0:
             return {}
             
@@ -301,7 +299,24 @@ def _base_row(symbol, info):
     price = info.get("currentPrice")
     pe = round(info["trailingPE"], 1) if info.get("trailingPE") else None
     fpe = round(info["forwardPE"], 1) if info.get("forwardPE") else None
-    scenarios = _calc_target_scenarios(price, pe, fpe, None, info)
+
+    div_rate = info.get("dividendRate")
+    div_yield_raw = info.get("dividendYield") or info.get("trailingAnnualDividendYield")
+
+    div_yield_pct = None
+    if div_rate and price and price > 0:
+        div_yield_pct = round((float(div_rate) / float(price)) * 100, 2)
+    elif div_yield_raw and div_yield_raw > 0:
+        y_val = float(div_yield_raw)
+        div_yield_pct = round(y_val * 100, 2) if y_val <= 1.0 else round(y_val, 2)
+
+    if div_yield_pct is not None and div_yield_pct < 0.05:
+        div_yield_pct = None
+
+    edgar_hist = E.get_annual_history(symbol)
+    pe_stats = _pe_stats_from_edgar(symbol, edgar_hist) if edgar_hist else None
+    pe_med = pe_stats["median"] if pe_stats else None
+    scenarios = _calc_target_scenarios(price, pe, fpe, pe_med, info)
 
     return {
         "symbol": symbol,
@@ -312,6 +327,7 @@ def _base_row(symbol, info):
         "marketCap": info.get("marketCap"),
         "pe": pe,
         "forwardPe": fpe,
+        "divYield": div_yield_pct,
         "pb": round(info["priceToBook"], 2) if info.get("priceToBook") else None,
         "roe": round(info["returnOnEquity"] * 100, 1) if info.get("returnOnEquity") is not None else None,
         "netMargin": round(info["profitMargins"] * 100, 1) if info.get("profitMargins") is not None else None,

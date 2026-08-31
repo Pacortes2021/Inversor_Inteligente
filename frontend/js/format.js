@@ -40,11 +40,6 @@ export function fmtRatio(x, d = 1) {
 
 export function pctClass(x) { return x == null ? "" : x >= 0 ? "up" : "down"; }
 
-export function fmtDate(ts) {
-  const d = new Date(ts);
-  return d.toLocaleDateString("es-CL", { year: "numeric", month: "short" });
-}
-
 export function escHtml(str) {
   if (str == null) return "";
   return String(str)
@@ -52,5 +47,16 @@ export function escHtml(str) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+    .replace(/'/g, "&#039;");
+}
+
+export function fmtDate(isoStr) {
+  if (!isoStr) return "—";
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return String(isoStr);
+    return d.toLocaleDateString("es-CL", { day: "numeric", month: "short", year: "numeric" });
+  } catch (e) {
+    return String(isoStr);
+  }
 }

@@ -11,9 +11,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   
   <!-- CSS Principal -->
-  <link rel="stylesheet" href="css/style.css?v=36.0">
-  <link rel="stylesheet" href="css/additions.css?v=36.0">
-  <link rel="stylesheet" href="css/koyfin.css?v=1.0">
+  <link rel="stylesheet" href="css/style.css?v=74.0">
+  <link rel="stylesheet" href="css/additions.css?v=74.0">
+  <link rel="stylesheet" href="css/koyfin.css?v=74.0">
   
   <!-- ECharts CDN -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
@@ -278,7 +278,7 @@
           </div>
           <div class="card-value" id="dcf-val">—</div>
           <div class="card-subtext" id="dcf-upside">—</div>
-          <div id="dcf-price-bar-wrap" class="dcf-bar-wrap d-none" >
+          <div id="dcf-price-bar-wrap" class="dcf-bar-wrap" style="display:none">
             <div class="dcf-bar-labels">
               <span>Precio</span><span id="dcf-bar-pct">—</span><span>DCF FV</span>
             </div>
@@ -376,7 +376,6 @@
         <div class="summary-sidebar-card card">
           <div class="sidebar-header-row">
             <h3>Summary</h3>
-            <button id="btn-add-note" class="btn-add-note"><svg class="h-ico "><use href="#i-pencil"/></svg>Nota de Tesis</button>
           </div>
           
           <div class="summary-metrics-list">
@@ -387,13 +386,12 @@
             <div class="metrics-row-item vertical-range-row">
               <div class="range-labels">
                 <span class="label">52 Week Range</span>
-                <span class="val" id="sum-52w-range">—</span>
               </div>
               <div class="visual-range-bar">
                 <span class="range-low-val" id="range-52w-low">—</span>
                 <div class="range-progress-track">
-                  <div class="range-progress-fill u-w0" id="range-52w-fill" ></div>
-                  <div class="range-progress-pin u-l0" id="range-52w-pin" ></div>
+                  <div class="range-progress-fill" id="range-52w-fill" style="width:0%"></div>
+                  <div class="range-progress-pin" id="range-52w-pin" style="left:0%"></div>
                 </div>
                 <span class="range-high-val" id="range-52w-high">—</span>
               </div>
@@ -468,7 +466,7 @@
       <section class="card u-mt20" >
         <h2 class="section-heading"><svg class="h-ico "><use href="#i-trophy"/></svg>Evaluador de Calidad & Solidez Financiera</h2>
         <p class="card-sub section-sub">
-          Evaluación de 9 puntos cuantitativos inspirados en la filosofía de Warren Buffett y Piotroski F-Score.
+          Evaluación de 14 puntos cuantitativos inspirados en la filosofía de Warren Buffett y Charlie Munger (Ventaja competitiva, solidez de balance y generación de caja).
         </p>
         
         <div id="scorecard-total-box" class="scorecard-donut-card">
@@ -490,23 +488,10 @@
         </div>
       </section>
 
-      <!-- TESIS DE INVERSIÓN & ANÁLISIS CUALITATIVO -->
-      <section class="card" id="notes-card">
-        <h2><svg class="h-ico "><use href="#i-doc"/></svg>Tesis de Inversión, Ventajas Competitivas (Moats) & Notas <span id="note-status" class="note-status">se guarda automáticamente</span></h2>
-        <p class="card-sub">La mitad que los números no capturan. Selecciona los fosos competitivos y registra tu tesis personal.</p>
-        <div id="moat-checks" class="moats moat-grid"></div>
-        <div class="notes-grid">
-          <label class="note-label">Tu tesis (¿por qué esta empresa, a este precio?)
-            <textarea id="note-thesis" rows="5" maxlength="2000" placeholder="Ej: marca dominante, ventaja de escala, PE bajo su mediana histórica; espero crecimiento sostenido a 5 años…"></textarea>
-          </label>
-          <label class="note-label-lg">Riesgos que podrían romper la tesis
-            <textarea id="note-risks" rows="5" maxlength="2000" placeholder="Ej: regulación, pérdida de cuota frente a competidores, dependencia de proveedores…"></textarea>
-          </label>
-        </div>
-      </section>
+
 
       <!-- EARNINGS SURPRISES Y CALENDARIO -->
-      <section class="card d-none" id="earnings-section" >
+      <section class="card" id="earnings-section" style="display:none">
         <div class="flex-between-baseline u-mb14" >
           <h2 class="section-heading-lg">
             <svg class="h-ico "><use href="#i-calendar"/></svg>Reportes de Ganancias (Earnings) y Sorpresas EPS
@@ -986,13 +971,25 @@
       <!-- EARNINGS & DIVIDENDOS -->
       <div class="grid-2col">
         <section class="card">
-          <h2><svg class="h-ico "><use href="#i-cash"/></svg>Seguridad del Dividendo</h2>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+            <h2><svg class="h-ico "><use href="#i-cash"/></svg>Seguridad del Dividendo</h2>
+            <div class="kw-toggles" id="div-toggles">
+              <button class="btn-sm active" data-view="amount">$</button>
+              <button class="btn-sm" data-view="yield">% Yield</button>
+            </div>
+          </div>
           <div id="div-safety" class="div-safety hidden"></div>
           <div class="chart" id="ch-divs"></div>
         </section>
 
         <section class="card">
-          <h2><svg class="h-ico "><use href="#i-money"/></svg>Histórico de Beneficio Por Acción (EPS)</h2>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+            <h2><svg class="h-ico "><use href="#i-money"/></svg>Histórico de Beneficio Por Acción (EPS)</h2>
+            <div class="kw-toggles" id="eps-toggles">
+              <button class="btn-sm active" data-view="annual">Anual</button>
+              <button class="btn-sm" data-view="quarterly">Trimestral</button>
+            </div>
+          </div>
           <div class="chart" id="ch-eps"></div>
         </section>
       </div>
@@ -1038,7 +1035,7 @@
 
       <!-- CALCULADORA AUTOMÁTICA EPS x PER 2030E -->
       <section class="card">
-        <div class="est-header">
+        <div class="est-header flex-between flex-wrap gap-12" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
           <div>
             <h2 class="section-heading-lg">
               <svg class="h-ico "><use href="#i-calc"/></svg>Calculadora de Precio Objetivo 2030E (EPS × PER)
@@ -1046,6 +1043,12 @@
             <p class="card-sub est-subtitle">
               Proyección de precio futuro multiplicando el EPS 2030E por múltiplos PER históricos.
             </p>
+          </div>
+          <div class="div-toggle-container">
+            <label class="div-toggle-label" title="Suma los dividendos acumulados esperados (2026-2030) para calcular el Retorno Total del Inversor">
+              <input type="checkbox" id="chk-include-divs" class="div-toggle-checkbox">
+              <span class="div-toggle-badge">💰 Incluir Dividendos (Retorno Total)</span>
+            </label>
           </div>
         </div>
 
@@ -1068,6 +1071,8 @@
             <div class="scenario-ret" id="est-pe-opt-ret">—</div>
           </div>
         </div>
+
+        <div id="est-pe-div-note" class="hidden" style="margin: 12px 0 0 0; padding: 8px 12px; background: rgba(16,185,129,0.08); border-left: 3px solid #10b981; border-radius: 6px; font-size: 12.5px; color: var(--text);"></div>
 
         <div class="custom-scenario-box">
           <div class="flex-between u-mb10" >
@@ -1398,6 +1403,12 @@
         </p>
       </div>
       <div class="head-actions wl-actions">
+        <div class="div-toggle-container">
+          <label class="div-toggle-label" title="Suma los dividendos proyectados a 4 años al Precio Objetivo 2030E para ver el Retorno Total acumulado">
+            <input type="checkbox" id="wl-chk-divs" class="div-toggle-checkbox">
+            <span class="div-toggle-badge">💰 Incluir Dividendos (Retorno Total)</span>
+          </label>
+        </div>
         <div class="chart-toggles-style" id="wl-perf-toggles">
           <button class="tg-btn active" data-period="1D">1D</button>
           <button class="tg-btn" data-period="5D">1 Sem</button>
@@ -1428,10 +1439,10 @@
             <th class="num sortable u-cpo" title="Índice de Fuerza Relativa (14d)" data-k="rsi" >RSI <span id="sort-rsi"></span></th>
             <th class="num sortable u-cpo" data-k="pe" >PE <span id="sort-pe"></span></th>
             <th class="num sortable u-cpo" data-k="forwardPe" >FWD PE <span id="sort-forwardPe"></span></th>
-            <th class="num sortable u-primary-cpo"  title="Precio objetivo 2030E base (EPS proyectado × PE vigente)" data-k="targetBase">★ Obj. 2030 <span id="sort-targetBase"></span></th>
-            <th class="num sortable u-cpo" title="Precio objetivo 2030E conservador (PE -20%)" data-k="targetPessimistic" >Obj. 2030 Pesim. <span id="sort-targetPessimistic"></span></th>
-            <th class="num sortable u-cpo" title="Precio objetivo 2030E optimista (PE +20%)" data-k="targetOpt" >Obj. 2030 Optim. <span id="sort-targetOpt"></span></th>
-            <th class="center sortable u-w120-cpo"  data-k="inBuyZone">Estado <span id="sort-inBuyZone"></span></th>
+            <th class="num sortable u-cpo" title="Rendimiento por dividendo anual (Yield TTM)" data-k="divYield" >Div. Yield <span id="sort-divYield"></span></th>
+            <th class="num sortable u-primary-cpo"  title="Precio objetivo 2030E Base (EPS 2030E × PER Mediano)" data-k="targetBase">★ Obj. 2030E <span id="sort-targetBase"></span></th>
+            <th class="num sortable u-cpo" title="Precio objetivo 2030E Conservador (PER -20%)" data-k="targetPessimistic" >Obj. 2030 Pesim. <span id="sort-targetPessimistic"></span></th>
+            <th class="num sortable u-cpo" title="Precio objetivo 2030E Optimista (PER +20%)" data-k="targetOpt" >Obj. 2030 Optim. <span id="sort-targetOpt"></span></th>
             <th></th>
           </tr>
         </thead>
@@ -1621,7 +1632,7 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script type="module" src="js/init.js?v=38.0"></script>
+<script type="module" src="js/init.js?v=74"></script>
 
 </body>
 </html>

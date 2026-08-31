@@ -117,8 +117,10 @@ def dividend_discount_model(info, annuals, discount=0.10):
     if _ok(roe) and roe > 1.0:
         roe /= 100.0
     payout = info.get("payoutRatio") or 0.40
-    if _ok(payout) and payout > 1.0:
-        payout /= 100.0
+    # Yahoo's payoutRatio is already a decimal (0.40 = 40%). Cap at 1.0 for DDM
+    # (payout > 1 = unsustainable dividend, clamp to 0.95 for G-Growth calc to still work)
+    if _ok(payout):
+        payout = min(abs(payout), 0.95)  # clamp, never divide – it's already decimal
 
     g = max(0.01, min(0.06, roe * (1 - payout))) if (_ok(roe) and _ok(payout) and payout < 1) else 0.03
 
@@ -128,8 +130,15 @@ def dividend_discount_model(info, annuals, discount=0.10):
 
 
 def peter_lynch_fair_value(eps, growth, div_yield=0.0):
-    """Valor Justo de Peter Lynch: EPS * (G + Dividend Yield) para PEG = 1.0."""
+    """Valor Justo de Peter Lynch: EPS * (G + Dividend Yield) para PEG = 1.0.
+    Sólo aplica a empresas de crecimiento medio-alto. Se descarta cuando la
+    tasa de crecimiento estimada < 5% anual (empresas maduras/defensivas) ya que
+    el modelo PEG produce valores absurdamente bajos e inútiles."""
     if not _ok(eps) or eps <= 0 or not _ok(growth) or growth <= 0:
+        return None
+    # Para empresas con crecimiento < 5%, el modelo PEG no aplica:
+    # Lynch lo diseñó para growth stocks, no para utilities o consumer staples maduros.
+    if growth < 0.05:
         return None
     g_pct = growth * 100.0
     yield_pct = div_yield if _ok(div_yield) else 0.0
@@ -278,7 +287,8 @@ def build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=None):
 
     cash = info.get("totalCash") or (annuals[-1].get("cash") if annuals else 0) or 0
     debt = info.get("totalDebt") or (annuals[-1].get("debt") if annuals else 0) or 0
-    net_cash = (cash - debt) if (_ok(cash) and _ok(debt)) else 0
+    # Use (x or 0) so debt-free companies (debt=None) correctly compute net_cash = cash
+    net_cash = (_ok(cash) and (cash or 0) or 0) - (_ok(debt) and (debt or 0) or 0)
 
 
     fcf_per_share = (base_fcf / shares) if (_ok(base_fcf) and _ok(shares) and shares > 0) else None
@@ -314,7 +324,9 @@ def build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=None):
         epv = None
     ddm = dividend_discount_model(info, annuals, discount) if is_financial else None
     div_yield_val = info.get("trailingAnnualDividendYield") or info.get("dividendYield")
-    if _ok(div_yield_val) and div_yield_val < 0.25:
+    # Yahoo returns yield as decimal (0.033 = 3.3%). Only multiply by 100 if < 1.5
+    # (threshold chosen to handle REITs/MLPs that can yield 15-30% as decimals up to 0.30)
+    if _ok(div_yield_val) and 0 < div_yield_val < 1.5:
         div_yield_val *= 100.0
     lynch_fv = peter_lynch_fair_value(eps, growth, div_yield=div_yield_val)
 
@@ -408,74 +420,144 @@ def _check(cid, name, desc, value, passed, fmt="x"):
 
 
 def buffett_scorecard(info, annuals, pe_stats):
-    """Criterios cuantitativos inspirados en Buffett/Munger. passed puede ser
-    True, False o None (sin datos: no cuenta para el puntaje)."""
+    """Criterios cuantitativos de élite inspirados en la filosofía de Warren Buffett
+    y Charlie Munger (14 puntos de calidad de negocio, foso defensivo y solidez).
+    passed puede ser True, False o None (sin datos: no cuenta para el puntaje)."""
     checks = []
 
     def avg(key, last_n=5):
         vals = [a[key] for a in annuals[-last_n:] if _ok(a.get(key))]
         return (sum(vals) / len(vals)) if vals else None
 
+    # 1. ROIC Promedio 5A ≥ 12% (Ventaja competitiva duradera / Moat según Charlie Munger)
+    roics = [a["roic"] for a in annuals[-5:] if _ok(a.get("roic"))]
+    roic_avg = (sum(roics) / len(roics)) if roics else None
+    checks.append(_check("roic", "ROIC ≥ 12%", "Retorno sobre capital invertido (Moat / Munger)",
+                         round(roic_avg, 1) if roic_avg is not None else None,
+                         roic_avg >= 12.0 if roic_avg is not None else None, "pct"))
+
+    # 2. ROE Promedio 5A ≥ 15% (Retorno sobre patrimonio en empresas con capital positivo)
     roe = avg("roe")
-    checks.append(_check("roe", "ROE ≥ 15%", "Retorno sobre patrimonio promedio (histórico disponible)",
-                         round(roe, 1) if roe is not None else None,
-                         roe >= 15 if roe is not None else None, "pct"))
+    eq_latest = annuals[-1].get("equity") if annuals else None
+    roe_valid = roe if (eq_latest is None or eq_latest > 0) else None
+    checks.append(_check("roe", "ROE ≥ 15%", "Retorno sobre patrimonio promedio (capital positivo)",
+                         round(roe_valid, 1) if roe_valid is not None else None,
+                         roe_valid >= 15.0 if roe_valid is not None else None, "pct"))
 
+    # 3. Margen Bruto ≥ 40% (Poder de fijación de precios / Pricing Power)
     gm = avg("grossMargin")
-    checks.append(_check("gross", "Margen bruto ≥ 40%", "Poder de fijación de precios (proxy de ventaja competitiva)",
+    checks.append(_check("gross", "Margen bruto ≥ 40%", "Poder de fijación de precios (ventaja competitiva)",
                          round(gm, 1) if gm is not None else None,
-                         gm >= 40 if gm is not None else None, "pct"))
+                         gm >= 40.0 if gm is not None else None, "pct"))
 
+    # 4. Margen Neto ≥ 10% (Rentabilidad final consistente)
     nm = avg("netMargin")
-    checks.append(_check("net", "Margen neto ≥ 10%", "Rentabilidad final consistente",
+    checks.append(_check("net", "Margen neto ≥ 10%", "Rentabilidad final consistente (promedio 5 años)",
                          round(nm, 1) if nm is not None else None,
-                         nm >= 10 if nm is not None else None, "pct"))
+                         nm >= 10.0 if nm is not None else None, "pct"))
+
+    # 5. Endeudamiento Conservador (Deuda/Patrimonio < 1.0 ó Deuda Neta/FCF < 4 años)
+    tot_debt = info.get("totalDebt") or (annuals[-1].get("totalDebt") if annuals else 0) or 0
+    cash_val = info.get("totalCash") or (annuals[-1].get("cash") if annuals else 0) or 0
+    net_debt = tot_debt - cash_val
+    fcf_latest = annuals[-1].get("fcf") if annuals else None
 
     de = None
     des = [a["debtToEquity"] for a in annuals if _ok(a.get("debtToEquity"))]
-    if des:
+    if des and eq_latest and eq_latest > 0:
         de = des[-1]
-    elif _ok(info.get("debtToEquity")):
+    elif _ok(info.get("debtToEquity")) and eq_latest and eq_latest > 0:
         de = info["debtToEquity"] / 100.0
-    checks.append(_check("debt", "Deuda/Patrimonio < 1", "Endeudamiento conservador",
-                         round(de, 2) if de is not None else None,
-                         de < 1 if de is not None else None, "x"))
 
+    debt_pass = None
+    debt_display = None
+    debt_fmt = "x"
+
+    if net_debt <= 0 or tot_debt <= 0:
+        debt_pass = True
+        debt_display = "Caja Neta"
+        debt_fmt = "text"
+    elif de is not None and de > 0:
+        debt_pass = de < 1.0
+        debt_display = round(de, 2)
+        debt_fmt = "x"
+    elif fcf_latest and fcf_latest > 0:
+        years_to_pay = net_debt / fcf_latest
+        debt_pass = years_to_pay <= 4.0
+        debt_display = f"{round(years_to_pay, 1)}a FCF"
+        debt_fmt = "text"
+
+    checks.append(_check("debt", "Deuda conservadora", "Deuda/Patrimonio < 1x ó Deuda Neta/FCF < 4 años",
+                         debt_display, debt_pass, debt_fmt))
+
+    # 6. Cobertura de Intereses > 5x (o Caja Neta / Cero Deuda)
     ic = None
     ics = [a["interestCoverage"] for a in annuals if _ok(a.get("interestCoverage"))]
     if ics:
         ic = ics[-1]
-    checks.append(_check("interest", "Cobertura de intereses > 5x", "EBIT sobre gasto en intereses",
-                         round(ic, 1) if ic is not None else None,
-                         ic > 5 if ic is not None else None, "x"))
 
+    int_pass = None
+    int_display = None
+    int_fmt = "x"
+    if net_debt <= 0 or tot_debt <= 0:
+        int_pass = True
+        int_display = "Caja Neta"
+        int_fmt = "text"
+    elif ic is not None:
+        int_pass = ic > 5.0
+        int_display = round(ic, 1)
+        int_fmt = "x"
+
+    checks.append(_check("interest", "Cobertura de intereses > 5x", "EBIT sobre intereses (o Caja Neta)",
+                         int_display, int_pass, int_fmt))
+
+    # 7. FCF Positivo todos los años disponibles
     fcfs = [a["fcf"] for a in annuals if a.get("fcf") is not None]
     fcf_pos = all(f > 0 for f in fcfs) if len(fcfs) >= 3 else None
     checks.append(_check("fcf", "FCF positivo todos los años", "Genera caja real de forma consistente",
                          len(fcfs) if fcfs else None, fcf_pos, "años"))
 
-    revs = [a["revenue"] for a in annuals if _ok(a.get("revenue")) and a["revenue"] > 0]
-    rev_g = None
-    if len(revs) >= 3:
-        rev_g = ((revs[-1] / revs[0]) ** (1 / (len(revs) - 1)) - 1) * 100
-    checks.append(_check("growth", "Crecimiento ingresos ≥ 5%", "CAGR de ventas (histórico disponible)",
-                         round(rev_g, 1) if rev_g is not None else None,
-                         rev_g >= 5 if rev_g is not None else None, "pct"))
+    # 8. Calidad de Ganancias (Conversión FCF / Utilidad Neta ≥ 80%)
+    pairs = [(a["fcf"], a["netIncome"]) for a in annuals[-5:]
+             if _ok(a.get("fcf")) and _ok(a.get("netIncome")) and a["netIncome"] > 0]
+    fcf_conv = None
+    if pairs:
+        ratios = [f / ni * 100 for f, ni in pairs]
+        fcf_conv = sum(ratios) / len(ratios)
+    checks.append(_check("fcf_conversion", "Conversión a FCF ≥ 80%", "Calidad de ganancias (FCF / Utilidad promedio 5A)",
+                         round(fcf_conv, 1) if fcf_conv is not None else None,
+                         fcf_conv >= 80.0 if fcf_conv is not None else None, "pct"))
 
-    epss = [a["eps"] for a in annuals if _ok(a.get("eps"))]
-    eps_up = None
-    if len(epss) >= 3:
-        eps_up = epss[-1] > epss[0] > 0
-    checks.append(_check("eps", "EPS creciente", "Utilidad por acción mayor que al inicio del período",
-                         round(epss[-1], 2) if epss else None, eps_up, "$"))
+    # 9. Crecimiento de Ingresos ≥ 5% (CAGR 5 años)
+    revs5 = [a["revenue"] for a in annuals[-5:] if _ok(a.get("revenue")) and a["revenue"] > 0]
+    rev_g5 = None
+    if len(revs5) >= 3:
+        rev_g5 = ((revs5[-1] / revs5[0]) ** (1 / (len(revs5) - 1)) - 1) * 100
+    checks.append(_check("growth", "Crecimiento ingresos ≥ 5%", "CAGR de ventas últimos 5 años",
+                         round(rev_g5, 1) if rev_g5 is not None else None,
+                         rev_g5 >= 5.0 if rev_g5 is not None else None, "pct"))
 
+    # 10. Crecimiento EPS consistente (CAGR 5A ≥ 5%)
+    epss5 = [a["eps"] for a in annuals[-5:] if _ok(a.get("eps")) and a["eps"] > 0]
+    eps_g5 = None
+    if len(epss5) >= 3 and epss5[0] > 0:
+        eps_g5 = ((epss5[-1] / epss5[0]) ** (1 / (len(epss5) - 1)) - 1) * 100
+    eps_pass = (eps_g5 >= 5.0) if eps_g5 is not None else (epss5[-1] > epss5[0] if len(epss5) >= 2 else None)
+    checks.append(_check("eps", "Crecimiento EPS ≥ 5%", "CAGR de beneficio por acción en 5 años",
+                         round(eps_g5, 1) if eps_g5 is not None else (round(epss5[-1], 2) if epss5 else None),
+                         eps_pass, "pct" if eps_g5 is not None else "$"))
+
+    # 11. Recompra de Acciones / No Dilución (disciplina de capital de la directiva)
     sh = [a["sharesOut"] for a in annuals if _ok(a.get("sharesOut"))]
     buyback = None
-    if len(sh) >= 3:
-        buyback = sh[-1] <= sh[0] * 1.005  # tolera emisiones mínimas
+    pct_chg = None
+    if len(sh) >= 3 and sh[0] > 0:
+        buyback = sh[-1] <= sh[0] * 1.005  # tolera emisiones mínimas (<0.5%)
+        pct_chg = (sh[-1] / sh[0] - 1) * 100
     checks.append(_check("buyback", "Recompra de acciones", "Acciones en circulación no diluyen al accionista",
-                         None, buyback, ""))
+                         round(pct_chg, 1) if pct_chg is not None else None, buyback, "pct"))
 
+    # 12. Razón Corriente ≥ 1.2x (Liquidez de corto plazo)
     cr = None
     crs = [a["currentRatio"] for a in annuals if _ok(a.get("currentRatio"))]
     if crs:
@@ -486,20 +568,22 @@ def buffett_scorecard(info, annuals, pe_stats):
                          round(cr, 2) if cr is not None else None,
                          cr >= 1.2 if cr is not None else None, "x"))
 
+    # 13. Valoración: PE bajo su Mediana Histórica 15A
     pe_disc = None
     if pe_stats and pe_stats.get("vsMedian") is not None:
         pe_disc = pe_stats["vsMedian"]
-    checks.append(_check("pe", "PE bajo su mediana histórica", "El precio actual paga menos por cada dólar de utilidad que el promedio",
+    checks.append(_check("pe", "PE bajo su mediana histórica", "El precio actual cotiza con descuento vs mediana 15A",
                          pe_disc, pe_disc < 0 if pe_disc is not None else None, "pct"))
 
+    # 14. FCF Yield ≥ 4% (Rentabilidad de caja sobre precio de mercado)
     fcf_yield = None
     mc = info.get("marketCap")
-    fcf_now = info.get("freeCashflow")
+    fcf_now = info.get("freeCashflow") or (annuals[-1].get("fcf") if annuals else None)
     if _ok(mc) and _ok(fcf_now) and mc > 0:
         fcf_yield = fcf_now / mc * 100
-    checks.append(_check("fcfyield", "FCF yield ≥ 4%", "Rentabilidad de caja sobre capitalización",
+    checks.append(_check("fcfyield", "FCF yield ≥ 4%", "Rentabilidad de caja sobre capitalización bursátil",
                          round(fcf_yield, 2) if fcf_yield is not None else None,
-                         fcf_yield >= 4 if fcf_yield is not None else None, "pct"))
+                         fcf_yield >= 4.0 if fcf_yield is not None else None, "pct"))
 
     evaluated = [c for c in checks if c["passed"] is not None]
     passed = sum(1 for c in evaluated if c["passed"])
@@ -543,17 +627,21 @@ def piotroski_f_score(annuals):
     if _ok(ocf_cur) and _ok(ni_cur) and ocf_cur > ni_cur:
         score += 1
 
-    # Apalancamiento, Liquidez y Fuente de Fondos
     # 5. Change in Leverage (Long-term debt ratio current < prior)
     ltd_cur = current.get("longTermDebt") or current.get("totalDebt")
     ltd_prior = prior.get("longTermDebt") or prior.get("totalDebt")
-    if _ok(ltd_cur) and _ok(assets_cur) and assets_cur > 0 and _ok(ltd_prior) and _ok(assets_prior) and assets_prior > 0:
-        lev_cur = ltd_cur / assets_cur
-        lev_prior = ltd_prior / assets_prior
+    # Treat explicit 0 same as None (debt-free = point automatically)
+    ltd_cur_v = ltd_cur if _ok(ltd_cur) and ltd_cur > 0 else None
+    ltd_prior_v = ltd_prior if _ok(ltd_prior) and ltd_prior > 0 else None
+    if ltd_cur_v is None and ltd_prior_v is None:
+        score += 1  # No debt at all → reward
+    elif ltd_cur_v is None and ltd_prior_v is not None:
+        score += 1  # Had debt, now debt-free → reward
+    elif _ok(ltd_cur_v) and _ok(ltd_prior_v) and _ok(assets_cur) and assets_cur > 0 and _ok(assets_prior) and assets_prior > 0:
+        lev_cur = ltd_cur_v / assets_cur
+        lev_prior = ltd_prior_v / assets_prior
         if lev_cur < lev_prior:
             score += 1
-    elif not _ok(ltd_cur) and not _ok(ltd_prior):
-        score += 1 # Sin deuda es bueno
 
     # 6. Change in Current Ratio (Current Ratio current > prior)
     cr_cur = current.get("currentRatio")

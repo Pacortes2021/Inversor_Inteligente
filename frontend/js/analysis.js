@@ -2,18 +2,18 @@
    cualitativas, scorecard Buffett, tabla de crecimiento, sidebar y
    orquestación de pestañas de acción. */
 
-import { $, toast, apiFetch } from "./dom.js";
-import { state, currentPeriodYears, currentMultiplesRange, setCurrentMultiplesRange } from "./state.js";
-import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, escHtml, pctClass } from "./format.js";
-import { termify } from "./glossary.js";
-import { chartPrice, chartRatio, chartDividends, chartEps, chartEarningsSurprise, renderAllCharts, renderPriceOverlay, renderKoyfinLayout, C, charts } from "./charts.js";
+import { $, toast, apiFetch } from "./dom.js?v=74";
+import { state, currentPeriodYears, currentMultiplesRange, setCurrentMultiplesRange } from "./state.js?v=74";
+import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, escHtml, pctClass } from "./format.js?v=74";
+import { termify } from "./glossary.js?v=74";
+import { chartPrice, chartRatio, chartDividends, chartEps, chartEarningsSurprise, renderAllCharts, renderPriceOverlay, renderKoyfinLayout, C, charts } from "./charts.js?v=74";
 
-import { checkStockAlerts } from "./alerts.js";
+import { checkStockAlerts } from "./alerts.js?v=74";
 import {
   renderValuationCard, renderRatiosGrid, renderEstimates, renderEpsEstimatesChart,
   renderInsidersHolders, renderFinancialStatements, renderEpsFv, renderDcfFv,
   renderDdmFv, renderHistoricalRatios, renderAdditional, renderScenarios, renderFcfHistory,
-} from "./valuation.js";
+} from "./valuation.js?v=74";
 
 /* ---------------------------------------------------------- render */
 export function renderAnalysis(d) {
@@ -120,10 +120,12 @@ export function renderSummary(d) {
     $("fv-analyst-target").textContent = "Wall St Target: —";
   }
 
-  const verdict = d.valuation.verdict;
+  const verdict = d.valuation?.verdict;
   const vBadge = $("verdict-badge");
-  vBadge.textContent = verdict.label;
-  vBadge.className = "verdict-badge-new " + verdict.level;
+  if (vBadge && verdict) {
+    vBadge.textContent = verdict.label;
+    vBadge.className = "verdict-badge-new " + verdict.level;
+  }
 
   // Tarjeta 2: Graham Model
   const grahamModel = d.valuation.models.find(m => m.id === "graham_intrinsic" || m.id === "graham");
@@ -200,13 +202,13 @@ export function renderSummary(d) {
   const { low52w, high52w } = d.quote;
   if (low52w && high52w && high52w > low52w) {
     const rangePct = Math.max(0, Math.min(100, (px - low52w) / (high52w - low52w) * 100));
-    $("sum-52w-range").textContent = `${fmtPrice(low52w, cur)} - ${fmtPrice(high52w, cur)}`;
+    if ($("sum-52w-range")) $("sum-52w-range").textContent = `${fmtPrice(low52w, cur)} - ${fmtPrice(high52w, cur)}`;
     $("range-52w-low").textContent = fmtPrice(low52w, cur);
     $("range-52w-high").textContent = fmtPrice(high52w, cur);
     $("range-52w-fill").style.width = rangePct + "%";
     $("range-52w-pin").style.left = rangePct + "%";
   } else {
-    $("sum-52w-range").textContent = "—";
+    if ($("sum-52w-range")) $("sum-52w-range").textContent = "—";
     $("range-52w-low").textContent = "—";
     $("range-52w-high").textContent = "—";
     $("range-52w-fill").style.width = "0%";
@@ -248,8 +250,8 @@ export function renderSummary(d) {
   }
 
   // Micro-gráficos de PE
-  const peVals = d.history.peTtm ? d.history.peTtm.map(pt => pt[1]).slice(-24) : [];
-  $("pe-sparkline").innerHTML = peVals.length >= 2 ? sparkSvgSmall(peVals, "#3b82f6") : "";
+  const peVals = d.history?.peTtm ? d.history.peTtm.map(pt => pt[1]).slice(-24) : [];
+  if ($("pe-sparkline")) $("pe-sparkline").innerHTML = peVals.length >= 2 ? sparkSvgSmall(peVals, "#3b82f6") : "";
 
   $("sum-eps").textContent = d.current.eps != null ? fmtPrice(d.current.eps, cur) : "—";
 
@@ -422,7 +424,8 @@ export function renderWarnings(warnings) {
 /* ------------------------------------------- seguridad del dividendo */
 export function renderDividendSafety(ds) {
   const box = $("div-safety");
-  if (!ds) return box.classList.add("hidden");
+  if (!box) return;
+  if (!ds) { box.classList.add("hidden"); return; }
   const chip = (label, val, term) =>
     `<span class="ds-chip">${termify(label, term)}: <b>${val}</b></span>`;
   box.innerHTML =
@@ -448,46 +451,55 @@ let noteSymbol = null;
 
 export async function loadNotes(symbol) {
   noteSymbol = symbol;
+  if (!$("moat-checks") && !$("note-thesis")) return;
   try {
     const r = await fetch(`/api/notes/${encodeURIComponent(symbol.replace(/\//g, '-'))}`);
     if (!r.ok) throw new Error(`Error ${r.status}`);
     const note = await r.json();
     const moats = Array.isArray(note.moats) ? note.moats : [];
-    if (noteSymbol !== symbol) return; // navegó a otro símbolo mientras cargaba
-    $("moat-checks").innerHTML = MOATS.map(([id, label, desc]) => `
-      <label class="moat ${moats.includes(id) ? "on" : ""}" title="${escHtml(desc)}">
-        <input type="checkbox" value="${id}" ${moats.includes(id) ? "checked" : ""}> ${escHtml(label)}
-      </label>`).join("");
-    $("note-thesis").value = note.thesis || "";
-    $("note-risks").value = note.risks || "";
-
-    $("moat-checks").querySelectorAll("input").forEach(cb =>
-      cb.onchange = () => { cb.closest(".moat").classList.toggle("on", cb.checked); saveNotes(); });
-    $("note-thesis").oninput = saveNotesDebounced;
-    $("note-risks").oninput = saveNotesDebounced;
+    if (noteSymbol !== symbol) return;
+    if ($("moat-checks")) {
+      $("moat-checks").innerHTML = MOATS.map(([id, label, desc]) => `
+        <label class="moat ${moats.includes(id) ? "on" : ""}" title="${escHtml(desc)}">
+          <input type="checkbox" value="${id}" ${moats.includes(id) ? "checked" : ""}> ${escHtml(label)}
+        </label>`).join("");
+      $("moat-checks").querySelectorAll("input").forEach(cb =>
+        cb.onchange = () => { cb.closest(".moat").classList.toggle("on", cb.checked); saveNotes(); });
+    }
+    if ($("note-thesis")) {
+      $("note-thesis").value = note.thesis || "";
+      $("note-thesis").oninput = saveNotesDebounced;
+    }
+    if ($("note-risks")) {
+      $("note-risks").value = note.risks || "";
+      $("note-risks").oninput = saveNotesDebounced;
+    }
   } catch {
-    if (noteSymbol === symbol) $("note-status").textContent = "⚠ no se pudo cargar";
+    if (noteSymbol === symbol && $("note-status")) $("note-status").textContent = "⚠ no se pudo cargar";
   }
 }
 
 export function saveNotesDebounced() {
   clearTimeout(noteTimer);
-  $("note-status").textContent = "escribiendo…";
+  if ($("note-status")) $("note-status").textContent = "escribiendo…";
   noteTimer = setTimeout(saveNotes, 900);
 }
 
 export async function saveNotes() {
   if (!noteSymbol) return;
-  const moats = [...$("moat-checks").querySelectorAll("input:checked")].map(cb => cb.value);
+  const moatBox = $("moat-checks");
+  const moats = moatBox ? [...moatBox.querySelectorAll("input:checked")].map(cb => cb.value) : [];
+  const thesis = $("note-thesis") ? $("note-thesis").value : "";
+  const risks = $("note-risks") ? $("note-risks").value : "";
   try {
     const r = await apiFetch(`/api/notes/${encodeURIComponent(noteSymbol.replace(/\//g, '-'))}`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ thesis: $("note-thesis").value, risks: $("note-risks").value, moats }),
+      body: JSON.stringify({ thesis, risks, moats }),
     });
     if (!r.ok) throw new Error(`Error ${r.status}`);
-    $("note-status").textContent = "guardado ✓";
+    if ($("note-status")) $("note-status").textContent = "guardado ✓";
   } catch (e) {
-    $("note-status").textContent = "⚠ error de guardado";
+    if ($("note-status")) $("note-status").textContent = "⚠ error de guardado";
   }
 }
 
@@ -553,10 +565,10 @@ export function renderBuffettScorecard(sc) {
 
       let valStr = "—";
       if (c.value != null) {
-        if (c.fmt === "pct") valStr = fmtPct(c.value);
-        else if (c.fmt === "x") valStr = `${c.value.toFixed(2)}x`;
+        if (c.fmt === "pct") valStr = (typeof c.value === 'number') ? fmtPct(c.value) : String(c.value);
+        else if (c.fmt === "x") valStr = (typeof c.value === 'number') ? `${c.value.toFixed(2)}x` : String(c.value);
         else if (c.fmt === "años") valStr = `${c.value} años`;
-        else if (c.fmt === "$") valStr = fmtPrice(c.value, state.data.profile.currency);
+        else if (c.fmt === "$") valStr = (typeof c.value === 'number') ? fmtPrice(c.value, state.data?.profile?.currency || 'USD') : String(c.value);
         else valStr = String(c.value);
       }
 
@@ -582,6 +594,7 @@ export function renderBuffettScorecard(sc) {
 export function renderGrowthTable(d) {
   const rows = d.growthTable || [];
   const card = $("growth-card");
+  if (!card) return;
   if (rows.length < 2) { card.classList.add("hidden"); return; }
   card.classList.remove("hidden");
   const cell = v => v == null ? `<td class="num muted">—</td>`
@@ -601,6 +614,7 @@ export function renderGrowthTable(d) {
 /* ---------------------------------------------------------- watch star */
 export function setStarState(inWatchlist) {
   const b = $("btn-watch");
+  if (!b) return;
   b.classList.toggle("active", !!inWatchlist);
   b.classList.toggle("starred", !!inWatchlist);
   b.innerHTML = `<svg class="h-ico "><use href="#i-star"/></svg>${inWatchlist ? "Siguiendo" : "Seguir"}`;
@@ -701,6 +715,30 @@ export function triggerTabSpecificActions(tab) {
         };
       });
     }
+
+    const divToggles = $("div-toggles");
+    if (divToggles && !divToggles.dataset.bound) {
+      divToggles.dataset.bound = "1";
+      divToggles.querySelectorAll("button").forEach(btn => {
+        btn.onclick = () => {
+          divToggles.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          chartDividends(state.data);
+        };
+      });
+    }
+
+    const epsToggles = $("eps-toggles");
+    if (epsToggles && !epsToggles.dataset.bound) {
+      epsToggles.dataset.bound = "1";
+      epsToggles.querySelectorAll("button").forEach(btn => {
+        btn.onclick = () => {
+          epsToggles.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          chartEps(state.data);
+        };
+      });
+    }
     requestAnimationFrame(() => Object.values(charts).forEach(ch => ch.resize()));
   } else if (tab === "ownership" || tab === "insiders") {
     renderInsidersHolders(state.data?.insidersHolders);
@@ -763,7 +801,8 @@ export async function refreshSidebar() {
 
 /* ────────────────────────── barra de KPIs estilo Koyfin ───────────── */
 function _kpi(label, value, cls = "") {
-  return `<div class="k-kpi"><span class="k-kpi-lab">${label}</span><b class="k-kpi-val ${cls}">${value || "—"}</b></div>`;
+  const rawText = String(value || "—").replace(/<[^>]*>/g, "");
+  return `<div class="k-kpi" title="${escHtml(rawText)}" onclick="this.classList.toggle('expanded')"><span class="k-kpi-lab">${label}</span><b class="k-kpi-val ${cls}">${value || "—"}</b></div>`;
 }
 
 function _priceCagr(pts, n) {
@@ -790,13 +829,20 @@ export function renderKoyfinBar(d) {
   try {
     if (nextStr) nextStr = new Date(nextStr + "T00:00:00").toLocaleDateString("es-CL", { weekday: "short", day: "2-digit", month: "short" });
   } catch (e) {}
+
+  let fpeCls = "k-mono";
+  if (c.forwardPe != null && c.pe != null) {
+    if (c.forwardPe < c.pe) fpeCls += " up";
+    else if (c.forwardPe > c.pe) fpeCls += " down";
+  }
+
   el.innerHTML = [
     _kpi("Sector", escHtml(p.sector || "—")),
     _kpi("Industry", escHtml(p.industry || "—")),
     _kpi("Dividend Yield", c.divYield != null ? `${fmtNum(c.divYield, 2)}%` : "—", "k-mono"),
     _kpi("Market Cap", mkt, "k-mono"),
-    _kpi("P/E Trailing", c.pe ? `${fmtRatio(c.pe, 1)}x` : "—", "k-mono"),
-    _kpi("P/E Forward", c.forwardPe ? `${fmtRatio(c.forwardPe, 1)}x` : "—", "k-mono"),
+    _kpi("P/E Trailing", c.pe != null ? fmtRatio(c.pe, 1) : "—", "k-mono"),
+    _kpi("P/E Forward", c.forwardPe != null ? fmtRatio(c.forwardPe, 1) : "—", fpeCls),
     _kpi("CAGR 3Y", cagr3 != null ? fmtPct(cagr3, 1, true) : "—", cagr3 != null ? pctClass(cagr3) : ""),
     _kpi("CAGR 10Y", cagr10 != null ? fmtPct(cagr10, 1, true) : "—", cagr10 != null ? pctClass(cagr10) : ""),
     _kpi("Próximos Earnings", nextStr || "—"),

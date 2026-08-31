@@ -1,14 +1,14 @@
 /* Routing por hash + búsqueda global + navegación delegada. */
 
-import { $ } from "./dom.js";
-import { state } from "./state.js";
-import { escHtml } from "./format.js";
-import { loadSymbol } from "./loader.js";
-import { triggerTabSpecificActions } from "./analysis.js";
-import { loadDashboard } from "./dashboard.js";
-import { loadScreener } from "./screener.js";
-import { loadWatchlist } from "./watchlist.js";
-import { loadPortfolio } from "./portfolio.js";
+import { $ } from "./dom.js?v=74";
+import { state } from "./state.js?v=74";
+import { escHtml } from "./format.js?v=74";
+import { loadSymbol } from "./loader.js?v=74";
+import { triggerTabSpecificActions } from "./analysis.js?v=74";
+import { loadDashboard } from "./dashboard.js?v=74";
+import { loadScreener } from "./screener.js?v=74";
+import { loadWatchlist } from "./watchlist.js?v=74";
+import { loadPortfolio } from "./portfolio.js?v=74";
 
 export const VIEWS = ["inicio", "analisis", "screener", "comparar", "watchlist", "portafolio"];
 export const UNLOCKED_TABS = ["summary", "valuation", "financials-hub", "ownership", "financials", "ratios", "rating", "estimates", "insiders", "eps-fv", "dcf-fv", "ddm-fv", "historical-ratios", "dividends", "earnings", "qualitative", "additional"];
@@ -52,8 +52,10 @@ export function route() {
   let current = VIEWS.find(v => hash.startsWith(`#/${v}`)) || "inicio";
 
   for (const v of VIEWS) {
-    $(`view-${v}`).classList.toggle("hidden", v !== current);
-    $(`tab-${v}`).classList.toggle("active", v === current);
+    const viewEl = $(`view-${v}`);
+    if (viewEl) viewEl.classList.toggle("hidden", v !== current);
+    const tabEl = $(`tab-${v}`);
+    if (tabEl) tabEl.classList.toggle("active", v === current);
   }
 
   if (current === "inicio") loadDashboard();

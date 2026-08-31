@@ -1,7 +1,7 @@
 /* Gráficos ECharts con tema propio — El Inversor Inteligente */
 
-import { fmtBig, fmtPrice, fmtPct, fmtRatio, fmtNum } from "./format.js";
-import { state } from "./state.js";
+import { fmtBig, fmtPrice, fmtPct, fmtRatio, fmtNum } from "./format.js?v=74";
+import { state } from "./state.js?v=74";
 
 /** Colores que se adaptan al tema claro/oscuro en tiempo de ejecución */
 export function getChartColors() {
@@ -647,15 +647,42 @@ export function chartShares(data) {
 }
 
 export function chartEps(data) {
-  const a = data.annuals.filter(x => x.eps != null);
-  if (a.length < 2) return hideCard('ch-eps');
+  const epsView = document.querySelector('#eps-toggles .active')?.dataset.view || 'annual';
+  let seriesData = [];
+  let xLabels = [];
+
+  if (epsView === 'quarterly' && data.quarterlies && data.quarterlies.length > 0) {
+    const q = data.quarterlies.filter(x => x.eps != null);
+    if (q.length < 2) return hideCard('ch-eps');
+    xLabels = q.map(x => {
+        if (x.quarter) return `Q${x.quarter} ${x.year}`;
+        const d = new Date(x.endDate || x.date);
+        return isNaN(d) ? (x.period || x.year) : d.toLocaleDateString("es-CL", {month: "short", year: "2-digit"});
+    });
+    seriesData = q.map(x => +x.eps.toFixed(2));
+  } else {
+    const a = (data.annuals || []).filter(x => x.eps != null);
+    if (a.length < 2) return hideCard('ch-eps');
+    xLabels = a.map(x => x.year);
+    seriesData = a.map(x => +x.eps.toFixed(2));
+  }
+
   showCard('ch-eps');
   const cc = getChartColors();
-  makeChart('ch-eps', yearsOption(a.map(x => x.year), {
+  makeChart('ch-eps', yearsOption(xLabels, {
     series: [{
-      type: 'bar', name: 'EPS diluido', data: a.map(x => +x.eps.toFixed(2)), barMaxWidth: 40,
-      itemStyle: { color: p => p.value >= 0 ? cc.gold : cc.red, borderRadius: [4,4,0,0] },
-      label: { show: true, position: 'top', color: cc.muted, fontSize: 11, formatter: p => fmtNum(p.value, 2) },
+      type: 'bar', name: epsView === 'quarterly' ? 'EPS Trimestral' : 'EPS Anual', data: seriesData, barMaxWidth: 40,
+      itemStyle: { 
+        color: p => {
+            const isPos = p.value >= 0;
+            return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: isPos ? '#f59e0b' : '#ef4444' },
+              { offset: 1, color: isPos ? '#fbbf24' : '#b91c1c' }
+            ]);
+        }, 
+        borderRadius: [4,4,0,0] 
+      },
+      label: { show: false },
       tooltip: { valueFormatter: v => fmtNum(v, 2) },
     }],
   }));
@@ -667,11 +694,28 @@ export function chartDividends(data) {
   showCard('ch-divs');
   const cc = getChartColors();
   const curYear = new Date().getFullYear();
+  
+  const divView = document.querySelector('#div-toggles .active')?.dataset.view || 'amount';
+  let seriesData = [];
+  
+  if (divView === 'yield') {
+    seriesData = d.map(x => ({ 
+        value: x[2] != null ? +x[2].toFixed(2) : null, 
+        itemStyle: x[0] === curYear ? { color: 'rgba(34,197,94,0.35)', borderRadius: [4,4,0,0] } : { color: cc.green, borderRadius: [4,4,0,0] } 
+    }));
+  } else {
+    seriesData = d.map(x => ({ 
+        value: +x[1].toFixed(3), 
+        itemStyle: x[0] === curYear ? { color: 'rgba(34,197,94,0.35)', borderRadius: [4,4,0,0] } : { color: cc.green, borderRadius: [4,4,0,0] } 
+    }));
+  }
+
   makeChart('ch-divs', yearsOption(d.map(x => x[0]), {
+    yAxis: { type: 'value', splitLine: { show: true, lineStyle: { color: "rgba(0,0,0,0.05)" } } },
     series: [{
-      type: 'bar', name: 'Dividendo por acción', barMaxWidth: 26,
-      data: d.map(x => ({ value: +x[1].toFixed(3), itemStyle: x[0] === curYear ? { color: 'rgba(34,197,94,0.35)', borderRadius: [4,4,0,0] } : { color: cc.green, borderRadius: [4,4,0,0] } })),
-      tooltip: { valueFormatter: v => fmtNum(v, 3) },
+      type: 'bar', name: divView === 'yield' ? 'Dividend Yield %' : 'Dividendo por acción', barMaxWidth: 26,
+      data: seriesData,
+      tooltip: { valueFormatter: v => divView === 'yield' ? fmtPct(v, 2) : fmtNum(v, 3) },
     }],
   }));
 }
@@ -1424,15 +1468,24 @@ export function renderKoyfinLayout(data) {
     let nextStr = p.nextEarnings ? String(p.nextEarnings) : null;
     try { if (nextStr) nextStr = new Date(nextStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); } catch {}
     const pctCls = v => v == null ? '' : (v >= 0 ? ' up' : ' down');
-    const ki = (lbl, val, cls = '') =>
-      `<div class="koy-kpi-item"><span class="koy-kpi-lbl">${lbl}</span><span class="koy-kpi-val${cls}">${val || '—'}</span></div>`;
+    let fpeCls = '';
+    if (c.forwardPe != null && c.pe != null) {
+      if (c.forwardPe < c.pe) fpeCls = ' up';
+      else if (c.forwardPe > c.pe) fpeCls = ' down';
+    }
+
+    const ki = (lbl, val, cls = '') => {
+      const rawText = String(val || '—').replace(/<[^>]*>/g, '');
+      return `<div class="koy-kpi-item" title="${escHtml(rawText)}" onclick="this.classList.toggle('expanded')"><span class="koy-kpi-lbl">${lbl}</span><span class="koy-kpi-val${cls}">${val || '—'}</span></div>`;
+    };
+
     elKpis.innerHTML = [
       ki('Sector',        p.sector   || '—'),
       ki('Industry',      p.industry || '—'),
       ki('Div. Yield',    c.divYield  != null ? fmtNum(c.divYield, 2) + '%' : '—'),
       ki('Market Cap',    q.marketCap != null ? fmtBig(q.marketCap) : '—'),
-      ki('Trailing P/E',  c.pe        != null ? fmtRatio(c.pe, 1) + 'x' : '—'),
-      ki('Forward P/E',   c.forwardPe != null ? fmtRatio(c.forwardPe, 1) + 'x' : '—'),
+      ki('Trailing P/E',  c.pe        != null ? fmtRatio(c.pe, 1) : '—'),
+      ki('Forward P/E',   c.forwardPe != null ? fmtRatio(c.forwardPe, 1) : '—', fpeCls),
       ki('CAGR 3Y',       cagr3  != null ? (cagr3  >= 0 ? '+' : '') + fmtNum(cagr3,  1) + '%' : '—', pctCls(cagr3)),
       ki('CAGR 10Y',      cagr10 != null ? (cagr10 >= 0 ? '+' : '') + fmtNum(cagr10, 1) + '%' : '—', pctCls(cagr10)),
       ki('Next Earnings', nextStr || '—'),

@@ -31,7 +31,12 @@ class YFinanceProvider(BaseDataProvider):
 
     def fetch_raw_data(self, symbol: str) -> Dict[str, Any]:
         symbol = symbol.upper().strip()
-        cache_file = YF_CACHE_DIR / f"{symbol.replace('/', '_')}.pkl"
+        try:
+            from ..config import CACHE_VERSION
+        except Exception:
+            CACHE_VERSION = "v0"
+        safe_sym = symbol.replace('/', '_')
+        cache_file = YF_CACHE_DIR / f"{safe_sym}_{CACHE_VERSION}.pkl"
 
         # 1. Leer de caché en disco (válido por 6 horas)
         if cache_file.exists():

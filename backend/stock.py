@@ -73,7 +73,7 @@ def _growth_table(annuals):
 def _dividend_safety(annuals, dividends_annual, info):
     """Racha de años pagando/subiendo dividendo y payout sobre FCF."""
     cur_year = pd.Timestamp.now().year
-    dmap = {y: d for y, d in dividends_annual if y < cur_year and d > 0}
+    dmap = {item[0]: item[1] for item in dividends_annual if item[0] < cur_year and item[1] > 0}
     if not dmap:
         return None
 
@@ -275,13 +275,23 @@ def _calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps
                 div_yield_vals.append(div / px_at_date * 100)
     div_yield_5y_avg = sum(div_yield_vals) / len(div_yield_vals) if div_yield_vals else 0.0
     
+    def _calc_fcf_ps(fcf, sh):
+        if not fcf or not sh or sh <= 0:
+            return None
+        val = fcf / sh
+        if val > 500:
+            val = fcf / (sh * 1_000_000.0)
+        elif val > 50:
+            val = fcf / (sh * 1_000.0)
+        return round(val, 2) if (val and val > 0 and val < 500) else None
+
     pcf_vals = []
     for a in last_5_annuals:
         fcf = a.get("fcf")
         sh = a.get("sharesOut")
         dt_val = a.get("endDate")
-        if fcf is not None and sh and sh > 0 and dt_val:
-            fcf_ps = fcf / sh
+        fcf_ps = _calc_fcf_ps(fcf, sh)
+        if fcf_ps and dt_val:
             dt = pd.to_datetime(dt_val, unit='ms') if isinstance(dt_val, (int, float)) else pd.to_datetime(dt_val)
             if prices is not None and not prices.empty and fcf_ps > 0:
                 idx = prices.index.get_indexer([dt], method='nearest')[0]
@@ -346,12 +356,14 @@ def _calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps
         roe_ttm = annuals[-1].get("roe")
 
     shares_now = M._f(info.get("sharesOutstanding"))
-    fcf_ps_ttm = (fcf_now / shares_now) if (fcf_now and shares_now and shares_now > 0) else None
+    fcf_ps_ttm = _calc_fcf_ps(fcf_now, shares_now) if (fcf_now and shares_now) else None
     
-    fcf_ps_5y_avg = None
-    fcf_ps_vals = [a["fcf"] / a["sharesOut"] for a in last_5_annuals if a.get("fcf") and a.get("sharesOut")]
-    if fcf_ps_vals:
-        fcf_ps_5y_avg = sum(fcf_ps_vals) / len(fcf_ps_vals)
+    fcf_ps_vals = []
+    for a in last_5_annuals:
+        fps = _calc_fcf_ps(a.get("fcf"), a.get("sharesOut"))
+        if fps:
+            fcf_ps_vals.append(fps)
+    fcf_ps_5y_avg = round(sum(fcf_ps_vals) / len(fcf_ps_vals), 2) if fcf_ps_vals else None
 
     roc_ttm = V.greenblatt_roc(info, annuals)
 
@@ -593,10 +605,29 @@ def build_payload(symbol: str, refresh: bool = False):
     fpe_val = M._f(info.get("forwardPE"))
     if fpe_val is None and price and info.get("forwardEps") and info["forwardEps"] > 0:
         fpe_val = price / info["forwardEps"]
+        
+    div_yield_ttm = M._f(info.get("trailingAnnualDividendYield"))
+    if div_yield_ttm is not None:
+        div_yield_ttm *= 100
+    else:
+        div_yield_ttm = M._f(info.get("dividendYield"))
+        if div_yield_ttm is not None:
+            div_yield_ttm *= 100
+        elif info.get("dividendRate") and price:
+            div_yield_ttm = float(info["dividendRate"]) / price * 100
+    if div_yield_ttm is None:
+        div_yield_ttm = 0.0
+
+    # Trailing PE: prefer direct field, else compute from EPS and price
+    tpe_val = M._f(info.get("trailingPE"))
+    if tpe_val is None and price and info.get("trailingEps") and info["trailingEps"] > 0:
+        tpe_val = round(price / info["trailingEps"], 2)
 
     current = {
-        "pe": M._f(info.get("trailingPE")),
+        "pe": tpe_val,
+        "trailingPE": tpe_val,
         "forwardPe": fpe_val,
+        "forwardPE": fpe_val,
         "ps": M._f(info.get("priceToSalesTrailing12Months")),
         "pb": M._f(info.get("priceToBook")),
         "evEbitda": M._f(info.get("enterpriseToEbitda")),
@@ -615,14 +646,21 @@ def build_payload(symbol: str, refresh: bool = False):
         "beta": M._f(info.get("beta")),
         "eps": M._f(info.get("trailingEps")),
         "epsForward": M._f(info.get("forwardEps")),
-        "bvps": M._f(info.get("bookValue")),
+        # bvps: Yahoo sometimes returns null — fallback to equity/shares from latest annual
+        "bvps": (M._f(info.get("bookValue"))
+                 or (annuals[-1].get("equity") / annuals[-1].get("sharesOut")
+                     if annuals and annuals[-1].get("equity") and annuals[-1].get("sharesOut") and annuals[-1]["sharesOut"] > 0
+                     else None)),
 
         "revenueGrowth": M._f(info.get("revenueGrowth")),
         "earningsGrowth": M._f(info.get("earningsGrowth")),
         "fcf": fcf_now,
         "fcfYield": (fcf_now / mc * 100) if (fcf_now and mc) else None,
-        "totalCash": M._f(info.get("totalCash")),
-        "totalDebt": M._f(info.get("totalDebt")),
+        # totalCash/Debt: fallback from latest annual when Yahoo returns null
+        "totalCash": (M._f(info.get("totalCash"))
+                      or (annuals[-1].get("cash") if annuals else None)),
+        "totalDebt": (M._f(info.get("totalDebt"))
+                      or (annuals[-1].get("totalDebt") if annuals else None)),
         "workingCapital": annuals[-1].get("workingCapital") if annuals else None,
         "sma50": round(sma50, 2) if sma50 else None,
         "sma200": round(sma200, 2) if sma200 else None,
@@ -674,7 +712,7 @@ def build_payload(symbol: str, refresh: bool = False):
     scorecard = V.buffett_scorecard(info, annuals, pe_stats)
     next_earnings, next_earnings_est, sec_filings = _sec_context(symbol, raw.calendar)
 
-    dividends_annual = M.dividend_history(raw)
+    dividends_annual = M.dividend_history(raw, prices=prices)
     div_safety = _dividend_safety(annuals, dividends_annual, info)
     warnings = Q.build_warnings(info, annuals, valuation, pe_pairs, edgar_hist)
 
@@ -694,8 +732,8 @@ def build_payload(symbol: str, refresh: bool = False):
             "industry": info.get("industry"),
             "country": info.get("country") or ("Chile" if symbol.upper().endswith(".SN") else None),
             "website": info.get("website"),
-            "employees": info.get("fullTimeEmployees"),
-            "summary": (info.get("longBusinessSummary") or "")[:600],
+            "employees": info.get("fullTimeEmployees") or info.get("employees"),
+            "summary": (info.get("longBusinessSummary") or info.get("description") or info.get("summary") or "")[:600],
             "exchange": info.get("fullExchangeName") or info.get("exchange"),
             "currency": info.get("currency") or ("CLP" if symbol.upper().endswith(".SN") else "USD"),
             "nextEarnings": next_earnings,
@@ -708,8 +746,10 @@ def build_payload(symbol: str, refresh: bool = False):
             "marketCap": mc,
             "high52w": M._f(info.get("fiftyTwoWeekHigh")),
             "low52w": M._f(info.get("fiftyTwoWeekLow")),
-            "volume": M._f(info.get("volume")),
-            "avgVolume": M._f(info.get("averageVolume")),
+            "volume": (M._f(info.get("volume")) or M._f(info.get("regularMarketVolume"))
+                       or (int(prices["Volume"].dropna().iloc[-1]) if prices is not None and "Volume" in prices.columns and not prices["Volume"].dropna().empty else None)),
+            "avgVolume": (M._f(info.get("averageVolume")) or M._f(info.get("averageVolume10days"))
+                         or (int(prices["Volume"].dropna().tail(30).mean()) if prices is not None and "Volume" in prices.columns and not prices["Volume"].dropna().empty else None)),
             "postMarketPrice": M._f(info.get("postMarketPrice")),
             "postMarketChangePercent": M._f(info.get("postMarketChangePercent")),
         },

@@ -37,6 +37,33 @@ def fetch_data_with_fallback(symbol: str) -> Dict[str, Any]:
                 if yf_data.get(k) is not None:
                     merged[k] = yf_data[k]
 
+        # Enriquecer info de FMP con campos exclusivos de yfinance
+        yf_info = yf_data.get("info") or {}
+        merged_info = merged.get("info") or {}
+        YF_ONLY_FIELDS = [
+            "forwardPE", "forwardEps", "trailingPE", "fullTimeEmployees",
+            "longBusinessSummary", "trailingAnnualDividendYield", "dividendYield",
+            "dividendRate", "payoutRatio", "trailingEps", "priceToBook",
+            "priceToSalesTrailing12Months", "enterpriseToEbitda", "enterpriseToRevenue",
+            "pegRatio", "trailingPegRatio", "beta", "shortRatio", "shortPercentOfFloat",
+            "heldPercentInsiders", "returnOnEquity", "returnOnAssets",
+            "grossMargins", "operatingMargins", "profitMargins",
+            "earningsGrowth", "revenueGrowth", "currentRatio", "quickRatio",
+            "debtToEquity", "targetMeanPrice", "recommendationKey",
+            # Market data fields
+            "sector", "industry", "marketCap", "sharesOutstanding",
+            "fiftyTwoWeekHigh", "fiftyTwoWeekLow", "fiftyDayAverage", "twoHundredDayAverage",
+            "volume", "averageVolume", "averageVolume10days",
+            "previousClose", "open", "dayHigh", "dayLow",
+            "postMarketPrice", "postMarketChangePercent",
+            "freeCashflow", "totalCash", "totalDebt",
+            "bookValue", "trailingAnnualDividendRate",
+        ]
+        for field in YF_ONLY_FIELDS:
+            if not merged_info.get(field) and yf_info.get(field) is not None:
+                merged_info[field] = yf_info[field]
+        merged["info"] = merged_info
+
         merged["provider"] = "Financial Modeling Prep (FMP)"
         merged["isFallback"] = False
         return merged
@@ -63,6 +90,26 @@ def fetch_data_with_fallback(symbol: str) -> Dict[str, Any]:
                 if isinstance(v, dict) and not v:
                     continue
                 merged[k] = v
+
+    # Recuperar campos críticos que solo yfinance provee, que pueden haberse
+    # pisado si FMP aportó un dict 'info' parcial (sin forwardPE, employees, etc.)
+    yf_info = yf_data.get("info") or {}
+    merged_info = merged.get("info") or {}
+    YF_ONLY_FIELDS = [
+        "forwardPE", "forwardEps", "trailingPE", "fullTimeEmployees",
+        "longBusinessSummary", "trailingAnnualDividendYield", "dividendYield",
+        "dividendRate", "payoutRatio", "trailingEps", "priceToBook",
+        "priceToSalesTrailing12Months", "enterpriseToEbitda", "enterpriseToRevenue",
+        "pegRatio", "trailingPegRatio", "beta", "shortRatio", "shortPercentOfFloat",
+        "heldPercentInsiders", "returnOnEquity", "returnOnAssets",
+        "grossMargins", "operatingMargins", "profitMargins",
+        "earningsGrowth", "revenueGrowth", "currentRatio", "quickRatio",
+        "debtToEquity", "targetMeanPrice", "recommendationKey",
+    ]
+    for field in YF_ONLY_FIELDS:
+        if not merged_info.get(field) and yf_info.get(field) is not None:
+            merged_info[field] = yf_info[field]
+    merged["info"] = merged_info
 
     if edgar_hist and any(edgar_hist.values()):
         logger.info(f"✅ Cobertura auditada de {symbol} verificada con SEC EDGAR ({len(edgar_hist.get('revenue', {}))} años).")

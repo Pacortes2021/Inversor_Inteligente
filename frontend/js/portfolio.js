@@ -1,10 +1,10 @@
 /* Portafolio: posiciones, concentración por sector y respaldo de datos. */
 
-import { toast, apiFetch } from "./dom.js";
-import { fmtBig, fmtNum, fmtPct, fmtPrice, escHtml, pctClass } from "./format.js";
-import { getChartColors } from "./charts.js";
-import { refreshSidebar } from "./analysis.js";
-import { wlInvalidate } from "./watchlist.js";
+import { toast, apiFetch } from "./dom.js?v=74";
+import { fmtBig, fmtNum, fmtPct, fmtPrice, escHtml, pctClass } from "./format.js?v=74";
+import { getChartColors } from "./charts.js?v=74";
+import { refreshSidebar } from "./analysis.js?v=74";
+import { wlInvalidate } from "./watchlist.js?v=74";
 
 let pfLoaded = false;
 let pfSectorChartInstance = null;
@@ -250,14 +250,20 @@ document.getElementById("pf-csv").addEventListener("click", async () => {
 
 /* -------------------------------------------------- respaldo de datos */
 document.getElementById("pf-export").addEventListener("click", async () => {
-  const data = await (await fetch("/api/backup")).json();
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `inversor_respaldo_${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-  toast("Respaldo exportado (watchlist + portafolio + notas)");
+  try {
+    const r = await fetch("/api/backup");
+    if (!r.ok) throw new Error(`Error ${r.status}`);
+    const data = await r.json();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `inversor_respaldo_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast("Respaldo exportado (watchlist + portafolio + notas) ✓");
+  } catch (err) {
+    toast("⚠ Error exportando respaldo: " + err.message);
+  }
 });
 
 document.getElementById("pf-import").addEventListener("click", () =>
