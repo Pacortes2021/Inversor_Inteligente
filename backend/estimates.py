@@ -191,10 +191,37 @@ def _build_growth_grid(symbol, raw, info, annuals=None, price=None, fmp_rows=Non
     rev_est_df = getattr(raw, "revenue_estimate", None)
     eps_est_df = getattr(raw, "earnings_estimate", None)
 
-    # 1. Recopilar proyecciones oficiales exclusivamente de proveedores
-    official_by_year = {}
-    provider_source = "Finnhub / Yahoo Finance"
+    # Crecimientos esperados a medio y largo plazo
+    g_rev_1y = 0.08
+    v = _growth_from_df(rev_est_df, "+1y")
+    if v is not None:
+        g_rev_1y = v
+    g_rev_2y = _growth_from_df(rev_est_df, "+2y")
 
+    g_eps_1y = 0.10
+    v = _growth_from_df(eps_est_df, "+1y")
+    if v is not None:
+        g_eps_1y = v
+    g_eps_2y = _growth_from_df(eps_est_df, "+2y")
+
+    g_eps_long_raw = g_eps_1y
+    if g_eps_2y is not None:
+        g_eps_long_raw = (g_eps_1y + g_eps_2y) / 2.0
+    if g_eps_long_raw > 0:
+        g_eps_long = max(G_EPS_LONG_FLOOR, min(G_EPS_LONG_CAP, g_eps_long_raw * 0.85))
+    else:
+        g_eps_long = 0.04
+
+    g_rev_long_raw = g_rev_1y
+    if g_rev_2y is not None:
+        g_rev_long_raw = (g_rev_1y + g_rev_2y) / 2.0
+    if g_rev_long_raw > 0:
+        g_rev_long = max(G_REV_LONG_FLOOR, min(G_REV_LONG_CAP, g_rev_long_raw * 0.85))
+    else:
+        g_rev_long = 0.03
+
+    # Consenso FMP por ejercicio
+    fmp_by_year = {}
     if fmp_rows:
         for row in fmp_rows:
             try:
@@ -202,53 +229,34 @@ def _build_growth_grid(symbol, raw, info, annuals=None, price=None, fmp_rows=Non
             except (TypeError, ValueError):
                 continue
             if fy > last_y:
-                official_by_year[fy] = {
-                    "revenue": row.get("revenueAvg"),
-                    "ebitda": row.get("ebitdaAvg"),
-                    "netIncome": row.get("netIncomeAvg"),
-                    "eps": row.get("epsAvg"),
-                    "analysts": row.get("analysts") or 0,
-                }
-        if official_by_year:
-            provider_source = "FMP (Financial Modeling Prep)"
+                fmp_by_year[fy] = row
 
-    if not official_by_year:
-        # Fallback a consenso oficial de analistas de Yahoo Finance (0y = próximo año fiscal, +1y = subsiguiente)
-        eps_0y = _val_from_df(eps_est_df, "0y", "avg")
-        rev_0y = _val_from_df(rev_est_df, "0y", "avg")
-        an_0y = _safe_int(_val_from_df(eps_est_df, "0y", "numberOfAnalysts")) or 0
+    provider_source = "FMP (Financial Modeling Prep)" if fmp_by_year else "Consenso Oficial de Analistas (Yahoo Finance / Institutional)"
 
-        if eps_0y is not None or rev_0y is not None:
-            y1 = last_y + 1
-            official_by_year[y1] = {
-                "eps": eps_0y,
-                "revenue": rev_0y,
-                "netIncome": (eps_0y * sh_out) if (eps_0y is not None and sh_out and sh_out > 1) else None,
-                "ebitda": None,
-                "analysts": an_0y,
-            }
+    # Ratios de conversión para EBITDA y FCF
+    ebitda_margins = [a.get("ebitda") / a.get("revenue") for a in sorted_annuals if a.get("ebitda") and a.get("revenue") and a.get("revenue") > 0]
+    ebitda_margin = (sum(ebitda_margins) / len(ebitda_margins)) if ebitda_margins else 0.25
 
-        eps_1y = _val_from_df(eps_est_df, "+1y", "avg")
-        rev_1y = _val_from_df(rev_est_df, "+1y", "avg")
-        an_1y = _safe_int(_val_from_df(eps_est_df, "+1y", "numberOfAnalysts")) or 0
+    def _pos(x):
+        v = M._f(x)
+        return v is not None and v > 0
+    fcf_ni_pairs = [(a.get("fcf"), a.get("netIncome")) for a in sorted_annuals
+                    if _pos(a.get("fcf")) and _pos(a.get("netIncome"))]
+    fcf_ni_ratio = None
+    if len(fcf_ni_pairs) >= 2:
+        ratios = sorted(M._f(f) / M._f(n) for f, n in fcf_ni_pairs)
+        fcf_ni_ratio = ratios[len(ratios) // 2]
 
-        if eps_1y is not None or rev_1y is not None:
-            y2 = last_y + 2
-            official_by_year[y2] = {
-                "eps": eps_1y,
-                "revenue": rev_1y,
-                "netIncome": (eps_1y * sh_out) if (eps_1y is not None and sh_out and sh_out > 1) else None,
-                "ebitda": None,
-                "analysts": an_1y,
-            }
-        if official_by_year:
-            provider_source = "Consenso Oficial de Analistas (Yahoo Finance / Institutional)"
-
-    if not official_by_year:
-        return None
-
-    proj_years = sorted(official_by_year.keys())
+    # Siempre proyectamos el horizonte estándar de 5 años hacia el futuro (hasta 2030E)
+    proj_years = [last_y + i for i in range(1, 6)]
     all_years = hist_years + proj_years
+
+    cur_rev = rev_map.get(last_y) or 0
+    cur_ebitda = ebitda_map.get(last_y) or (cur_rev * ebitda_margin)
+    cur_ni = ni_map.get(last_y) or (cur_rev * 0.15)
+    cur_eps = eps_map.get(last_y) or (cur_ni / sh_out if sh_out else 1.0)
+    cur_fcf = fcf_map.get(last_y) or cur_ni
+    cur_div = div_map.get(last_y) or 0
 
     rev_all = {**rev_map}
     ebitda_all = {**ebitda_map}
@@ -258,18 +266,65 @@ def _build_growth_grid(symbol, raw, info, annuals=None, price=None, fmp_rows=Non
     div_all = {**div_map}
     fwd_pe_all = {y: None for y in hist_years}
 
-    for py in proj_years:
-        off = official_by_year.get(py, {})
-        rev_all[py] = off.get("revenue")
-        ebitda_all[py] = off.get("ebitda")
-        ni_all[py] = off.get("netIncome")
-        eps_all[py] = off.get("eps")
-        # No inventamos FCF ni Dividendos si los analistas no los publican formalmente
-        fcf_all[py] = None
-        div_all[py] = None
+    for idx, py in enumerate(proj_years):
+        g_r = g_rev_1y if idx == 0 else g_rev_long
+        g_e = g_eps_1y if idx == 0 else g_eps_long
 
-        if price_val and off.get("eps") and off["eps"] > 0:
-            fwd_pe_all[py] = round(price_val / off["eps"], 2)
+        row = fmp_by_year.get(py)
+        if row:
+            # 1. Prioridad: Consenso plurianual de FMP
+            if row.get("revenueAvg"):
+                cur_rev = row["revenueAvg"]
+            if row.get("ebitdaAvg"):
+                cur_ebitda = row["ebitdaAvg"]
+            if row.get("netIncomeAvg"):
+                cur_ni = row["netIncomeAvg"]
+                if fcf_ni_ratio:
+                    cur_fcf = cur_ni * fcf_ni_ratio
+            if row.get("epsAvg"):
+                cur_eps = row["epsAvg"]
+            if cur_div and cur_div > 0:
+                cur_div *= (1 + g_e)
+        else:
+            # 2. Consenso oficial de Yahoo Finance (0y para año 1, +1y para año 2)
+            yh_period = "0y" if idx == 0 else ("+1y" if idx == 1 else None)
+            yh_eps = _val_from_df(eps_est_df, yh_period, "avg") if yh_period else None
+            yh_rev = _val_from_df(rev_est_df, yh_period, "avg") if yh_period else None
+
+            if yh_rev and yh_rev > 0:
+                cur_rev = yh_rev
+                cur_ebitda = cur_rev * ebitda_margin
+            else:
+                cur_rev *= (1 + g_r)
+                cur_ebitda *= (1 + g_r)
+
+            if yh_eps is not None:
+                cur_eps = yh_eps
+                if sh_out and sh_out > 1:
+                    cur_ni = cur_eps * sh_out
+                else:
+                    cur_ni = cur_rev * 0.15
+                if fcf_ni_ratio:
+                    cur_fcf = cur_ni * fcf_ni_ratio
+                else:
+                    cur_fcf = cur_ni * 0.85
+            else:
+                cur_eps *= (1 + g_e)
+                cur_ni *= (1 + g_e)
+                cur_fcf *= (1 + g_e)
+
+            if cur_div and cur_div > 0:
+                cur_div *= (1 + g_e)
+
+        rev_all[py] = cur_rev
+        ebitda_all[py] = cur_ebitda
+        ni_all[py] = cur_ni
+        eps_all[py] = cur_eps
+        fcf_all[py] = cur_fcf
+        div_all[py] = cur_div
+
+        if price_val and cur_eps and cur_eps > 0:
+            fwd_pe_all[py] = round(price_val / cur_eps, 2)
         else:
             fwd_pe_all[py] = None
 
