@@ -147,6 +147,19 @@ def _growth_from_df(df, period):
         return None
 
 
+def _val_from_df(df, period, col="avg"):
+    """Valor numérico de una columna (ej. avg, low, high) en earnings/revenue_estimate."""
+    if df is None or df.empty or period not in df.index:
+        return None
+    try:
+        v = df.loc[period, col]
+        if v is None or pd.isna(v):
+            return None
+        return float(v)
+    except Exception:
+        return None
+
+
 def _build_growth_grid(symbol, raw, info, annuals=None, price=None, fmp_rows=None):
     """Construye la grilla de crecimiento histórico + proyecciones 5 años.
     Si hay consenso FMP (fmp_rows), los años proyectados cubiertos usan los
@@ -278,13 +291,16 @@ def _build_growth_grid(symbol, raw, info, annuals=None, price=None, fmp_rows=Non
         ratios = sorted(M._f(f) / M._f(n) for f, n in fcf_ni_pairs[-5:])
         fcf_ni_ratio = ratios[len(ratios) // 2]
 
+    ebitda_margins = [a.get("ebitda") / a.get("revenue") for a in sorted_annuals if a.get("ebitda") and a.get("revenue") and a.get("revenue") > 0]
+    ebitda_margin = (sum(ebitda_margins) / len(ebitda_margins)) if ebitda_margins else 0.25
+
     for idx, py in enumerate(proj_years):
         g_r = g_rev_1y if idx == 0 else g_rev_long
         g_e = g_eps_1y if idx == 0 else g_eps_long
 
         row = fmp_by_year.get(py)
         if row:
-            # Años con consenso de analistas: usar valores reales proyectados
+            # Años con consenso de analistas FMP: usar valores reales proyectados
             fmp_used = True
             if row.get("revenueAvg"):
                 cur_rev = row["revenueAvg"]
@@ -299,11 +315,33 @@ def _build_growth_grid(symbol, raw, info, annuals=None, price=None, fmp_rows=Non
             if cur_div and cur_div > 0:
                 cur_div *= (1 + g_e)
         else:
-            cur_rev *= (1 + g_r)
-            cur_ebitda *= (1 + g_r)
-            cur_ni *= (1 + g_e)
-            cur_eps *= (1 + g_e)
-            cur_fcf *= (1 + g_e)
+            # Check if Yahoo consensus has absolute estimates for 1st (0y) or 2nd (+1y) year
+            yh_period = "0y" if idx == 0 else ("+1y" if idx == 1 else None)
+            yh_eps = _val_from_df(eps_est_df, yh_period, "avg") if yh_period else None
+            yh_rev = _val_from_df(rev_est_df, yh_period, "avg") if yh_period else None
+
+            if yh_rev and yh_rev > 0:
+                cur_rev = yh_rev
+                cur_ebitda = cur_rev * ebitda_margin
+            else:
+                cur_rev *= (1 + g_r)
+                cur_ebitda *= (1 + g_r)
+
+            if yh_eps is not None:
+                cur_eps = yh_eps
+                if sh_out and sh_out > 1:
+                    cur_ni = cur_eps * sh_out
+                else:
+                    cur_ni = cur_rev * 0.15
+                if fcf_ni_ratio:
+                    cur_fcf = cur_ni * fcf_ni_ratio
+                else:
+                    cur_fcf = cur_ni * 0.9
+            else:
+                cur_ni *= (1 + g_e)
+                cur_eps *= (1 + g_e)
+                cur_fcf *= (1 + g_e)
+
             if cur_div and cur_div > 0:
                 cur_div *= (1 + g_e)
 
