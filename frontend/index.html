@@ -11,9 +11,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   
   <!-- CSS Principal -->
-  <link rel="stylesheet" href="css/style.css?v=75.0">
-  <link rel="stylesheet" href="css/additions.css?v=75.0">
-  <link rel="stylesheet" href="css/koyfin.css?v=75.0">
+  <link rel="stylesheet" href="css/style.css?v=76.0">
+  <link rel="stylesheet" href="css/additions.css?v=76.0">
+  <link rel="stylesheet" href="css/koyfin.css?v=76.0">
   
   <!-- ECharts CDN -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
@@ -462,29 +462,111 @@
         </div>
       </div>
 
-      <!-- EVALUADOR DE CALIDAD (BUFFETT SCORECARD) -->
-      <section class="card u-mt20" >
-        <h2 class="section-heading"><svg class="h-ico "><use href="#i-trophy"/></svg>Evaluador de Calidad & Solidez Financiera</h2>
-        <p class="card-sub section-sub">
-          Evaluación de 14 puntos cuantitativos inspirados en la filosofía de Warren Buffett y Charlie Munger (Ventaja competitiva, solidez de balance y generación de caja).
-        </p>
-        
-        <div id="scorecard-total-box" class="scorecard-donut-card">
-          <div class="donut-wrapper">
-            <svg class="donut-svg u-w76-h76" viewBox="0 0 100 100" >
-              <circle class="donut-bg" cx="50" cy="50" r="42" fill="none"></circle>
-              <circle id="donut-fill" class="donut-fill" cx="50" cy="50" r="42" fill="none" stroke-dasharray="263.89" stroke-dashoffset="263.89"></circle>
-            </svg>
-            <div id="scorecard-donut" class="donut-text">—</div>
+      <!-- EVALUADOR DE CALIDAD (BUFFETT SCORECARD) ESTILO MÚLTIPLOS HISTÓRICOS -->
+      <section class="card u-mt20" id="buffett-quality-section">
+        <div class="multiples-header flex-between-center u-mb16">
+          <div>
+            <h2 class="section-heading u-m0"><svg class="h-ico "><use href="#i-trophy"/></svg>Evaluador de Calidad & Solidez Financiera</h2>
+            <p class="card-sub section-sub u-mt4">
+              Análisis cuantitativo de 14 criterios de Warren Buffett & Charlie Munger con gráficos históricos interactivos, umbrales y estadísticas clave.
+            </p>
           </div>
-          <div class="scorecard-info-box">
-            <h4 class="scorecard-title">Puntaje de Solidez de Inversión</h4>
-            <p id="scorecard-desc" class="scorecard-desc-text">Criterios aprobados basados en la historia financiera disponible.</p>
+          <div id="scorecard-total-box" class="scorecard-donut-card-compact">
+            <div class="donut-wrapper-sm">
+              <svg class="donut-svg u-w52-h52" viewBox="0 0 100 100">
+                <circle class="donut-bg" cx="50" cy="50" r="42" fill="none"></circle>
+                <circle id="donut-fill" class="donut-fill" cx="50" cy="50" r="42" fill="none" stroke-dasharray="263.89" stroke-dashoffset="263.89"></circle>
+              </svg>
+              <div id="scorecard-donut" class="donut-text-sm">—</div>
+            </div>
+            <div class="scorecard-info-box">
+              <h4 class="scorecard-title" id="scorecard-score-title">Puntaje Buffett</h4>
+              <p id="scorecard-desc" class="scorecard-desc-text">—</p>
+            </div>
           </div>
         </div>
 
-        <div id="scorecard-list" class="scorecard-list-container">
-          <!-- Criterios evaluados dinámicamente -->
+        <!-- GRID DE TARJETAS DE GRÁFICOS DE CALIDAD (ESTILO MÚLTIPLOS HISTÓRICOS) -->
+        <div class="grid-multiples" id="grid-quality-charts">
+          <!-- 1. ROIC & ROE -->
+          <div class="chart-card chart-half">
+            <div class="flex-between-center">
+              <h3>ROIC y ROE <span class="chart-tag">Umbral Moat ≥ 12% / 15%</span></h3>
+              <span id="badge-qual-roic" class="stat-badge">—</span>
+            </div>
+            <div class="chart chart-md" id="ch-qual-roic"></div>
+            <div class="chart-stat-row" id="stat-qual-roic"></div>
+          </div>
+
+          <!-- 2. Márgenes y Pricing Power -->
+          <div class="chart-card chart-half">
+            <div class="flex-between-center">
+              <h3>Márgenes Operativos <span class="chart-tag">Poder de Precios ≥ 40% / 10%</span></h3>
+              <span id="badge-qual-margins" class="stat-badge">—</span>
+            </div>
+            <div class="chart chart-md" id="ch-qual-margins"></div>
+            <div class="chart-stat-row" id="stat-qual-margins"></div>
+          </div>
+
+          <!-- 3. Flujo de Caja Libre y Conversión -->
+          <div class="chart-card chart-half">
+            <div class="flex-between-center">
+              <h3>FCF y Conversión de Ganancias <span class="chart-tag">Conversión ≥ 80%</span></h3>
+              <span id="badge-qual-fcf" class="stat-badge">—</span>
+            </div>
+            <div class="chart chart-md" id="ch-qual-fcf"></div>
+            <div class="chart-stat-row" id="stat-qual-fcf"></div>
+          </div>
+
+          <!-- 4. Deuda y Capacidad de Desendeudamiento -->
+          <div class="chart-card chart-half">
+            <div class="flex-between-center">
+              <h3>Deuda vs Caja y Pago <span class="chart-tag">Desendeudamiento ≤ 4a FCF</span></h3>
+              <span id="badge-qual-debt" class="stat-badge">—</span>
+            </div>
+            <div class="chart chart-md" id="ch-qual-debt"></div>
+            <div class="chart-stat-row" id="stat-qual-debt"></div>
+          </div>
+
+          <!-- 5. Crecimiento de Ventas y EPS -->
+          <div class="chart-card chart-half">
+            <div class="flex-between-center">
+              <h3>Crecimiento Ingresos y EPS <span class="chart-tag">CAGR 5A ≥ 5%</span></h3>
+              <span id="badge-qual-growth" class="stat-badge">—</span>
+            </div>
+            <div class="chart chart-md" id="ch-qual-growth"></div>
+            <div class="chart-stat-row" id="stat-qual-growth"></div>
+          </div>
+
+          <!-- 6. Acciones en Circulación (Recompras vs Dilución) -->
+          <div class="chart-card chart-half">
+            <div class="flex-between-center">
+              <h3>Acciones en Circulación <span class="chart-tag">Recompras / No Dilución</span></h3>
+              <span id="badge-qual-shares" class="stat-badge">—</span>
+            </div>
+            <div class="chart chart-md" id="ch-qual-shares"></div>
+            <div class="chart-stat-row" id="stat-qual-shares"></div>
+          </div>
+
+          <!-- 7. Liquidez y Solvencia de Corto Plazo -->
+          <div class="chart-card chart-half">
+            <div class="flex-between-center">
+              <h3>Razón Corriente y Liquidez <span class="chart-tag">Umbral ≥ 1.2x</span></h3>
+              <span id="badge-qual-liquidity" class="stat-badge">—</span>
+            </div>
+            <div class="chart chart-md" id="ch-qual-liquidity"></div>
+            <div class="chart-stat-row" id="stat-qual-liquidity"></div>
+          </div>
+
+          <!-- 8. Valoración: PE vs Mediana Histórica y FCF Yield -->
+          <div class="chart-card chart-half">
+            <div class="flex-between-center">
+              <h3>PE Histórico vs Mediana <span class="chart-tag">Descuento de Valoración</span></h3>
+              <span id="badge-qual-pe" class="stat-badge">—</span>
+            </div>
+            <div class="chart chart-md" id="ch-qual-pe"></div>
+            <div class="chart-stat-row" id="stat-qual-pe"></div>
+          </div>
         </div>
       </section>
 
@@ -1632,7 +1714,7 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script type="module" src="js/init.js?v=75"></script>
+<script type="module" src="js/init.js?v=76"></script>
 
 </body>
 </html>

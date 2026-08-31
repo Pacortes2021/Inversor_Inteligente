@@ -2,18 +2,18 @@
    cualitativas, scorecard Buffett, tabla de crecimiento, sidebar y
    orquestación de pestañas de acción. */
 
-import { $, toast, apiFetch } from "./dom.js?v=75";
-import { state, currentPeriodYears, currentMultiplesRange, setCurrentMultiplesRange } from "./state.js?v=75";
-import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, escHtml, pctClass } from "./format.js?v=75";
-import { termify } from "./glossary.js?v=75";
-import { chartPrice, chartRatio, chartDividends, chartEps, chartEarningsSurprise, renderAllCharts, renderPriceOverlay, renderKoyfinLayout, C, charts } from "./charts.js?v=75";
+import { $, toast, apiFetch } from "./dom.js?v=76";
+import { state, currentPeriodYears, currentMultiplesRange, setCurrentMultiplesRange } from "./state.js?v=76";
+import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, escHtml, pctClass } from "./format.js?v=76";
+import { termify } from "./glossary.js?v=76";
+import { chartPrice, chartRatio, chartDividends, chartEps, chartEarningsSurprise, renderAllCharts, renderPriceOverlay, renderKoyfinLayout, C, charts } from "./charts.js?v=76";
 
-import { checkStockAlerts } from "./alerts.js?v=75";
+import { checkStockAlerts } from "./alerts.js?v=76";
 import {
   renderValuationCard, renderRatiosGrid, renderEstimates, renderEpsEstimatesChart,
   renderInsidersHolders, renderFinancialStatements, renderEpsFv, renderDcfFv,
   renderDdmFv, renderHistoricalRatios, renderAdditional, renderScenarios, renderFcfHistory,
-} from "./valuation.js?v=75";
+} from "./valuation.js?v=76";
 
 /* ---------------------------------------------------------- render */
 export function renderAnalysis(d) {
@@ -526,17 +526,14 @@ export function renderBuffettScorecard(sc) {
     }).join("");
   }
 
-  // Ahora pintamos en la pestaña Rating si existe
-  const listEl = $("scorecard-list");
-  if (listEl) {
+  // Actualizar Scorecard Donut y métricas resumen
+  if ($("scorecard-donut") && sc) {
     $("scorecard-donut").textContent = `${sc.passed}/${sc.evaluated}`;
     const pct = sc.evaluated > 0 ? (sc.passed / sc.evaluated) : 0;
 
-    // Animar SVG donut fill ring con transición suave
     const fillEl = $("donut-fill");
     if (fillEl) {
       const circ = 263.89;
-      // Primero asegurar que esté en 0 para disparar animación
       fillEl.style.transition = "none";
       fillEl.style.strokeDashoffset = circ;
       requestAnimationFrame(() => {
@@ -550,48 +547,10 @@ export function renderBuffettScorecard(sc) {
 
     let desc = "";
     if (pct >= 0.8) desc = "Excelente solidez de inversión. Cumple con la mayoría de criterios de Buffett.";
-    else if (pct >= 0.5) desc = "Solidez moderada. Cumple con algunos criterios clave de Buffett, revisar con cautela.";
-    else desc = "Solidez débil. Pasa muy pocos criterios de Buffett, alta precaución recomendada.";
-    $("scorecard-desc").textContent = desc;
-
-    listEl.innerHTML = sc.checks.map(c => {
-      const isPass = c.passed === true;
-      const isFail = c.passed === false;
-      let badgeHtml = isPass
-        ? `<div class="scorecard-item-badge pass">✓</div>`
-        : isFail
-          ? `<div class="scorecard-item-badge fail">✗</div>`
-          : `<div class="scorecard-item-badge na">?</div>`;
-
-      let valStr = "—";
-      if (c.value != null) {
-        if (c.fmt === "pct") valStr = (typeof c.value === 'number') ? fmtPct(c.value) : String(c.value);
-        else if (c.fmt === "x") valStr = (typeof c.value === 'number') ? `${c.value.toFixed(2)}x` : String(c.value);
-        else if (c.fmt === "años") valStr = `${c.value} años`;
-        else if (c.fmt === "$") valStr = (typeof c.value === 'number') ? fmtPrice(c.value, state.data?.profile?.currency || 'USD') : String(c.value);
-        else valStr = String(c.value);
-      }
-
-      const sparklineHtml = renderScorecardSparkline(c.history, c.passed, c.fmt);
-
-      return `
-        <div class="scorecard-item-row">
-          <div class="scorecard-item-left">
-            ${badgeHtml}
-            <div class="scorecard-item-info">
-              <span class="scorecard-item-name">${escHtml(c.name)}</span>
-              <span class="scorecard-item-desc">${escHtml(c.desc)}</span>
-            </div>
-          </div>
-          <div class="scorecard-item-sparkline">
-            ${sparklineHtml}
-          </div>
-          <div class="scorecard-item-right">
-            <span class="scorecard-item-value">${valStr}</span>
-          </div>
-        </div>
-      `;
-    }).join("");
+    else if (pct >= 0.5) desc = "Solidez moderada. Cumple con algunos criterios clave de Buffett.";
+    else desc = "Solidez débil. Pasa muy pocos criterios de Buffett, revisar con cautela.";
+    if ($("scorecard-desc")) $("scorecard-desc").textContent = desc;
+    if ($("scorecard-score-title")) $("scorecard-score-title").textContent = `Puntaje Buffett: ${Math.round(pct * 100)}%`;
   }
 }
 

@@ -1703,52 +1703,51 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
 /* =====================================================================
    WARREN BUFFETT SCORECARD
    ===================================================================== */
-.scorecard-donut-card {
+.scorecard-donut-card-compact {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 20px 24px;
-  background: var(--panel);
-  border-radius: var(--radius-lg);
+  gap: 14px;
+  padding: 8px 16px;
+  background: var(--panel-2);
+  border-radius: 12px;
   border: 1px solid var(--border);
-  box-shadow: var(--shadow-card);
-  margin-bottom: 18px;
+  flex-shrink: 0;
+}
+.donut-wrapper-sm {
   position: relative;
-  overflow: hidden;
-}
-.scorecard-donut-card::before {
-  content: '';
-  position: absolute;
-  top: -40px; right: -40px;
-  width: 120px; height: 120px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
-  pointer-events: none;
-}
-[data-theme="light"] .scorecard-donut-card::before {
-  display: none;
-}
-.donut-wrapper {
-  position: relative;
-  width: 80px; height: 80px;
-  max-width: 80px; max-height: 80px;
+  width: 52px; height: 52px;
+  max-width: 52px; max-height: 52px;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-.donut-svg { width: 80px; height: 80px; transform: rotate(-90deg); }
-.donut-bg   { fill: none !important; stroke: var(--border-dark); stroke-width: 8; }
-.donut-fill { fill: none !important; stroke: var(--primary); stroke-width: 8; stroke-linecap: round; }
-.donut-text {
+.u-w52-h52 { width: 52px; height: 52px; transform: rotate(-90deg); }
+.donut-text-sm {
   position: absolute;
   font-family: inherit; font-variant-numeric: tabular-nums;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--text);
   text-align: center;
 }
-.scorecard-info-box { display: flex; flex-direction: column; gap: 4px; }
-.scorecard-title    { font-size: 16px; font-weight: 800; color: var(--text); margin: 0; font-family: 'Space Grotesk', 'Inter', sans-serif; }
-.scorecard-desc-text{ font-size: 13px; color: var(--muted); margin: 0; }
+
+.stat-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.stat-badge.pass { background: var(--green-soft); color: var(--green-text); border: 1px solid rgba(34,197,94,0.25); }
+.stat-badge.fail { background: var(--red-soft);   color: var(--red-text);   border: 1px solid rgba(239,68,68,0.25); }
+.stat-badge.na   { background: var(--panel-2);    color: var(--muted);      border: 1px solid var(--border); }
+
+.scorecard-info-box { display: flex; flex-direction: column; gap: 2px; }
+.scorecard-title    { font-size: 14px; font-weight: 800; color: var(--text); margin: 0; font-family: 'Space Grotesk', 'Inter', sans-serif; }
+.scorecard-desc-text{ font-size: 11.5px; color: var(--muted); margin: 0; max-width: 260px; }
 
 .scorecard-list-container { display: flex; flex-direction: column; gap: 6px; }
 .scorecard-item-row {

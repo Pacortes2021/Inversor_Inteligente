@@ -1,7 +1,7 @@
 /* Dashboard / Home: carga datos del mercado, watchlist, oversold, movers, portafolio. */
 
-import { $ } from "./dom.js?v=75";
-import { fmtPct, fmtNum, fmtPrice, fmtBig, escHtml } from "./format.js?v=75";
+import { $ } from "./dom.js?v=76";
+import { fmtPct, fmtNum, fmtPrice, fmtBig, escHtml } from "./format.js?v=76";
 
 const dash = { loaded: false };
 const IDX_ICONS = { "^GSPC": "i-trend-up", "^IXIC": "i-chart", "^DJI": "i-landmark", "^N225": "i-flag", "^VIX": "i-flame" };

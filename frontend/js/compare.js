@@ -1,8 +1,8 @@
 /* Comparador de empresas: hasta 4 lado a lado con gráficos superpuestos. */
 
-import { toast } from "./dom.js?v=75";
-import { fmtPrice, fmtBig, fmtPct, fmtRatio, escHtml, pctClass } from "./format.js?v=75";
-import { renderCompareCharts, charts } from "./charts.js?v=75";
+import { toast } from "./dom.js?v=76";
+import { fmtPrice, fmtBig, fmtPct, fmtRatio, escHtml, pctClass } from "./format.js?v=76";
+import { renderCompareCharts, charts } from "./charts.js?v=76";
 
 const cmp = { symbols: [], payloads: {}, adding: false };
 const CMP_COLORS = ["#d97706", "#0d9488", "#3b82f6", "#8b5cf6"];
