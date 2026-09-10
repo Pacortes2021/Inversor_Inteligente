@@ -28,7 +28,7 @@ export async function loadPortfolio(refresh = false) {
   }
 }
 
-function renderPortfolio({ positions, totals }) {
+function renderPortfolio({ positions, totals, warnings = [] }) {
   if (!positions.length) {
     document.getElementById("pf-empty").classList.remove("hidden");
     document.getElementById("pf-summary-grid").classList.add("hidden");
@@ -70,7 +70,7 @@ function renderPortfolio({ positions, totals }) {
   }
 
   // Renderizar gráfico de distribución por sector si ECharts está listo
-  renderPortfolioSectorChart(positions, totals);
+  renderPortfolioSectorChart(positions, totals, warnings);
 
   const tbody = document.querySelector("#pf-table tbody");
   tbody.innerHTML = positions.map(p => {
@@ -86,8 +86,8 @@ function renderPortfolio({ positions, totals }) {
     return `<tr${p.overConcentrated ? ' style="background:rgba(239,68,68,0.03)"' : ''}>
       <td class="sym" data-symbol="${escHtml(p.symbol)}" style="cursor:pointer;">${escHtml(p.symbol)}</td>
       <td>${escHtml(p.date)}</td>
-      <td class="num">${fmtNum(p.price, 2)}</td>
-      <td class="num">${p.priceNow != null ? fmtNum(p.priceNow, 2) : "—"}</td>
+      <td class="num">${fmtPrice(p.price, p.currency)}</td>
+      <td class="num">${p.priceNow != null ? fmtPrice(p.priceNow, p.currency) : "—"}</td>
       <td class="num">${fmtNum(p.shares, p.shares % 1 ? 2 : 0)}</td>
       <td class="num">${p.value != null ? fmtBig(p.value, "USD") : "—"}</td>
       ${pctCell}
@@ -113,7 +113,7 @@ function renderPortfolio({ positions, totals }) {
   document.getElementById("pf-table").classList.remove("hidden");
 }
 
-function renderPortfolioSectorChart(positions, totals) {
+function renderPortfolioSectorChart(positions, totals, warnings = []) {
   const chartEl = document.getElementById("pf-sector-chart");
   const cardEl = document.getElementById("pf-sector-card");
   if (!chartEl || !cardEl || !positions.length) return;
@@ -131,13 +131,19 @@ function renderPortfolioSectorChart(positions, totals) {
     .sort((a, b) => b.value - a.value);
 
   // Alertas de concentración > 25%
-  const overConc = positions.filter(p => p.overConcentrated);
+  const overConc = [...new Map(
+    positions.filter(p => p.overConcentrated).map(p => [p.symbol, p])
+  ).values()];
   const alertDiv = document.getElementById("pf-concentration-alert");
   if (alertDiv) {
+    const messages = warnings.map(w => `<div>⚠️ ${escHtml(w)}</div>`);
     if (overConc.length > 0) {
-      alertDiv.innerHTML = `⚠️ <b>Concentración alta:</b> ${overConc.map(p =>
+      messages.push(`<div>⚠️ <b>Concentración alta:</b> ${overConc.map(p =>
         `<span style="font-weight:700; color:var(--gold)">${escHtml(p.symbol)} (${p.pctOfPortfolio?.toFixed(1)}%)</span>`
-      ).join(", ")} supera el 25% del portafolio. Considera diversificar.`;
+      ).join(", ")} supera el 25% del portafolio. Considera diversificar.</div>`);
+    }
+    if (messages.length) {
+      alertDiv.innerHTML = messages.join("");
       alertDiv.classList.remove("hidden");
     } else {
       alertDiv.classList.add("hidden");
@@ -204,6 +210,7 @@ document.getElementById("pf-form").addEventListener("submit", async e => {
     date: document.getElementById("pf-date").value,
     price: parseFloat(document.getElementById("pf-price").value),
     shares: parseFloat(document.getElementById("pf-shares").value),
+    currency: document.getElementById("pf-currency").value,
     note: document.getElementById("pf-note").value,
   };
   if (!body.symbol || !body.date || !isFinite(body.price) || !isFinite(body.shares)) return;
@@ -223,6 +230,12 @@ document.getElementById("pf-form").addEventListener("submit", async e => {
 
 document.getElementById("pf-refresh").addEventListener("click", () => loadPortfolio(true));
 
+document.getElementById("pf-symbol").addEventListener("input", e => {
+  if (e.target.value.trim().toUpperCase().endsWith(".SN")) {
+    document.getElementById("pf-currency").value = "CLP";
+  }
+});
+
 /* Exportar Portafolio a CSV */
 document.getElementById("pf-csv").addEventListener("click", async () => {
   try {
@@ -230,9 +243,9 @@ document.getElementById("pf-csv").addEventListener("click", async () => {
     const { positions } = await r.json();
     if (!positions || !positions.length) return toast("No hay posiciones para exportar");
     const esc = s => `"${String(s ?? "").replace(/"/g, '""')}"`;
-    const headers = ["Símbolo", "Fecha", "Precio Compra", "Precio Actual", "Cantidad", "Valor Total", "Retorno %", "Retorno S&P 500 %", "Alfa %", "Nota"];
+    const headers = ["Símbolo", "Fecha", "Moneda", "Precio Compra", "Precio Actual", "Cantidad", "Valor USD", "Retorno %", "Retorno S&P 500 %", "Alfa %", "Nota"];
     const rows = positions.map(p => [
-      esc(p.symbol), esc(p.date), esc(p.price), esc(p.priceNow), esc(p.shares),
+      esc(p.symbol), esc(p.date), esc(p.currency), esc(p.price), esc(p.priceNow), esc(p.shares),
       esc(p.value), esc(p.return), esc(p.spyReturn), esc(p.alpha), esc(p.note)
     ]);
     const csvContent = [headers.map(esc).join(";"), ...rows.map(r => r.join(";"))].join("\n");

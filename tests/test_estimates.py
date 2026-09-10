@@ -43,7 +43,9 @@ def test_grid_caps_long_growth():
     last_hist = eps["values"][-6]  # 2023 (histórico, último real)
     assert eps["values"][-1] > last_hist * (1.35) ** 4 * 0.9
     assert eps["values"][-1] < last_hist * (1.40) ** 5
-    assert grid["epsSources"] == {"yahooGrowth": 60.0, "fmp": False, "source": "Finnhub / Yahoo Finance"}
+    assert grid["epsSources"]["kind"] == "model"
+    assert grid["epsSources"]["directYears"] == []
+    assert grid["epsSources"]["modelYears"]
 
 
 def test_grid_mean_1y_2y():
@@ -55,7 +57,7 @@ def test_grid_mean_1y_2y():
 
 
 
-def test_grid_split_guard_bidireccional():
+def test_grid_no_inventa_ajuste_split_por_magnitud():
 
     # EDGAR sin ajustar: EPS 0.10 con precio 100 y PE 20 -> esperado 5.0 (50x)
     ann = _annuals()
@@ -63,8 +65,9 @@ def test_grid_split_guard_bidireccional():
         a["eps"] = 0.10 * 1.1 ** (a["year"] - 2019)
     grid = EST._build_growth_grid("X", FakeRaw(0.10), _info(), ann, 100.0)
     eps = next(r for r in grid["rows"] if r["label"] == "EPS")
-    # La serie debe re-escalarse a ~5.0 (factor 50 -> redondeado 50)
-    assert abs(eps["values"][-6] - 5.0) < 0.6
+    # Los splits se normalizan en la capa de métricas, no mediante una
+    # heurística basada en el tamaño del EPS dentro de estimaciones.
+    assert abs(eps["values"][-6] - ann[-1]["eps"]) < 0.01
 
 
 # --------------------------------------------------------------- FRED bond

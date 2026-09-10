@@ -29,7 +29,7 @@ class YFinanceProvider(BaseDataProvider):
         except Exception:
             return None
 
-    def fetch_raw_data(self, symbol: str) -> Dict[str, Any]:
+    def fetch_raw_data(self, symbol: str, refresh: bool = False) -> Dict[str, Any]:
         symbol = symbol.upper().strip()
         try:
             from ..config import CACHE_VERSION
@@ -39,7 +39,7 @@ class YFinanceProvider(BaseDataProvider):
         cache_file = YF_CACHE_DIR / f"{safe_sym}_{CACHE_VERSION}.pkl"
 
         # 1. Leer de caché en disco (válido por 6 horas)
-        if cache_file.exists():
+        if not refresh and cache_file.exists():
             try:
                 if time.time() - cache_file.stat().st_mtime < 21600:
                     with open(cache_file, "rb") as f:
@@ -119,4 +119,3 @@ class YFinanceProvider(BaseDataProvider):
                 logger.warning(f"Error escribiendo caché yf para {symbol}: {e}")
 
         return res
-

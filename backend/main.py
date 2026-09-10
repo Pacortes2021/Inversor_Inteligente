@@ -210,6 +210,7 @@ class Position(BaseModel):
     date: str
     price: float = Field(..., gt=0, le=1_000_000_000)
     shares: float = Field(..., gt=0, le=1_000_000_000)
+    currency: str = "USD"
     note: str = ""
 
     @field_validator("symbol")
@@ -239,6 +240,14 @@ class Position(BaseModel):
     def round_values(cls, v: float) -> float:
         return round(v, 4)
 
+    @field_validator("currency")
+    @classmethod
+    def check_currency(cls, v: str) -> str:
+        currency = (v or "USD").strip().upper()
+        if currency not in {"USD", "CLP"}:
+            raise ValueError("Moneda no compatible; usa USD o CLP")
+        return currency
+
     @field_validator("note")
     @classmethod
     def check_note(cls, v: str) -> str:
@@ -252,7 +261,7 @@ def api_portfolio():
 
 @app.post("/api/portfolio", dependencies=[Depends(verify_api_key)])
 def api_portfolio_add(p: Position):
-    PF.add_position(p.symbol, p.date, p.price, p.shares, p.note)
+    PF.add_position(p.symbol, p.date, p.price, p.shares, p.note, p.currency)
     return {"ok": True}
 
 
@@ -353,6 +362,9 @@ class Backup(BaseModel):
                     "date": date,
                     "price": price,
                     "shares": shares,
+                    "currency": (str(item.get("currency") or ("CLP" if sym.endswith(".SN") else "USD")).upper()
+                                 if str(item.get("currency") or "").upper() in {"USD", "CLP"}
+                                 else ("CLP" if sym.endswith(".SN") else "USD")),
                     "note": str(item.get("note", ""))[:300],
                 })
         return out

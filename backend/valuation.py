@@ -268,6 +268,7 @@ def _now_year():
 def build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=None):
     """Arma el bloque de valoración completo, con insumos para recalcular
     el DCF en el navegador (sliders)."""
+    currency_mismatch = bool(info.get("_currencyMismatch"))
     shares = info.get("sharesOutstanding") or (annuals[-1].get("sharesOut") if annuals else None)
     eps = info.get("trailingEps") or (annuals[-1].get("eps") if annuals else None)
     bvps = info.get("bookValue") or (annuals[-1].get("bvps") if annuals else (annuals[-1].get("equity") / shares if (annuals and shares and annuals[-1].get("equity")) else None))
@@ -276,17 +277,23 @@ def build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=None):
     # el último anual y el promedio de 3 años, para suavizar cargos puntuales
     cands = []
     v = info.get("freeCashflow")
-    if _ok(v) and v > 0:
-        cands.append(v)
-    fcfs = [a["fcf"] for a in annuals if _ok(a.get("fcf")) and a["fcf"] > 0]
-    if fcfs:
-        cands.append(fcfs[-1])
-    if len(fcfs) >= 3:
-        cands.append(sum(fcfs[-3:]) / 3)
+    annual_fcfs = [a["fcf"] for a in annuals if _ok(a.get("fcf"))]
+    latest_reported_fcf = v if _ok(v) else (annual_fcfs[-1] if annual_fcfs else None)
+    # Un DCF de FCF no es interpretable mientras el flujo más reciente sea no
+    # positivo. No se deben saltar pérdidas recientes para rescatar años antiguos.
+    if _ok(latest_reported_fcf) and latest_reported_fcf > 0:
+        cands.append(latest_reported_fcf)
+        if annual_fcfs and annual_fcfs[-1] > 0 and annual_fcfs[-1] != latest_reported_fcf:
+            cands.append(annual_fcfs[-1])
+        recent_fcfs = annual_fcfs[-3:]
+        if len(recent_fcfs) == 3:
+            avg_recent = sum(recent_fcfs) / 3
+            if avg_recent > 0:
+                cands.append(avg_recent)
     base_fcf = sorted(cands)[len(cands) // 2] if cands else None
 
     cash = info.get("totalCash") or (annuals[-1].get("cash") if annuals else 0) or 0
-    debt = info.get("totalDebt") or (annuals[-1].get("debt") if annuals else 0) or 0
+    debt = info.get("totalDebt") or (annuals[-1].get("totalDebt") if annuals else 0) or 0
     # Use (x or 0) so debt-free companies (debt=None) correctly compute net_cash = cash
     net_cash = (_ok(cash) and (cash or 0) or 0) - (_ok(debt) and (debt or 0) or 0)
 
@@ -329,6 +336,13 @@ def build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=None):
     if _ok(div_yield_val) and 0 < div_yield_val < 1.5:
         div_yield_val *= 100.0
     lynch_fv = peter_lynch_fair_value(eps, growth, div_yield=div_yield_val)
+
+    # Sin conversión verificable no se comparan flujos o beneficios contables
+    # con un precio expresado en otra moneda. Es preferible omitir un veredicto
+    # antes que mostrar una valoración numéricamente plausible pero inválida.
+    if currency_mismatch:
+        dcf = graham = graham_int = reversion = epv = ddm = lynch_fv = None
+        earnings_yield = None
 
 
     models = []
@@ -383,6 +397,7 @@ def build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=None):
         "impliedGrowth": round(implied * 100, 1) if implied is not None else None,
         "earningsYield": round(earnings_yield, 2) if earnings_yield else None,
         "bond10y": round(bond10y, 2) if _ok(bond10y) else None,
+        "currencyMismatch": currency_mismatch,
         "dcfInputs": {
             "baseFcf": base_fcf if _ok(base_fcf) else None,
             "shares": shares if _ok(shares) else None,
@@ -667,16 +682,20 @@ def piotroski_f_score(annuals):
         score += 1
 
     # 5. Change in Leverage (Long-term debt ratio current < prior)
-    ltd_cur = current.get("longTermDebt") or current.get("totalDebt")
-    ltd_prior = prior.get("longTermDebt") or prior.get("totalDebt")
-    # Treat explicit 0 same as None (debt-free = point automatically)
-    ltd_cur_v = ltd_cur if _ok(ltd_cur) and ltd_cur > 0 else None
-    ltd_prior_v = ltd_prior if _ok(ltd_prior) and ltd_prior > 0 else None
-    if ltd_cur_v is None and ltd_prior_v is None:
-        score += 1  # No debt at all → reward
-    elif ltd_cur_v is None and ltd_prior_v is not None:
+    def _reported_debt(row):
+        for key in ("longTermDebt", "totalDebt"):
+            if key in row and _ok(row.get(key)):
+                return row[key]
+        return None
+
+    ltd_cur_v = _reported_debt(current)
+    ltd_prior_v = _reported_debt(prior)
+    if ltd_cur_v is not None and ltd_prior_v is not None and ltd_cur_v <= 0 and ltd_prior_v <= 0:
+        score += 1  # Deuda cero informada explícitamente en ambos años
+    elif ltd_cur_v is not None and ltd_prior_v is not None and ltd_cur_v <= 0 < ltd_prior_v:
         score += 1  # Had debt, now debt-free → reward
-    elif _ok(ltd_cur_v) and _ok(ltd_prior_v) and _ok(assets_cur) and assets_cur > 0 and _ok(assets_prior) and assets_prior > 0:
+    elif (_ok(ltd_cur_v) and _ok(ltd_prior_v) and _ok(assets_cur) and assets_cur > 0
+          and _ok(assets_prior) and assets_prior > 0):
         lev_cur = ltd_cur_v / assets_cur
         lev_prior = ltd_prior_v / assets_prior
         if lev_cur < lev_prior:

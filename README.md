@@ -31,7 +31,7 @@ Con filtros por sector y texto, y exportación a CSV.
 **Glosario interactivo**: clic en cualquier indicador (PER, ROE, FCF yield, margen de seguridad, EPV…) abre una explicación en español simple con ejemplo — cualquiera puede leer la app sin saber finanzas.
 
 **Confianza, Seguridad y Madurez**:
-- Suite de **tests** (`pytest` — 36 tests de valoración, métricas, EDGAR, calidad, validaciones de API y escrituras atómicas).
+- Suite de **tests** (`pytest` — 61 tests de valoración, métricas, monedas, portafolio, EDGAR, calidad, validaciones de API y escrituras atómicas).
 - **Avisos de calidad de datos** en cada análisis: FCF deprimido/inflado vs su historia, saltos de utilidad, patrimonio negativo, historial de PE corto, discrepancias Yahoo vs SEC.
 - **Historial de margen de seguridad**: cada análisis y escaneo profundo guarda una foto diaria (`data/mos_history.jsonl`) y el análisis muestra cómo evoluciona el MoS en el tiempo.
 - **Notas cualitativas por acción**: checklist de moat (marca, costos, red, switching, patentes, escala) + tesis y riesgos, con autoguardado (`data/notes.json`).
@@ -72,6 +72,8 @@ data/           → watchlist.json (tus datos)
 ## Notas y límites
 
 - **EDGAR solo cubre empresas que reportan a la SEC** (EE.UU. + ADRs); para el resto (ej: bolsa de Santiago) la historia se limita a los ~4-5 años de Yahoo.
+- **Monedas verificables**: si la moneda de cotización y la moneda de los estados financieros difieren, la app omite la valoración y los múltiplos históricos hasta disponer de una conversión comprobable. El portafolio registra la moneda de cada compra y convierte CLP a USD con el tipo de cambio de la fecha de compra y el actual.
+- **Trazabilidad de proyecciones**: cada año proyectado distingue cifras de consenso (Yahoo/FMP), cifras derivadas del consenso y supuestos propios de la app. Una extrapolación nunca debe presentarse como consenso externo.
 - Los EPS históricos de EDGAR se ajustan por splits para calzar con los precios ajustados de Yahoo; los PE > 200 se filtran por no ser señal de valoración.
 - Caché: fundamentales 6 h, EDGAR 7 días, screener 24 h. `?refresh=1` o el botón "Actualizar datos" fuerzan recálculo.
 - El escaneo profundo la primera vez toma varios minutos (descarga los XBRL de la SEC); después queda cacheado.

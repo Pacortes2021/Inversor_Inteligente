@@ -73,8 +73,18 @@ def test_backup_validation():
     assert b.portfolio[0]["symbol"] == "MSFT"
 
 
-def test_screener_multi_universe_isolation():
+def test_screener_multi_universe_isolation(monkeypatch):
     # Verificar que us y cl se registran independientemente
+    class NoopThread:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def start(self):
+            pass
+
+    _deep_states.clear()
+    monkeypatch.setattr("backend.screener.cache_get", lambda key: None)
+    monkeypatch.setattr("backend.screener.threading.Thread", NoopThread)
     res_us = run_deep_screener("us")
     res_cl = run_deep_screener("cl")
     assert res_us["universe"] == "us"

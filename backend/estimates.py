@@ -161,13 +161,13 @@ def _val_from_df(df, period, col="avg"):
 
 
 def _build_growth_grid(symbol, raw, info, annuals=None, price=None, fmp_rows=None):
-    """Construye la grilla de crecimiento histórico + proyecciones oficiales de analistas.
-    100% basado en datos directos de consenso del proveedor (FMP o Yahoo Finance).
-    No realiza extrapolaciones matemáticas inventadas ni cálculos artificiales."""
+    """Construye la grilla histórica y proyectada, identificando por año si
+    cada cifra viene del consenso o de un supuesto propio de la aplicación."""
     if not annuals:
         return None
-    curr = info.get("currency") or "USD"
-    price_val = price or info.get("currentPrice") or info.get("regularMarketPrice") or 0
+    curr = str(info.get("financialCurrency") or info.get("currency") or "USD").upper()
+    quote_curr = str(info.get("currency") or curr).upper()
+    price_val = 0 if quote_curr != curr else (price or info.get("currentPrice") or info.get("regularMarketPrice") or 0)
 
     sorted_annuals = sorted(annuals, key=lambda a: a.get("year", 0))[-5:]
     hist_years = [a["year"] for a in sorted_annuals if a.get("year")]
@@ -231,8 +231,6 @@ def _build_growth_grid(symbol, raw, info, annuals=None, price=None, fmp_rows=Non
             if fy > last_y:
                 fmp_by_year[fy] = row
 
-    provider_source = "FMP (Financial Modeling Prep)" if fmp_by_year else "Consenso Oficial de Analistas (Yahoo Finance / Institutional)"
-
     # Ratios de conversión para EBITDA y FCF
     ebitda_margins = [a.get("ebitda") / a.get("revenue") for a in sorted_annuals if a.get("ebitda") and a.get("revenue") and a.get("revenue") > 0]
     ebitda_margin = (sum(ebitda_margins) / len(ebitda_margins)) if ebitda_margins else 0.25
@@ -265,6 +263,7 @@ def _build_growth_grid(symbol, raw, info, annuals=None, price=None, fmp_rows=Non
     fcf_all = {**fcf_map}
     div_all = {**div_map}
     fwd_pe_all = {y: None for y in hist_years}
+    projection_sources = {}
 
     for idx, py in enumerate(proj_years):
         g_r = g_rev_1y if idx == 0 else g_rev_long
@@ -272,6 +271,11 @@ def _build_growth_grid(symbol, raw, info, annuals=None, price=None, fmp_rows=Non
 
         row = fmp_by_year.get(py)
         if row:
+            year_sources = {
+                "revenue": "fmp" if row.get("revenueAvg") else "model",
+                "eps": "fmp" if row.get("epsAvg") else "model",
+                "fcf": "model_from_consensus" if row.get("netIncomeAvg") else "model",
+            }
             # 1. Prioridad: Consenso plurianual de FMP
             if row.get("revenueAvg"):
                 cur_rev = row["revenueAvg"]
@@ -290,6 +294,11 @@ def _build_growth_grid(symbol, raw, info, annuals=None, price=None, fmp_rows=Non
             yh_period = "0y" if idx == 0 else ("+1y" if idx == 1 else None)
             yh_eps = _val_from_df(eps_est_df, yh_period, "avg") if yh_period else None
             yh_rev = _val_from_df(rev_est_df, yh_period, "avg") if yh_period else None
+            year_sources = {
+                "revenue": "yahoo" if yh_rev is not None and yh_rev > 0 else "model",
+                "eps": "yahoo" if yh_eps is not None else "model",
+                "fcf": "model_from_consensus" if yh_eps is not None else "model",
+            }
 
             if yh_rev and yh_rev > 0:
                 cur_rev = yh_rev
@@ -322,6 +331,7 @@ def _build_growth_grid(symbol, raw, info, annuals=None, price=None, fmp_rows=Non
         eps_all[py] = cur_eps
         fcf_all[py] = cur_fcf
         div_all[py] = cur_div
+        projection_sources[str(py)] = year_sources
 
         if price_val and cur_eps and cur_eps > 0:
             fwd_pe_all[py] = round(price_val / cur_eps, 2)
@@ -377,11 +387,29 @@ def _build_growth_grid(symbol, raw, info, annuals=None, price=None, fmp_rows=Non
             except Exception:
                 mrq_str = str(mrq_ts)
 
+    direct_years = [year for year, sources in projection_sources.items()
+                    if sources["eps"] in ("fmp", "yahoo") or sources["revenue"] in ("fmp", "yahoo")]
+    model_years = [year for year, sources in projection_sources.items()
+                   if "model" in sources["eps"] or "model" in sources["revenue"]]
+    if direct_years and model_years:
+        source_kind = "mixed"
+        source_label = "Consenso de analistas donde está disponible + proyección propia"
+    elif direct_years:
+        source_kind = "consensus"
+        source_label = "Consenso de analistas"
+    else:
+        source_kind = "model"
+        source_label = "Proyección propia basada en supuestos de crecimiento"
+
     eps_src = {
-        "fmp": bool(fmp_rows),
-        "source": provider_source,
+        "fmp": any(s["eps"] == "fmp" or s["revenue"] == "fmp" for s in projection_sources.values()),
+        "kind": source_kind,
+        "source": source_label,
         "yearsProjected": len(proj_years),
         "lastUpdated": time.strftime("%Y-%m-%d"),
+        "directYears": direct_years,
+        "modelYears": model_years,
+        "byYear": projection_sources,
     }
 
     return jclean({

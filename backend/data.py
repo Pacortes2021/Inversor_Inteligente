@@ -122,11 +122,11 @@ def jclean(obj):
 class RawData:
     """Descarga datos para un símbolo utilizando el proveedor configurado (FMP o yfinance fallback)."""
 
-    def __init__(self, symbol: str):
+    def __init__(self, symbol: str, refresh: bool = False):
         from .providers.factory import fetch_data_with_fallback
 
         self.symbol = symbol
-        data = fetch_data_with_fallback(symbol)
+        data = fetch_data_with_fallback(symbol, refresh=refresh)
 
         self.provider = data.get("provider", "unknown")
         self.info = data.get("info") or {}
@@ -220,6 +220,31 @@ def nasdaq_history(symbol, start, end, interval="1d"):
     return df
 
 
+def normalize_price_history(df, symbol):
+    """Normaliza la salida de yf.download para un único símbolo.
+
+    Versiones recientes de yfinance devuelven MultiIndex incluso al pedir un
+    solo ticker. El resto del backend espera columnas OHLCV simples.
+    """
+    if df is None or getattr(df, "empty", True):
+        return df
+    if isinstance(df.columns, pd.MultiIndex):
+        symbol_upper = str(symbol).upper()
+        for level in range(df.columns.nlevels):
+            values = {str(v).upper() for v in df.columns.get_level_values(level)}
+            if symbol_upper in values:
+                df = df.xs(symbol, axis=1, level=level, drop_level=True)
+                break
+        if isinstance(df.columns, pd.MultiIndex):
+            # Caso de un único ticker sin etiqueta idéntica (p. ej. alias).
+            varying = [i for i in range(df.columns.nlevels)
+                       if len(set(df.columns.get_level_values(i))) > 1]
+            if len(varying) == 1:
+                keep = varying[0]
+                df.columns = df.columns.get_level_values(keep)
+    return df
+
+
 def price_history(symbol, period=None, start=None, end=None, interval="1d"):
     """Serie de precios ajustada: Yahoo primero, fallback Nasdaq (US)."""
     try:
@@ -228,7 +253,7 @@ def price_history(symbol, period=None, start=None, end=None, interval="1d"):
         else:
             h = safe_download(symbol, start=start, end=end, interval=interval, progress=False, auto_adjust=True)
         if h is not None and not h.empty:
-            return h
+            return normalize_price_history(h, symbol)
     except Exception:
         pass
     if not start:

@@ -6,6 +6,6 @@ from typing import Dict, Any
 class BaseDataProvider(ABC):
 
     @abstractmethod
-    def fetch_raw_data(self, symbol: str) -> Dict[str, Any]:
+    def fetch_raw_data(self, symbol: str, refresh: bool = False) -> Dict[str, Any]:
         """Retorna un diccionario estructurado con los datos crudos del símbolo."""
         pass

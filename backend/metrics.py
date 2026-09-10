@@ -144,15 +144,24 @@ def fcf_ttm_series(cf_a, cf_q):
                 pts[pd.Timestamp(col)] = float(fcf)
     # Trimestrales (TTM)
     if cf_q is not None and len(cf_q.columns) >= 4:
-        for i in range(3, len(cf_q.columns)):
-            cols = cf_q.columns[i-3:i+1]
-            ocf_sum = sum(_f(cf_q.loc["Operating Cash Flow", c]) or 0 for c in cols if "Operating Cash Flow" in cf_q.index)
-            capex_sum = sum(_f(cf_q.loc["Capital Expenditure", c]) or 0 for c in cols if "Capital Expenditure" in cf_q.index)
-            fcf_sum = sum(_f(cf_q.loc["Free Cash Flow", c]) or 0 for c in cols if "Free Cash Flow" in cf_q.index)
-            if fcf_sum == 0 and ocf_sum != 0:
-                fcf_sum = ocf_sum + capex_sum
-            if fcf_sum != 0:
-                pts[pd.Timestamp(cf_q.columns[i])] = float(fcf_sum)
+        # Yahoo suele entregar columnas de la más reciente a la más antigua.
+        # Una ventana TTM debe construirse cronológicamente y fecharse al cierre
+        # más reciente de sus cuatro trimestres.
+        ordered_cols = sorted(cf_q.columns, key=pd.Timestamp)
+        for i in range(3, len(ordered_cols)):
+            cols = ordered_cols[i-3:i+1]
+            fcf_sum = None
+            if "Free Cash Flow" in cf_q.index:
+                vals = [_f(cf_q.loc["Free Cash Flow", c]) for c in cols]
+                if all(v is not None for v in vals):
+                    fcf_sum = sum(vals)
+            if fcf_sum is None and {"Operating Cash Flow", "Capital Expenditure"}.issubset(cf_q.index):
+                ocf_vals = [_f(cf_q.loc["Operating Cash Flow", c]) for c in cols]
+                capex_vals = [_f(cf_q.loc["Capital Expenditure", c]) for c in cols]
+                if all(v is not None for v in ocf_vals + capex_vals):
+                    fcf_sum = sum(ocf_vals) + sum(capex_vals)
+            if fcf_sum is not None:
+                pts[pd.Timestamp(cols[-1])] = float(fcf_sum)
     if not pts:
         return None
     return pd.Series(pts).sort_index()
@@ -310,6 +319,8 @@ def build_fundamentals(inc, bs, cf, dividends=None):
         cur_assets = _g(bs, col_bs, "Current Assets")
         cur_liab = _g(bs, col_bs, "Current Liabilities")
         assets = _g(bs, col_bs, "Total Assets")
+        total_liabilities = _g(bs, col_bs, "Total Liabilities Net Minority Interest", "Total Liabilities")
+        retained_earnings = _g(bs, col_bs, "Retained Earnings")
         long_term_debt = _g(bs, col_bs, "Long Term Debt", "Long Term Debt And Capital Lease Obligation")
         shares_n = _g(bs, col_bs, "Ordinary Shares Number", "Share Issued")
 
@@ -348,6 +359,8 @@ def build_fundamentals(inc, bs, cf, dividends=None):
             "ebitda": ebitda,
             "debtToEbitda": (debt / ebitda) if (debt is not None and ebitda and ebitda > 0) else None,
             "assets": assets,
+            "totalLiabilities": total_liabilities,
+            "retainedEarnings": retained_earnings,
             "workingCapital": (cur_assets - cur_liab) if (cur_assets is not None and cur_liab is not None) else None,
             "longTermDebt": long_term_debt,
             "shares": shares_n,

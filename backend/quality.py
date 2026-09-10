@@ -9,6 +9,14 @@ def build_warnings(info, annuals, valuation, pe_pairs, edgar_hist):
     """Lista de avisos (strings) sobre datos que pueden distorsionar el veredicto."""
     w = []
 
+    quote_currency = str(info.get("currency") or "").upper()
+    financial_currency = str(info.get("financialCurrency") or "").upper()
+    if quote_currency and financial_currency and quote_currency != financial_currency:
+        w.append(
+            f"La acción cotiza en {quote_currency}, pero sus estados financieros están en {financial_currency}. "
+            "La valoración y los múltiplos históricos se omiten hasta disponer de una conversión de moneda verificable."
+        )
+
     # 1. FCF base desviado de su promedio de 3 años (caída > 35% o salto > 150%)
     base = (valuation.get("dcfInputs") or {}).get("baseFcf")
     fcfs = [a["fcf"] for a in annuals if _ok(a.get("fcf"))][-3:]
@@ -119,4 +127,3 @@ def pe_is_reliable(info, annuals):
     if not _ok(pe) or pe > 150 or pe < 0:
         return False
     return True
-

@@ -628,7 +628,7 @@ export function renderGrowthEstimatesGrid(grid) {
 
   const curr = grid.currency || state.data?.profile?.currency || "USD";
   if (subtextEl) {
-    subtextEl.textContent = `Currency in ${curr}. All numbers in millions.`;
+    subtextEl.textContent = `Moneda contable: ${curr}. Importes corporativos en millones; EPS y dividendos por acción.`;
   }
 
   const src = grid.epsSources;
@@ -638,8 +638,14 @@ export function renderGrowthEstimatesGrid(grid) {
     const mrq = grid.mostRecentQuarter ? fmtDate(grid.mostRecentQuarter) : null;
     const dateBadge = `<span class="badge badge-base" style="font-size:11px; margin-left:8px; font-weight:600; padding:2px 8px; border-radius:4px;" title="Fecha de captura y actualización de previsiones post-reporte de ganancias">📅 Previsiones: ${lastUp}${mrq ? ` | Último Reporte: ${mrq}` : ''}</span>`;
 
-    const srcLabel = src?.source || (src?.fmp ? "FMP (Financial Modeling Prep)" : "Yahoo Finance Official Consensus");
-    warnEl.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;"><span>✅ Proyecciones 100% directas de <b>${escHtml(srcLabel)}</b> — sin estimaciones inventadas.</span> ${dateBadge}</div>`;
+    const srcLabel = src?.source || "Fuente de proyección no identificada";
+    const icon = src?.kind === "consensus" ? "✅" : "ℹ️";
+    const detail = src?.kind === "model"
+      ? "Estas cifras son escenarios de la app y no consenso externo."
+      : src?.kind === "mixed"
+        ? "Los años sin cobertura externa se completan con supuestos de la app."
+        : "Las cifras proyectadas tienen cobertura directa del proveedor.";
+    warnEl.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;"><span>${icon} <b>${escHtml(srcLabel)}</b>. ${escHtml(detail)}</span> ${dateBadge}</div>`;
     warnEl.style.display = "block";
   }
 

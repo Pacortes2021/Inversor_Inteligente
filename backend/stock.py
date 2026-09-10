@@ -393,6 +393,33 @@ def _calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps
     }
 
 
+def _altman_z_score(annual, market_cap):
+    """Altman Z clásico; devuelve None si falta un insumo exacto.
+
+    No sustituye retained earnings, pasivos o capital de trabajo por proxies,
+    porque hacerlo produce una clasificación de solvencia ficticia.
+    """
+    assets = annual.get("assets")
+    working_capital = annual.get("workingCapital")
+    retained = annual.get("retainedEarnings")
+    liabilities = annual.get("totalLiabilities")
+    sales = annual.get("revenue")
+    op_margin = annual.get("opMargin")
+    net_income = annual.get("netIncome")
+    ebit = (sales * op_margin / 100) if (sales is not None and op_margin is not None) else net_income
+    required = (assets, working_capital, retained, ebit, market_cap, liabilities, sales)
+    if not all(M._f(v) is not None for v in required) or assets <= 0 or liabilities <= 0:
+        return None
+    score = (
+        1.2 * working_capital / assets
+        + 1.4 * retained / assets
+        + 3.3 * ebit / assets
+        + 0.6 * market_cap / liabilities
+        + 0.99 * sales / assets
+    )
+    return round(score, 2)
+
+
 def build_payload(symbol: str, refresh: bool = False):
     from .main import CACHE_VERSION
     key = f"stock_{CACHE_VERSION}_{symbol.upper().replace('/', '_')}"
@@ -404,7 +431,7 @@ def build_payload(symbol: str, refresh: bool = False):
     # EDGAR se descarga en paralelo con Yahoo (ahorra varios segundos)
     with ThreadPoolExecutor(max_workers=1) as _ex:
         _edgar_fut = _ex.submit(E.get_annual_history, symbol)
-        raw = RawData(symbol)
+        raw = RawData(symbol, refresh=refresh)
         edgar_hist = _edgar_fut.result()
     if not raw.is_valid():
         return None
@@ -414,6 +441,10 @@ def build_payload(symbol: str, refresh: bool = False):
     monthly = M.monthly_prices(prices)
     weekly = M.weekly_prices(prices)  # Para ratios más detallados
     price = M._f(info.get("currentPrice")) or float(prices["Close"].dropna().iloc[-1])
+    quote_currency = str(info.get("currency") or "").upper()
+    financial_currency = str(info.get("financialCurrency") or "").upper()
+    currency_mismatch = bool(quote_currency and financial_currency and quote_currency != financial_currency)
+    info["_currencyMismatch"] = currency_mismatch
 
     # ------------------------------------------------ series históricas
     shares = M.shares_series(raw)
@@ -450,7 +481,7 @@ def build_payload(symbol: str, refresh: bool = False):
             pass
 
     cur_pe = M._f(info.get("trailingPE"))
-    if eps_ttm_computed and eps_ttm_computed > 0 and price and price > 0:
+    if not currency_mismatch and eps_ttm_computed and eps_ttm_computed > 0 and price and price > 0:
         pe_computed = price / eps_ttm_computed
         if cur_pe is None or abs(cur_pe - pe_computed) / max(pe_computed, 1e-4) > 0.20:
             if cur_pe is not None:
@@ -461,13 +492,13 @@ def build_payload(symbol: str, refresh: bool = False):
             info["trailingEps"] = round(eps_ttm_computed, 2)
 
     # Usar precios semanales para charts más detallados
-    pe_hist = M.ratio_history(weekly, eps_ttm, "per_share")
+    pe_hist = M.ratio_history(weekly, eps_ttm, "per_share") if not currency_mismatch else None
     if pe_hist is not None:
         # PE > 200 no es una señal de valoración: utilidad casi nula distorsiona
         pe_hist = pe_hist[pe_hist <= 200]
-    ps_hist = M.ratio_history(weekly, rev_ttm, "total", shares)
-    pb_hist = M.ratio_history(weekly, equity, "total", shares)
-    pcf_hist = M.ratio_history(weekly, fcf_ttm, "total", shares)
+    ps_hist = M.ratio_history(weekly, rev_ttm, "total", shares) if not currency_mismatch else None
+    pb_hist = M.ratio_history(weekly, equity, "total", shares) if not currency_mismatch else None
+    pcf_hist = M.ratio_history(weekly, fcf_ttm, "total", shares) if not currency_mismatch else None
     if pcf_hist is not None:
         pcf_hist = pcf_hist[pcf_hist <= 500]  # Filtrar valores extremos
 
@@ -528,7 +559,7 @@ def build_payload(symbol: str, refresh: bool = False):
     # ------------------------------------------------ snapshot actual
     # FCF TTM único (computado o fallback Yahoo), usado en fcfYield, P/CF del
     # grid de ratios y ancla del chart — un solo número en toda la app.
-    fcf_now = fcf_t_now
+    fcf_now = None if currency_mismatch else fcf_t_now
     mc = mc_px
 
     sma50 = None
@@ -681,27 +712,7 @@ def build_payload(symbol: str, refresh: bool = False):
         "shortRatio": M._f(info.get("shortRatio")),
     }
 
-    altman_z = None
-    try:
-        last_a = annuals[-1] if annuals else {}
-        assets_val = last_a.get("assets")
-        eq_val = last_a.get("equity")
-        wc_val = current.get("workingCapital")
-        debt_val = current.get("totalDebt")
-        sales_val = last_a.get("revenue")
-        ni_val = last_a.get("netIncome")
-        op_val = last_a.get("opMargin")
-        ebit_val = (sales_val * op_val / 100) if (sales_val and op_val) else ni_val
-
-        if assets_val and assets_val > 0:
-            x1 = (wc_val / assets_val) if wc_val else 0.2
-            x2 = (eq_val * 0.5 / assets_val) if eq_val else 0.15
-            x3 = (ebit_val / assets_val) if ebit_val else 0.15
-            x4 = (eq_val / debt_val) if (eq_val and debt_val and debt_val > 0) else 1.0
-            x5 = (sales_val / assets_val) if sales_val else 0.8
-            altman_z = round(1.2 * x1 + 1.4 * x2 + 3.3 * x3 + 0.6 * x4 + 0.99 * x5, 2)
-    except Exception:
-        pass
+    altman_z = _altman_z_score(annuals[-1], mc) if annuals else None
 
     current["altmanZ"] = altman_z
 
@@ -736,6 +747,8 @@ def build_payload(symbol: str, refresh: bool = False):
             "summary": (info.get("longBusinessSummary") or info.get("description") or info.get("summary") or "")[:600],
             "exchange": info.get("fullExchangeName") or info.get("exchange"),
             "currency": info.get("currency") or ("CLP" if symbol.upper().endswith(".SN") else "USD"),
+            "financialCurrency": info.get("financialCurrency"),
+            "currencyMismatch": currency_mismatch,
             "nextEarnings": next_earnings,
             "nextEarningsEst": next_earnings_est,
             "secFilings": sec_filings,
