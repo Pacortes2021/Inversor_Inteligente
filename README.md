@@ -48,7 +48,7 @@ Con filtros por sector y texto, y exportación a CSV.
 
 ```bash
 ./run.sh          # Modo seguro local (http://127.0.0.1:8756)
-./run.sh --lan    # Modo red local (permite abrir desde iPhone en la misma WiFi)
+INVERSOR_API_KEY='una-clave-larga' ./run.sh --lan  # Red local con escritura protegida
 ```
 
 (La primera vez: `python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt`)
@@ -72,7 +72,7 @@ data/           → watchlist.json (tus datos)
 ## Notas y límites
 
 - **EDGAR solo cubre empresas que reportan a la SEC** (EE.UU. + ADRs); para el resto (ej: bolsa de Santiago) la historia se limita a los ~4-5 años de Yahoo.
-- **Monedas verificables**: si la moneda de cotización y la moneda de los estados financieros difieren, la app omite la valoración y los múltiplos históricos hasta disponer de una conversión comprobable. El portafolio registra la moneda de cada compra y convierte CLP a USD con el tipo de cambio de la fecha de compra y el actual.
+- **Monedas verificables**: Estados Unidos se calcula en USD y Chile en CLP. Cuando una empresa chilena reporta en USD, sus montos contables se convierten con `CLP=X`; si la tasa no está disponible, se omite la valoración. El portafolio registra la moneda de cada compra y convierte CLP a USD con el tipo de cambio correspondiente.
 - **Trazabilidad de proyecciones**: cada año proyectado distingue cifras de consenso (Yahoo/FMP), cifras derivadas del consenso y supuestos propios de la app. Una extrapolación nunca debe presentarse como consenso externo.
 - Los EPS históricos de EDGAR se ajustan por splits para calzar con los precios ajustados de Yahoo; los PE > 200 se filtran por no ser señal de valoración.
 - Caché: fundamentales 6 h, EDGAR 7 días, screener 24 h. `?refresh=1` o el botón "Actualizar datos" fuerzan recálculo.

@@ -1,8 +1,8 @@
 /* Screener de valor: modos rápido/profundo, universos, filtros y export CSV. */
 
-import { fmtPrice, fmtNum, fmtPct, escHtml, pctClass } from "./format.js?v=80";
-import { renderHeatmap } from "./charts.js?v=80";
-import { go } from "./router.js?v=80";
+import { fmtPrice, fmtNum, fmtPct, escHtml, pctClass } from "./format.js?v=81";
+import { renderHeatmap } from "./charts.js?v=81";
+import { go } from "./router.js?v=81";
 
 const scr = {
   universe: "us", mode: "quick", view: "table",
@@ -294,7 +294,7 @@ function renderScreener() {
         case 'fcfYield': v = fmtPct(r.fcfYield, 2); break;
         case 'roe': v = r.roe != null ? fmtPct(r.roe, 1) : '—'; break;
         case 'roc': v = r.roc != null ? fmtPct(r.roc, 1) : '—'; break;
-        case "fScore": v = r.fScore != null ? r.fScore + " / 9" : "—"; break;
+        case "fScore": v = r.fScore != null ? r.fScore + " / " + (r.fScoreEvaluated || 9) : "—"; break;
         case "debtToEquity": v = r.debtToEquity != null ? fmtNum(r.debtToEquity, 2) : "—"; break;
         case "drawdown": return `<td class="num ${pctClass(r.drawdown)}">${fmtPct(r.drawdown, 1)}</td>`;
         case "distSma200d": {

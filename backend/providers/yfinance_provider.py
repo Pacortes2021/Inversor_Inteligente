@@ -5,10 +5,15 @@ import time
 import pickle
 from pathlib import Path
 import pandas as pd
-import yfinance as yf
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any
 from .base import BaseDataProvider
+from ..yfinance_wrapper import (
+    safe_calendar, safe_dividends, safe_earnings_dates, safe_earnings_estimate,
+    safe_financials, safe_history, safe_info, safe_insider_transactions,
+    safe_institutional_holders, safe_news, safe_recommendations,
+    safe_revenue_estimate, safe_shares, safe_ticker,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -49,27 +54,27 @@ class YFinanceProvider(BaseDataProvider):
 
         start = (pd.Timestamp.now() - pd.DateOffset(years=10)).strftime("%Y-%m-%d")
 
-        ticker = yf.Ticker(symbol)
-        info_data = self._safe(lambda: ticker.info) or {}
+        ticker = safe_ticker(symbol)
+        info_data = self._safe(lambda: safe_info(ticker)) or {}
 
         tasks = {
-            "prices": lambda: ticker.history(period="max", interval="1d", auto_adjust=True),
-            "inc_a": lambda: ticker.income_stmt,
-            "inc_q": lambda: ticker.quarterly_income_stmt,
-            "bs_a": lambda: ticker.balance_sheet,
-            "bs_q": lambda: ticker.quarterly_balance_sheet,
-            "cf_a": lambda: ticker.cashflow,
-            "cf_q": lambda: ticker.quarterly_cashflow,
-            "dividends": lambda: ticker.dividends,
-            "calendar": lambda: ticker.calendar,
-            "shares": lambda: ticker.get_shares_full(start=start),
-            "recommendations": lambda: ticker.recommendations,
-            "earnings_estimate": lambda: ticker.earnings_estimate,
-            "revenue_estimate": lambda: ticker.revenue_estimate,
-            "earnings_dates": lambda: ticker.earnings_dates,
-            "insider_transactions": lambda: ticker.insider_transactions,
-            "institutional_holders": lambda: ticker.institutional_holders,
-            "news": lambda: ticker.news,
+            "prices": lambda: safe_history(ticker, period="max", interval="1d", auto_adjust=True),
+            "inc_a": lambda: safe_financials(ticker, "income_stmt"),
+            "inc_q": lambda: safe_financials(ticker, "quarterly_income_stmt"),
+            "bs_a": lambda: safe_financials(ticker, "balance_sheet"),
+            "bs_q": lambda: safe_financials(ticker, "quarterly_balance_sheet"),
+            "cf_a": lambda: safe_financials(ticker, "cashflow"),
+            "cf_q": lambda: safe_financials(ticker, "quarterly_cashflow"),
+            "dividends": lambda: safe_dividends(ticker),
+            "calendar": lambda: safe_calendar(ticker),
+            "shares": lambda: safe_shares(ticker, start),
+            "recommendations": lambda: safe_recommendations(ticker),
+            "earnings_estimate": lambda: safe_earnings_estimate(ticker),
+            "revenue_estimate": lambda: safe_revenue_estimate(ticker),
+            "earnings_dates": lambda: safe_earnings_dates(ticker),
+            "insider_transactions": lambda: safe_insider_transactions(ticker),
+            "institutional_holders": lambda: safe_institutional_holders(ticker),
+            "news": lambda: safe_news(ticker),
         }
 
         with ThreadPoolExecutor(max_workers=6) as ex:

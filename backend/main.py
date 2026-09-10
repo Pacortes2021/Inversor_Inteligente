@@ -1,6 +1,8 @@
 """El Inversor Inteligente — servidor FastAPI (API + frontend estático)."""
 
 import os
+import hmac
+import ipaddress
 from pathlib import Path
 
 # Cargar variables de entorno desde .env
@@ -16,7 +18,7 @@ import re
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 
-from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi import FastAPI, HTTPException, Depends, Header, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator, Field
 
@@ -24,18 +26,27 @@ from pydantic import BaseModel, field_validator, Field
 from . import notes as NT
 from . import portfolio as PF
 from . import watchlist as WL
-from .data import atomic_write_json, clean_expired_cache
+from .data import clean_expired_cache, transactional_write_json
 from .market import get_indices, get_movers, get_oversold
 from .screener import run_deep_screener, run_screener
 from .stock import build_payload
 from .config import API_KEY, CACHE_VERSION
+from .yfinance_wrapper import safe_download, safe_search
 
 
 # ─── Auth simple para endpoints mutantes ───
 
 
-def verify_api_key(x_api_key: str = Header(default=None, alias="X-API-Key")):
-    if x_api_key != API_KEY:
+def verify_api_key(request: Request, x_api_key: str = Header(default=None, alias="X-API-Key")):
+    client_host = request.client.host if request.client else ""
+    try:
+        if ipaddress.ip_address(client_host).is_loopback:
+            return True
+    except ValueError:
+        pass
+    if not API_KEY:
+        raise HTTPException(503, "Configura INVERSOR_API_KEY para modificar datos desde la red local")
+    if not x_api_key or not hmac.compare_digest(x_api_key, API_KEY):
         raise HTTPException(401, "API key inválida o faltante")
     return True
 
@@ -90,8 +101,7 @@ def api_stock(symbol: str, refresh: bool = False):
 @app.get("/api/search")
 def api_search(q: str):
     try:
-        import yfinance as yf
-        res = yf.Search(q, max_results=8)
+        res = safe_search(q, max_results=8)
         out = []
         for it in (res.quotes or []):
             if it.get("symbol") and it.get("quoteType") in ("EQUITY", "ETF"):
@@ -119,8 +129,6 @@ def api_screener_deep(universe: str = "us", refresh: bool = False):
 def api_quotes(symbols: str):
     """Cotizaciones en lote con sparkline de 30 días (sidebar de favoritos)."""
     import pandas as pd
-    import yfinance as yf
-
     from .data import cache_get, cache_set
 
     syms = []
@@ -140,8 +148,8 @@ def api_quotes(symbols: str):
         return cached
 
     try:
-        df = yf.download(syms, period="1mo", interval="1d", progress=False,
-                         auto_adjust=True)["Close"]
+        df = safe_download(syms, period="1mo", interval="1d", progress=False,
+                           auto_adjust=True)["Close"]
         if isinstance(df, pd.Series):
             df = df.to_frame(name=syms[0])
         out = []
@@ -385,10 +393,11 @@ def api_restore(b: Backup):
             "risks": str(v.get("risks", ""))[:2000],
             "moats": [str(m)[:30] for m in v.get("moats", []) if isinstance(m, (str, int))][:10],
         }
-    # Escritura transaccional: validar ambos guardados antes de escribir notas
-    WL._save(b.watchlist)
-    PF._save(b.portfolio)
-    atomic_write_json(NT.NOTES_FILE, notes)
+    transactional_write_json({
+        WL.WL_FILE: b.watchlist,
+        PF.PF_FILE: b.portfolio,
+        NT.NOTES_FILE: notes,
+    })
     return {"ok": True}
 
 

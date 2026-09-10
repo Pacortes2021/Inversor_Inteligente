@@ -49,6 +49,51 @@ def atomic_write_json(file_path: Path, data):
             raise
 
 
+def transactional_write_json(files):
+    """Actualiza varios JSON como una unidad y restaura todos si uno falla."""
+    targets = [(Path(path).resolve(), data) for path, data in files.items()]
+    staged = []
+    originals = {}
+    with _file_lock:
+        try:
+            for path, data in targets:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                originals[path] = path.read_bytes() if path.exists() else None
+                fd, temp_name = tempfile.mkstemp(dir=path.parent, prefix=".tmp_tx_", suffix=".json")
+                with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                    json.dump(data, stream, indent=2, ensure_ascii=False)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                staged.append((path, temp_name))
+
+            for path, temp_name in staged:
+                os.replace(temp_name, path)
+        except Exception:
+            for path, original in originals.items():
+                try:
+                    if original is None:
+                        path.unlink(missing_ok=True)
+                    else:
+                        fd, restore_name = tempfile.mkstemp(
+                            dir=path.parent, prefix=".tmp_rollback_", suffix=".json"
+                        )
+                        with os.fdopen(fd, "wb") as stream:
+                            stream.write(original)
+                            stream.flush()
+                            os.fsync(stream.fileno())
+                        os.replace(restore_name, path)
+                except Exception:
+                    pass
+            raise
+        finally:
+            for _, temp_name in staged:
+                try:
+                    if os.path.exists(temp_name):
+                        os.remove(temp_name)
+                except Exception:
+                    pass
+
+
 def load_json(file_path: Path, default=None):
     """Carga JSON de forma segura. Si el archivo está corrupto, lo respalda a
     `<nombre>.corrupt` (evitando que el siguiente write sobreescriba datos

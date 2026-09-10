@@ -4,6 +4,6 @@
 
 export const API_KEY =
   (typeof window !== "undefined" && window.INVERSOR_API_KEY) ||
-  "dev-secret-change-me";
+  "";
 
-export const CACHE_VERSION = "v26.0";
+export const CACHE_VERSION = "v27.0";

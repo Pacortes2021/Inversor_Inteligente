@@ -2,18 +2,18 @@
    cualitativas, scorecard Buffett, tabla de crecimiento, sidebar y
    orquestación de pestañas de acción. */
 
-import { $, toast, apiFetch } from "./dom.js?v=80";
-import { state, currentPeriodYears, currentMultiplesRange, setCurrentMultiplesRange } from "./state.js?v=80";
-import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, escHtml, pctClass } from "./format.js?v=80";
-import { termify } from "./glossary.js?v=80";
-import { chartPrice, chartRatio, chartDividends, chartEps, chartEarningsSurprise, renderAllCharts, renderPriceOverlay, renderKoyfinLayout, renderQualityScorecardCharts, C, charts } from "./charts.js?v=80";
+import { $, toast, apiFetch } from "./dom.js?v=81";
+import { state, currentPeriodYears, currentMultiplesRange, setCurrentMultiplesRange } from "./state.js?v=81";
+import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, escHtml, pctClass } from "./format.js?v=81";
+import { termify } from "./glossary.js?v=81";
+import { chartPrice, chartRatio, chartDividends, chartEps, chartEarningsSurprise, renderAllCharts, renderPriceOverlay, renderKoyfinLayout, renderQualityScorecardCharts, C, charts } from "./charts.js?v=81";
 
-import { checkStockAlerts } from "./alerts.js?v=80";
+import { checkStockAlerts } from "./alerts.js?v=81";
 import {
   renderValuationCard, renderRatiosGrid, renderEstimates, renderEpsEstimatesChart,
   renderInsidersHolders, renderFinancialStatements, renderEpsFv, renderDcfFv,
   renderDdmFv, renderHistoricalRatios, renderAdditional, renderScenarios, renderFcfHistory,
-} from "./valuation.js?v=80";
+} from "./valuation.js?v=81";
 
 /* ---------------------------------------------------------- render */
 export function renderAnalysis(d) {
@@ -166,11 +166,18 @@ export function renderSummary(d) {
   }
 
   // Tarjeta 4: Financial Indicators
-  $("ind-altman").textContent = d.current.altmanZ != null ? d.current.altmanZ.toFixed(2) : "—";
+  $("ind-altman").textContent = d.current.altmanApplicable === false
+    ? "No aplica" : (d.current.altmanZ != null ? d.current.altmanZ.toFixed(2) : "—");
   const z = d.current.altmanZ;
-  $("ind-altman").className = "v " + (z > 2.9 ? "green" : z < 1.1 ? "red" : "gold");
+  $("ind-altman").className = "v " + (d.current.altmanApplicable === false ? "" : z > 2.99 ? "green" : z < 1.81 ? "red" : "gold");
+  $("ind-altman").title = d.current.altmanApplicable === false
+    ? "El Altman Z clásico no se interpreta en bancos ni aseguradoras."
+    : "Zona de riesgo < 1,81 · zona gris 1,81–2,99 · zona segura > 2,99";
 
-  $("ind-piotroski").textContent = d.current.fScore != null ? `${d.current.fScore} / 9` : "—";
+  const fsEvaluated = d.current.fScoreEvaluated || 0;
+  $("ind-piotroski").textContent = d.current.fScore != null ? `${d.current.fScore} / ${fsEvaluated || 9}` : "—";
+  $("ind-piotroski").title = fsEvaluated && fsEvaluated < 9
+    ? `Puntaje parcial: ${fsEvaluated} de 9 criterios tenían datos suficientes.` : "Piotroski F-Score";
   const fs = d.current.fScore;
   $("ind-piotroski").className = "v " + (fs >= 7 ? "green" : fs <= 3 ? "red" : "gold");
 

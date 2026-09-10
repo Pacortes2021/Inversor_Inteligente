@@ -3,10 +3,12 @@ from types import SimpleNamespace
 import pandas as pd
 
 from backend import data as D
+from backend import currency as C
 from backend import estimates as E
 from backend import metrics as M
 from backend import portfolio as P
 from backend import ratios as R
+from backend import quality as Q
 from backend import stock as S
 from backend import valuation as V
 
@@ -69,9 +71,74 @@ def test_currency_mismatch_omits_intrinsic_value():
     assert out["currencyMismatch"] is True
 
 
+def test_chilean_financials_are_normalized_to_clp_without_converting_market_fields():
+    info = {
+        "currency": "CLP", "financialCurrency": "USD", "currentPrice": 9000,
+        "marketCap": 900_000, "freeCashflow": 100, "totalDebt": 20,
+        "trailingPE": 10, "priceToBook": 2,
+    }
+    fx = {"rate": 900.0, "rawRate": 900.0, "ticker": "CLP=X", "date": "2026-09-10"}
+    out, meta = C.normalize_info("TEST.SN", info, fx=fx)
+    assert out["currency"] == "CLP"
+    assert out["reportedFinancialCurrency"] == "USD"
+    assert out["financialCurrency"] == "CLP"
+    assert out["freeCashflow"] == 90_000
+    assert out["totalDebt"] == 18_000
+    assert out["marketCap"] == 900_000
+    assert out["trailingEps"] == 900
+    assert out["bookValue"] == 4500
+    assert out["_currencyMismatch"] is False
+    assert meta["status"] == "converted"
+
+
+def test_currency_conversion_failure_blocks_incompatible_calculations():
+    info = {"currency": "CLP", "financialCurrency": "USD", "freeCashflow": 100}
+    out, meta = C.normalize_info("TEST.SN", info, fx={})
+    assert out["freeCashflow"] == 100
+    assert out["_currencyMismatch"] is True
+    assert meta["status"] == "unavailable"
+
+
+def test_annual_conversion_preserves_shares_and_market_dividend():
+    conversion = {"status": "converted", "source": "USD", "target": "CLP", "rate": 900.0}
+    rows = [{"year": 2025, "revenue": 100, "eps": 2, "sharesOut": 50, "dividendPS": 30}]
+    out = C.convert_annuals(rows, conversion)
+    assert out[0]["revenue"] == 90_000
+    assert out[0]["eps"] == 1800
+    assert out[0]["sharesOut"] == 50
+    assert out[0]["dividendPS"] == 30
+
+
+def test_screener_does_not_use_fcf_yield_when_currency_is_unresolved():
+    from backend import screener
+
+    info = {
+        "currentPrice": 1000, "trailingPE": 10, "marketCap": 100_000,
+        "freeCashflow": 100, "_currencyMismatch": True,
+    }
+    assert screener.score_stock(info)["fcfYield"] is None
+
+
+def test_quality_warning_labels_chilean_fair_value_in_clp():
+    warnings = Q.build_warnings(
+        {"currency": "CLP", "financialCurrency": "CLP"}, [],
+        {"marginOfSafety": -25, "consensus": 14_142, "dcfInputs": {}}, [], None,
+    )
+    assert any("CLP 14,142" in warning for warning in warnings)
+    assert not any("($" in warning for warning in warnings)
+
+
 def test_piotroski_does_not_reward_unknown_debt():
-    assert V.piotroski_f_score([{}, {}]) == 0
+    assert V.piotroski_f_score([{}, {}]) is None
     assert V.piotroski_f_score([{"totalDebt": 0}, {"totalDebt": 0}]) == 1
+
+
+def test_piotroski_reports_coverage_instead_of_treating_missing_data_as_failures():
+    out = V.piotroski_f_score_details([
+        {"netIncome": -10, "ocf": 20},
+        {"netIncome": 15, "ocf": 25},
+    ])
+    assert out == {"score": 3, "evaluated": 3, "total": 9}
 
 
 def test_altman_requires_real_inputs_and_uses_standard_formula():
@@ -80,6 +147,11 @@ def test_altman_requires_real_inputs_and_uses_standard_formula():
               "totalLiabilities": 400, "revenue": 800, "opMargin": 10}
     expected = 1.2 * .1 + 1.4 * .2 + 3.3 * .08 + .6 * 1.25 + .99 * .8
     assert S._altman_z_score(annual, 500) == round(expected, 2)
+
+
+def test_altman_classic_is_not_applied_to_financial_companies():
+    assert S._altman_applicable({"sector": "Financial Services", "industry": "Banks"}) is False
+    assert S._altman_applicable({"sector": "Technology", "industry": "Software"}) is True
 
 
 def test_price_history_normalizes_single_ticker_multiindex():
@@ -122,6 +194,7 @@ def test_portfolio_converts_clp_and_aggregates_symbol_concentration(monkeypatch)
     monkeypatch.setattr(P, "_load", lambda: items)
     monkeypatch.setattr(P, "_history", lambda symbol, *args, **kwargs: histories[symbol])
     monkeypatch.setattr(P, "_instrument_meta", lambda symbol: {"sector": "Test", "currency": "CLP" if symbol.endswith(".SN") else "USD"})
+    monkeypatch.setattr(P, "_actions", lambda symbol: {"splits": pd.Series(dtype=float), "dividends": pd.Series(dtype=float)})
     out = P.get_portfolio()
     assert out["totals"]["invested"] == 200.0
     assert out["totals"]["value"] == 210.0
@@ -137,5 +210,32 @@ def test_concentration_groups_multiple_purchases_of_same_symbol(monkeypatch):
     monkeypatch.setattr(P, "_load", lambda: items)
     monkeypatch.setattr(P, "_history", lambda *args, **kwargs: series)
     monkeypatch.setattr(P, "_instrument_meta", lambda symbol: {"sector": "Test", "currency": "USD"})
+    monkeypatch.setattr(P, "_actions", lambda symbol: {"splits": pd.Series(dtype=float), "dividends": pd.Series(dtype=float)})
     positions = P.get_portfolio()["positions"]
     assert all(p["pctOfPortfolio"] == 100.0 and p["overConcentrated"] for p in positions)
+
+
+def test_portfolio_adjusts_shares_for_splits_and_includes_cash_dividends(monkeypatch):
+    items = [{"id": 1, "symbol": "SPLT", "date": "2020-01-02", "price": 100,
+              "shares": 10, "currency": "USD"}]
+    dates = pd.to_datetime(["2020-01-02", "2026-09-09"])
+    histories = {
+        "SPY": pd.Series([100, 200], index=dates),
+        "SPLT": pd.Series([25, 30], index=dates),
+    }
+    actions = {
+        "splits": pd.Series([4.0], index=pd.to_datetime(["2022-06-01"])),
+        "dividends": pd.Series([1.0, 0.25], index=pd.to_datetime(["2021-06-01", "2023-06-01"])),
+    }
+    monkeypatch.setattr(P, "_load", lambda: items)
+    monkeypatch.setattr(P, "_history", lambda symbol, *args, **kwargs: histories[symbol])
+    monkeypatch.setattr(P, "_instrument_meta", lambda symbol: {"sector": "Test", "currency": "USD"})
+    monkeypatch.setattr(P, "_actions", lambda symbol: actions)
+    out = P.get_portfolio()
+    pos = out["positions"][0]
+    assert pos["adjustedShares"] == 40
+    assert pos["value"] == 1200
+    assert pos["dividends"] == 20
+    assert pos["totalValue"] == 1220
+    assert pos["return"] == 22.0
+    assert out["totals"]["totalValue"] == 1220

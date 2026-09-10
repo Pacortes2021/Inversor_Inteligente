@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from . import edgar as E
+from . import currency as C
 from . import fmp as F
 from . import metrics as M
 from . import quality as Q
@@ -420,6 +421,14 @@ def _altman_z_score(annual, market_cap):
     return round(score, 2)
 
 
+def _altman_applicable(info):
+    """El modelo clásico no es interpretable para bancos y aseguradoras."""
+    sector = str((info or {}).get("sector") or "").lower()
+    industry = str((info or {}).get("industry") or "").lower()
+    excluded = ("financial", "bank", "insurance", "asset management", "credit services")
+    return not any(term in sector or term in industry for term in excluded)
+
+
 def build_payload(symbol: str, refresh: bool = False):
     from .main import CACHE_VERSION
     key = f"stock_{CACHE_VERSION}_{symbol.upper().replace('/', '_')}"
@@ -436,15 +445,16 @@ def build_payload(symbol: str, refresh: bool = False):
     if not raw.is_valid():
         return None
 
-    info = raw.info
+    info, currency_conversion = C.normalize_info(symbol, raw.info)
+    raw.info = info
+    C.convert_raw_estimates(raw, currency_conversion)
     prices = raw.prices
     monthly = M.monthly_prices(prices)
     weekly = M.weekly_prices(prices)  # Para ratios más detallados
     price = M._f(info.get("currentPrice")) or float(prices["Close"].dropna().iloc[-1])
     quote_currency = str(info.get("currency") or "").upper()
-    financial_currency = str(info.get("financialCurrency") or "").upper()
-    currency_mismatch = bool(quote_currency and financial_currency and quote_currency != financial_currency)
-    info["_currencyMismatch"] = currency_mismatch
+    financial_currency = str(info.get("reportedFinancialCurrency") or info.get("financialCurrency") or "").upper()
+    currency_mismatch = bool(info.get("_currencyMismatch"))
 
     # ------------------------------------------------ series históricas
     shares = M.shares_series(raw)
@@ -453,6 +463,10 @@ def build_payload(symbol: str, refresh: bool = False):
     rev_ttm = M.ttm_from_statements(raw.inc_a, raw.inc_q, "Total Revenue", "Operating Revenue")
     equity = M.step_series(raw.bs_a, raw.bs_q, "Stockholders Equity", "Common Stock Equity")
     fcf_ttm = M.fcf_ttm_series(raw.cf_a, raw.cf_q)
+    eps_ttm = C.convert_series(eps_ttm, currency_conversion)
+    rev_ttm = C.convert_series(rev_ttm, currency_conversion)
+    equity = C.convert_series(equity, currency_conversion)
+    fcf_ttm = C.convert_series(fcf_ttm, currency_conversion)
 
     # EDGAR extiende la historia a 10-15+ años (solo empresas que reportan a la SEC).
     # Sus valores por acción vienen as-reported: hay que ajustarlos por splits
@@ -540,6 +554,7 @@ def build_payload(symbol: str, refresh: bool = False):
 
     # series TTM para el overlay interactivo (precio vs fundamentales)
     ni_ttm = M.ttm_from_statements(raw.inc_a, raw.inc_q, "Net Income", "Net Income Common Stockholders")
+    ni_ttm = C.convert_series(ni_ttm, currency_conversion)
     net_margin_ttm_series = None
     if rev_ttm is not None and ni_ttm is not None and len(rev_ttm) and len(ni_ttm):
         _idx = rev_ttm.index.union(ni_ttm.index).sort_values()
@@ -555,6 +570,8 @@ def build_payload(symbol: str, refresh: bool = False):
     annuals = _merge_annuals(M.annual_fundamentals(raw), E.to_annual_rows(edgar_hist),
                              raw.dividends, splits)
     quarterlies = M.quarterly_fundamentals(raw)
+    annuals = C.convert_annuals(annuals, currency_conversion)
+    quarterlies = C.convert_annuals(quarterlies, currency_conversion)
 
     # ------------------------------------------------ snapshot actual
     # FCF TTM único (computado o fallback Yahoo), usado en fcfYield, P/CF del
@@ -603,7 +620,8 @@ def build_payload(symbol: str, refresh: bool = False):
         except Exception:
             pass
 
-    f_score = V.piotroski_f_score(annuals)
+    f_score_details = V.piotroski_f_score_details(annuals)
+    f_score = f_score_details["score"]
     roc = V.greenblatt_roc(info, annuals)
 
     payout_val = M._f(info.get("payoutRatio"))
@@ -697,6 +715,7 @@ def build_payload(symbol: str, refresh: bool = False):
         "sma200": round(sma200, 2) if sma200 else None,
         "rsi": rsi,
         "fScore": f_score,
+        "fScoreEvaluated": f_score_details["evaluated"],
         "roc": round(roc, 1) if roc else None,
         "perf1m": perf_1m,
         "perf1y": perf_1y,
@@ -712,13 +731,15 @@ def build_payload(symbol: str, refresh: bool = False):
         "shortRatio": M._f(info.get("shortRatio")),
     }
 
-    altman_z = _altman_z_score(annuals[-1], mc) if annuals else None
+    altman_applicable = _altman_applicable(info)
+    altman_z = _altman_z_score(annuals[-1], mc) if annuals and altman_applicable else None
 
     current["altmanZ"] = altman_z
+    current["altmanApplicable"] = altman_applicable
 
 
     bond10y = bond_yield_10y()
-    fmp_rows = F.fetch_analyst_estimates(symbol)
+    fmp_rows = C.convert_fmp_rows(F.fetch_analyst_estimates(symbol), currency_conversion)
     valuation = V.build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=fmp_rows)
     scorecard = V.buffett_scorecard(info, annuals, pe_stats, pe_pairs=pe_pairs, price=price)
     next_earnings, next_earnings_est, sec_filings = _sec_context(symbol, raw.calendar)
@@ -747,8 +768,10 @@ def build_payload(symbol: str, refresh: bool = False):
             "summary": (info.get("longBusinessSummary") or info.get("description") or info.get("summary") or "")[:600],
             "exchange": info.get("fullExchangeName") or info.get("exchange"),
             "currency": info.get("currency") or ("CLP" if symbol.upper().endswith(".SN") else "USD"),
-            "financialCurrency": info.get("financialCurrency"),
+            "financialCurrency": financial_currency or quote_currency,
+            "calculationCurrency": quote_currency,
             "currencyMismatch": currency_mismatch,
+            "currencyConversion": currency_conversion,
             "nextEarnings": next_earnings,
             "nextEarningsEst": next_earnings_est,
             "secFilings": sec_filings,

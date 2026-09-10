@@ -141,6 +141,11 @@ def safe_download(symbols, **kwargs) -> Any:
     return yf.download(symbols, **kwargs)
 
 
+@with_retry
+def safe_search(query: str, max_results: int = 8) -> Any:
+    return yf.Search(query, max_results=max_results)
+
+
 def enable_degraded_mode():
     """Activa modo degradado (solo sirve caché, no llama a Yahoo)."""
     global YF_DEGRADED_MODE

@@ -5,13 +5,28 @@ from datetime import datetime
 from .valuation import _ok
 
 
+def _money(value, currency):
+    if not _ok(value):
+        return "—"
+    digits = 0 if currency == "CLP" else 2
+    return f"{currency or 'USD'} {value:,.{digits}f}"
+
+
 def build_warnings(info, annuals, valuation, pe_pairs, edgar_hist):
     """Lista de avisos (strings) sobre datos que pueden distorsionar el veredicto."""
     w = []
 
     quote_currency = str(info.get("currency") or "").upper()
-    financial_currency = str(info.get("financialCurrency") or "").upper()
-    if quote_currency and financial_currency and quote_currency != financial_currency:
+    financial_currency = str(info.get("reportedFinancialCurrency") or info.get("financialCurrency") or "").upper()
+    conversion = info.get("_currencyConversion") or {}
+    if conversion.get("status") == "converted":
+        rate = conversion.get("rawRate") or conversion.get("rate")
+        date = conversion.get("date") or "fecha no disponible"
+        w.append(
+            f"Los estados financieros se reportan en {financial_currency} y se convirtieron a "
+            f"{quote_currency} con una tasa de {rate:.2f} ({date}, Yahoo Finance)."
+        )
+    elif quote_currency and financial_currency and quote_currency != financial_currency:
         w.append(
             f"La acción cotiza en {quote_currency}, pero sus estados financieros están en {financial_currency}. "
             "La valoración y los múltiplos históricos se omiten hasta disponer de una conversión de moneda verificable."
@@ -97,10 +112,10 @@ def build_warnings(info, annuals, valuation, pe_pairs, edgar_hist):
     if _ok(mos) and _ok(consensus_price):
         if mos < -20:
             w.append(f"El precio actual supera en {abs(mos):.0f}% el valor intrínseco consensuado "
-                     f"(${consensus_price:.0f}) — la acción aparenta estar sobrevalorada según los modelos actuales.")
+                     f"({_money(consensus_price, quote_currency)}) — la acción aparenta estar sobrevalorada según los modelos actuales.")
         elif mos > 30:
             w.append(f"El precio actual cotiza con un descuento de {mos:.0f}% sobre el valor intrínseco "
-                     f"(${consensus_price:.0f}) — puede haber una oportunidad de compra.")
+                     f"({_money(consensus_price, quote_currency)}) — puede haber una oportunidad de compra.")
 
     # 8. PE actual en extremo superior del rango histórico
     if pe_pairs and len(pe_pairs) > 20:

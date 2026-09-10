@@ -1,8 +1,8 @@
 /* Comparador de empresas: hasta 4 lado a lado con gráficos superpuestos. */
 
-import { toast } from "./dom.js?v=80";
-import { fmtPrice, fmtBig, fmtPct, fmtRatio, escHtml, pctClass } from "./format.js?v=80";
-import { renderCompareCharts, charts } from "./charts.js?v=80";
+import { toast } from "./dom.js?v=81";
+import { fmtPrice, fmtBig, fmtPct, fmtRatio, escHtml, pctClass } from "./format.js?v=81";
+import { renderCompareCharts, charts } from "./charts.js?v=81";
 
 const cmp = { symbols: [], payloads: {}, adding: false };
 const CMP_COLORS = ["#d97706", "#0d9488", "#3b82f6", "#8b5cf6"];
@@ -68,8 +68,8 @@ const CMP_ROWS = [
   ["Crec. ingresos (yoy)", d => spanPct(d.current.revenueGrowth != null ? d.current.revenueGrowth * 100 : null, true)],
   ["CAGR Ingresos (5Y)", d => { const g = d.growthTable ? d.growthTable.find(x => x.metric === "Ingresos") : null; return g && g.cagr5 != null ? fmtPct(g.cagr5, 1) : "—"; }],
   ["CAGR FCF (5Y)", d => { const g = d.growthTable ? d.growthTable.find(x => x.metric === "Flujo de caja libre") : null; return g && g.cagr5 != null ? fmtPct(g.cagr5, 1) : "—"; }],
-  ["Altman Z-Score", d => d.current.altmanZ != null ? `${d.current.altmanZ.toFixed(2)} (${d.current.altmanZ >= 3 ? 'Seguro' : d.current.altmanZ >= 1.8 ? 'Atención' : 'Riesgo'})` : "—"],
-  ["Piotroski F-Score", d => d.current.fScore != null ? `${d.current.fScore} / 9` : "—"],
+  ["Altman Z-Score", d => d.current.altmanApplicable === false ? "No aplica" : d.current.altmanZ != null ? `${d.current.altmanZ.toFixed(2)} (${d.current.altmanZ > 2.99 ? 'Seguro' : d.current.altmanZ >= 1.81 ? 'Atención' : 'Riesgo'})` : "—"],
+  ["Piotroski F-Score", d => d.current.fScore != null ? `${d.current.fScore} / ${d.current.fScoreEvaluated || 9}` : "—"],
   ["Scorecard Buffett", d => `${d.scorecard.passed}/${d.scorecard.evaluated}`],
   ["Valor intrínseco", d => d.valuation.consensus != null ? fmtPrice(d.valuation.consensus, d.profile.currency) : "—"],
   ["Margen de seguridad", d => spanPct(d.valuation.marginOfSafety, true)],

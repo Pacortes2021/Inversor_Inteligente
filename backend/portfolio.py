@@ -7,9 +7,8 @@ import time
 from pathlib import Path
 
 import pandas as pd
-import yfinance as yf
-
 from .data import atomic_write_json, cache_get, cache_set, load_json, price_history
+from .yfinance_wrapper import safe_history, safe_info, safe_ticker
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
@@ -35,7 +34,7 @@ def _history(symbol, key, ttl=6 * 3600):
     if cached:
         return pd.Series({pd.Timestamp(d): v for d, v in cached})
     try:
-        h = yf.Ticker(symbol).history(period="12y", interval="1d", auto_adjust=True)
+        h = safe_history(safe_ticker(symbol), period="12y", interval="1d", auto_adjust=True)
         if h is None or h.empty:
             h = None
     except Exception:
@@ -48,6 +47,75 @@ def _history(symbol, key, ttl=6 * 3600):
     s.index = s.index.tz_localize(None) if getattr(s.index, "tz", None) is not None else s.index
     cache_set(key, [[str(i.date()), round(float(v), 4)] for i, v in s.items()], ttl=ttl)
     return s
+
+
+def _actions(symbol, ttl=6 * 3600):
+    """Splits y dividendos necesarios para reconstruir una compra real."""
+    key = f"_pf_actions_{symbol.replace('/', '_').replace('.', '_')}"
+    cached = cache_get(key)
+    if isinstance(cached, dict):
+        return {
+            "splits": pd.Series({pd.Timestamp(d): v for d, v in cached.get("splits", [])}, dtype=float),
+            "dividends": pd.Series({pd.Timestamp(d): v for d, v in cached.get("dividends", [])}, dtype=float),
+        }
+    try:
+        h = safe_history(safe_ticker(symbol), period="12y", interval="1d",
+                         auto_adjust=False, actions=True)
+    except Exception:
+        h = None
+    if h is None or h.empty:
+        return {"splits": pd.Series(dtype=float), "dividends": pd.Series(dtype=float)}
+
+    def series_for(column):
+        if column not in h:
+            return pd.Series(dtype=float)
+        series = pd.to_numeric(h[column], errors="coerce").dropna()
+        series = series[series > 0]
+        if getattr(series.index, "tz", None) is not None:
+            series.index = series.index.tz_localize(None)
+        return series
+
+    splits = series_for("Stock Splits")
+    dividends = series_for("Dividends")
+    cache_set(key, {
+        "splits": [[str(d.date()), float(v)] for d, v in splits.items()],
+        "dividends": [[str(d.date()), float(v)] for d, v in dividends.items()],
+    }, ttl=ttl)
+    return {"splits": splits, "dividends": dividends}
+
+
+def _split_factor_since(splits, date, through=None):
+    if splits is None or splits.empty:
+        return 1.0
+    start = pd.Timestamp(date)
+    selected = splits[splits.index > start]
+    if through is not None:
+        selected = selected[selected.index <= pd.Timestamp(through)]
+    return float(selected.prod()) if not selected.empty else 1.0
+
+
+def _dividend_income(actions, date, original_shares, currency, fx_series):
+    """Dividendos cobrados, ajustando la cantidad por splits previos a cada pago."""
+    dividends = actions.get("dividends")
+    splits = actions.get("splits")
+    if dividends is None or dividends.empty:
+        return 0.0, 0.0, True
+    dividends = dividends[dividends.index > pd.Timestamp(date)]
+    native = base = 0.0
+    complete = True
+    for paid_at, per_share in dividends.items():
+        shares_at_payment = original_shares * _split_factor_since(splits, date, paid_at)
+        cash = float(per_share) * shares_at_payment
+        native += cash
+        if currency == BASE_CURRENCY:
+            base += cash
+        else:
+            fx_at_payment = _price_at(fx_series, paid_at) if fx_series is not None else None
+            if fx_at_payment:
+                base += cash / fx_at_payment
+            else:
+                complete = False
+    return native, base if complete else None, complete
 
 
 def _price_at(series, date):
@@ -67,7 +135,7 @@ def _instrument_meta(symbol):
     if isinstance(cached, dict):
         return cached
     try:
-        info = yf.Ticker(symbol).info or {}
+        info = safe_info(safe_ticker(symbol))
     except Exception:
         info = {}
     meta = {
@@ -101,7 +169,7 @@ def get_portfolio():
     spy_now = float(spy.iloc[-1]) if spy is not None and not spy.empty and math.isfinite(float(spy.iloc[-1])) else None
 
     positions = []
-    tot_invested = tot_value = 0.0
+    tot_invested = tot_value = tot_income = 0.0
     tot_spy_value = 0.0
     fx_cache = {}
     conversion_complete = True
@@ -114,6 +182,9 @@ def get_portfolio():
 
         meta = _instrument_meta(sym)
         currency = (it.get("currency") or meta["currency"]).upper()
+        actions = _actions(sym)
+        split_factor = _split_factor_since(actions.get("splits"), it["date"])
+        adjusted_shares = it["shares"] * split_factor
 
         pos = {**it}
         pos["currency"] = currency
@@ -121,9 +192,11 @@ def get_portfolio():
         pos["investedNative"] = invested_native
         pos["priceNow"] = price_now
         pos["sector"] = meta["sector"]
+        pos["splitFactor"] = round(split_factor, 8)
+        pos["adjustedShares"] = adjusted_shares
 
         if price_now:
-            value_native = price_now * it["shares"]
+            value_native = price_now * adjusted_shares
             pos["valueNative"] = value_native
             fx = _fx_to_usd(currency, fx_cache)
             if currency == BASE_CURRENCY:
@@ -135,20 +208,32 @@ def get_portfolio():
             if fx_then and fx_now:
                 invested = invested_native / fx_then
                 value = value_native / fx_now
-                ret = (value / invested - 1) * 100
+                dividends_native, dividends, dividends_complete = _dividend_income(
+                    actions, it["date"], it["shares"], currency, fx
+                )
+                total_value = value + (dividends or 0)
+                ret = (total_value / invested - 1) * 100 if dividends_complete else None
                 pos["invested"] = invested
                 pos["value"] = value
-                pos["return"] = round(ret, 1)
+                pos["dividendsNative"] = round(dividends_native, 4)
+                pos["dividends"] = round(dividends, 2) if dividends is not None else None
+                pos["totalValue"] = round(total_value, 2) if dividends_complete else None
+                pos["priceReturn"] = round((value / invested - 1) * 100, 1)
+                pos["return"] = round(ret, 1) if ret is not None else None
                 pos["fxAtPurchase"] = round(fx_then, 4)
                 pos["fxNow"] = round(fx_now, 4)
                 tot_invested += invested
                 tot_value += value
+                if dividends_complete:
+                    tot_income += dividends or 0
+                else:
+                    conversion_complete = False
 
                 spy_then = _price_at(spy, it["date"]) if spy is not None else None
                 if spy_then and spy_now:
                     spy_ret = (spy_now / spy_then - 1) * 100
                     pos["spyReturn"] = round(spy_ret, 1)
-                    pos["alpha"] = round(ret - spy_ret, 1)
+                    pos["alpha"] = round(ret - spy_ret, 1) if ret is not None else None
                     tot_spy_value += invested * (spy_now / spy_then)
                 else:
                     benchmark_complete = False
@@ -180,11 +265,14 @@ def get_portfolio():
 
     totals = None
     if tot_invested > 0:
-        ret = (tot_value / tot_invested - 1) * 100
+        total_value = tot_value + tot_income
+        ret = (total_value / tot_invested - 1) * 100
         spy_ret = (tot_spy_value / tot_invested - 1) * 100 if benchmark_complete and tot_spy_value else None
         totals = {
             "invested": round(tot_invested, 2),
             "value": round(tot_value, 2),
+            "dividends": round(tot_income, 2),
+            "totalValue": round(total_value, 2),
             "return": round(ret, 1),
             "spyReturn": round(spy_ret, 1) if spy_ret is not None else None,
             "alpha": round(ret - spy_ret, 1) if spy_ret is not None else None,

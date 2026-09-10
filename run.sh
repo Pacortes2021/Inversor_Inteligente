@@ -11,6 +11,9 @@ if [ "$1" = "--lan" ] || [ "$BIND_LAN" = "1" ]; then
   echo "⚠️ ADVERTENCIA: Servidor expuesto en la red local (0.0.0.0)."
   echo "  En este equipo:  http://127.0.0.1:8756"
   echo "  Desde tu iPhone: http://$IP:8756  (misma red WiFi)"
+  if [ -z "$INVERSOR_API_KEY" ] && ! grep -Eq '^INVERSOR_API_KEY=.+$' .env 2>/dev/null; then
+    echo "  Modo lectura: define INVERSOR_API_KEY para modificar portafolio, watchlist o notas."
+  fi
 else
   echo "◆ El Inversor Inteligente (modo local seguro)"
   echo "  Acceso local:    http://127.0.0.1:8756"

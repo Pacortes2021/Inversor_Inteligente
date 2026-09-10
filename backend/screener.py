@@ -11,13 +11,13 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pandas as pd
-import yfinance as yf
-
+from . import currency as C
 from . import edgar as E
 from . import metrics as M
 from . import valuation as V
 from .data import TTL_SCREENER, bond_yield_10y, cache_get, cache_set, jclean, price_history
 from .config import CACHE_VERSION
+from .yfinance_wrapper import safe_download, safe_history, safe_info, safe_ticker
 
 # ------------------------------------------------------------------ universos
 
@@ -77,18 +77,6 @@ UNIVERSE_CL = [
 UNIVERSES = {"us": UNIVERSE_US, "cl": UNIVERSE_CL}
 
 
-def _retry(fn, tries=3, wait=1.5):
-    """Reintenta ante errores transitorios (rate limit de Yahoo, red)."""
-    last = None
-    for i in range(tries):
-        try:
-            return fn()
-        except Exception as e:
-            last = e
-            time.sleep(wait * (i + 1))
-    raise last
-
-
 def _sma_last(values, n):
     """SMA de los últimos n valores; None si faltan datos."""
     if not values:
@@ -109,14 +97,14 @@ def _fetch_sma_batch(symbols):
 
     daily = None
     try:
-        daily = yf.download(syms, period="1y", interval="1d", progress=False,
-                            auto_adjust=True, threads=False)
+        daily = safe_download(syms, period="1y", interval="1d", progress=False,
+                              auto_adjust=True, threads=False)
     except Exception:
         pass
     weekly = None
     try:
-        weekly = yf.download(syms, period="5y", interval="1wk", progress=False,
-                             auto_adjust=True, threads=False)
+        weekly = safe_download(syms, period="5y", interval="1wk", progress=False,
+                               auto_adjust=True, threads=False)
     except Exception:
         pass
 
@@ -204,7 +192,9 @@ def score_stock(info):
 
     ey = (1 / pe * 100) if pe and pe > 0 else None
     fey = (1 / fpe * 100) if fpe and fpe > 0 else None
-    fcfy = (fcf / mc * 100) if (fcf and mc and fcf > 0) else None
+    fcfy = ((fcf / mc * 100) if (fcf and mc and fcf > 0) else None)
+    if info.get("_currencyMismatch"):
+        fcfy = None
     drawdown = (price / hi52 - 1) * 100 if (price and hi52) else None
 
     val_parts = [s for s in (_scale(ey, 1, 10), _scale(fey, 1, 10), _scale(fcfy, 0, 8)) if s is not None]
@@ -338,7 +328,8 @@ def _base_row(symbol, info):
 
 def scan_one(symbol):
     try:
-        info = _retry(lambda: yf.Ticker(symbol).info or {})
+        ticker = safe_ticker(symbol)
+        info, _ = C.normalize_info(symbol, safe_info(ticker))
         s = score_stock(info)
         if not s:
             return None
@@ -384,7 +375,7 @@ def _pe_stats_from_edgar(symbol, edgar_hist):
     if eps is None or len(eps) < 4:
         return None
     try:
-        h = yf.Ticker(symbol).history(period="15y", interval="1mo")
+        h = safe_history(safe_ticker(symbol), period="15y", interval="1mo")
         if h is None or h.empty:
             h = None
     except Exception:
@@ -408,7 +399,8 @@ def scan_one_deep(symbol, bond10y):
     if cached:
         return cached
     try:
-        info = _retry(lambda: yf.Ticker(symbol).info or {})
+        raw = safe_ticker(symbol)
+        info, currency_conversion = C.normalize_info(symbol, safe_info(raw))
         price = info.get("currentPrice")
         if not price:
             return None
@@ -416,6 +408,7 @@ def scan_one_deep(symbol, bond10y):
         edgar_hist = E.get_annual_history(symbol)
         pe_stats = _pe_stats_from_edgar(symbol, edgar_hist) if edgar_hist else None
         annuals = E.to_annual_rows(edgar_hist) if edgar_hist else []
+        annuals = C.convert_annuals(annuals, currency_conversion)
 
         val = V.build_valuation(price, info, annuals, pe_stats, bond10y)
         quick = score_stock(info) or {}
@@ -430,10 +423,10 @@ def scan_one_deep(symbol, bond10y):
             verdict = {"label": "Modelos insuficientes", "level": "na"}
 
         roc = V.greenblatt_roc(info, annuals)
-        f_score = V.piotroski_f_score(annuals)
+        f_score_details = V.piotroski_f_score_details(annuals)
+        f_score = f_score_details["score"]
         
         from .estimates import build_estimates_payload
-        raw = yf.Ticker(symbol)
         est = build_estimates_payload(raw, info, annuals, price, symbol=symbol)
         eps_2030 = None
         grid = est.get("growthGrid", {}) if est else {}
@@ -462,6 +455,8 @@ def scan_one_deep(symbol, bond10y):
             "nModels": len(val["models"]),
             "roc": round(roc, 1) if roc else None,
             "fScore": f_score,
+            "fScoreEvaluated": f_score_details["evaluated"],
+            "currencyConversion": currency_conversion,
         }
         row = jclean(row)
         cache_set(f"deep_{CACHE_VERSION}_{symbol.replace('/', '_').replace('.', '_')}", row, ttl=TTL_SCREENER)

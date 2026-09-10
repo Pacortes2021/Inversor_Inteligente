@@ -644,42 +644,45 @@ def buffett_scorecard(info, annuals, pe_stats, pe_pairs=None, price=None):
     return {"passed": passed, "evaluated": len(evaluated), "checks": checks}
 
 
-def piotroski_f_score(annuals):
-    """Calcula el Piotroski F-Score (0-9) basado en los dos últimos años fiscales."""
+def piotroski_f_score_details(annuals):
+    """F-Score con cobertura explícita para no convertir faltantes en ceros."""
     if not annuals or len(annuals) < 2:
-        return None
+        return {"score": None, "evaluated": 0, "total": 9}
 
     # Tomar los dos últimos años disponibles
     current = annuals[-1]
     prior = annuals[-2]
 
-    score = 0
+    results = []
+
+    def criterion(evaluable, passed=False):
+        if evaluable:
+            results.append(bool(passed))
 
     # Rentabilidad (Profitability)
     # 1. ROA > 0 (usamos Net Income > 0 si ROA no está explícito pero Net Income sí)
     ni_cur = current.get("netIncome")
-    if _ok(ni_cur) and ni_cur > 0:
-        score += 1
+    criterion(_ok(ni_cur), _ok(ni_cur) and ni_cur > 0)
 
     # 2. Operating Cash Flow (OCF) > 0
     ocf_cur = current.get("ocf")
-    if _ok(ocf_cur) and ocf_cur > 0:
-        score += 1
+    criterion(_ok(ocf_cur), _ok(ocf_cur) and ocf_cur > 0)
 
     # 3. Change in ROA (ROA current > ROA prior)
     # Aproximado por (Net Income / Assets)
     assets_cur = current.get("assets")
     assets_prior = prior.get("assets")
     ni_prior = prior.get("netIncome")
-    if _ok(ni_cur) and _ok(assets_cur) and assets_cur > 0 and _ok(ni_prior) and _ok(assets_prior) and assets_prior > 0:
+    roa_evaluable = (_ok(ni_cur) and _ok(assets_cur) and assets_cur > 0
+                     and _ok(ni_prior) and _ok(assets_prior) and assets_prior > 0)
+    if roa_evaluable:
         roa_cur = ni_cur / assets_cur
         roa_prior = ni_prior / assets_prior
-        if roa_cur > roa_prior:
-            score += 1
+        criterion(True, roa_cur > roa_prior)
 
     # 4. Accruals (OCF > Net Income)
-    if _ok(ocf_cur) and _ok(ni_cur) and ocf_cur > ni_cur:
-        score += 1
+    criterion(_ok(ocf_cur) and _ok(ni_cur),
+              _ok(ocf_cur) and _ok(ni_cur) and ocf_cur > ni_cur)
 
     # 5. Change in Leverage (Long-term debt ratio current < prior)
     def _reported_debt(row):
@@ -690,46 +693,59 @@ def piotroski_f_score(annuals):
 
     ltd_cur_v = _reported_debt(current)
     ltd_prior_v = _reported_debt(prior)
+    debt_evaluable = False
+    debt_passed = False
     if ltd_cur_v is not None and ltd_prior_v is not None and ltd_cur_v <= 0 and ltd_prior_v <= 0:
-        score += 1  # Deuda cero informada explícitamente en ambos años
+        debt_evaluable, debt_passed = True, True
     elif ltd_cur_v is not None and ltd_prior_v is not None and ltd_cur_v <= 0 < ltd_prior_v:
-        score += 1  # Had debt, now debt-free → reward
+        debt_evaluable, debt_passed = True, True
     elif (_ok(ltd_cur_v) and _ok(ltd_prior_v) and _ok(assets_cur) and assets_cur > 0
           and _ok(assets_prior) and assets_prior > 0):
+        debt_evaluable = True
         lev_cur = ltd_cur_v / assets_cur
         lev_prior = ltd_prior_v / assets_prior
-        if lev_cur < lev_prior:
-            score += 1
+        debt_passed = lev_cur < lev_prior
+    criterion(debt_evaluable, debt_passed)
 
     # 6. Change in Current Ratio (Current Ratio current > prior)
     cr_cur = current.get("currentRatio")
     cr_prior = prior.get("currentRatio")
-    if _ok(cr_cur) and _ok(cr_prior) and cr_cur > cr_prior:
-        score += 1
+    criterion(_ok(cr_cur) and _ok(cr_prior),
+              _ok(cr_cur) and _ok(cr_prior) and cr_cur > cr_prior)
 
     # 7. Change in Shares (Shares current <= prior)
     sh_cur = current.get("sharesOut")
     sh_prior = prior.get("sharesOut")
-    if _ok(sh_cur) and _ok(sh_prior) and sh_cur <= sh_prior * 1.01: # Tolerancia del 1%
-        score += 1
+    criterion(_ok(sh_cur) and _ok(sh_prior),
+              _ok(sh_cur) and _ok(sh_prior) and sh_cur <= sh_prior * 1.01)
 
     # Eficiencia Operativa
     # 8. Change in Gross Margin (Gross Margin current > prior)
     gm_cur = current.get("grossMargin")
     gm_prior = prior.get("grossMargin")
-    if _ok(gm_cur) and _ok(gm_prior) and gm_cur > gm_prior:
-        score += 1
+    criterion(_ok(gm_cur) and _ok(gm_prior),
+              _ok(gm_cur) and _ok(gm_prior) and gm_cur > gm_prior)
 
     # 9. Change in Asset Turnover (Asset Turnover current > prior)
     rev_cur = current.get("revenue")
     rev_prior = prior.get("revenue")
-    if _ok(rev_cur) and _ok(assets_cur) and assets_cur > 0 and _ok(rev_prior) and _ok(assets_prior) and assets_prior > 0:
+    turnover_evaluable = (_ok(rev_cur) and _ok(assets_cur) and assets_cur > 0
+                          and _ok(rev_prior) and _ok(assets_prior) and assets_prior > 0)
+    if turnover_evaluable:
         at_cur = rev_cur / assets_cur
         at_prior = rev_prior / assets_prior
-        if at_cur > at_prior:
-            score += 1
+        criterion(True, at_cur > at_prior)
 
-    return score
+    return {
+        "score": sum(results) if results else None,
+        "evaluated": len(results),
+        "total": 9,
+    }
+
+
+def piotroski_f_score(annuals):
+    """Compatibilidad: devuelve el puntaje, omitiéndolo si no se evaluó nada."""
+    return piotroski_f_score_details(annuals)["score"]
 
 
 def greenblatt_roc(info, annuals):

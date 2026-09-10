@@ -1,10 +1,11 @@
 import os
 import tempfile
+from types import SimpleNamespace
 from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from backend.data import atomic_write_json
+from backend.data import atomic_write_json, transactional_write_json
 from backend.main import Position, WatchItem, Note, Backup
 from backend.screener import run_deep_screener, _deep_states
 
@@ -18,6 +19,31 @@ def test_atomic_write_json():
         import json
         read_back = json.loads(target.read_text(encoding="utf-8"))
         assert read_back == data
+
+
+def test_transactional_write_json_rolls_back_all_files(monkeypatch, tmp_path):
+    first = tmp_path / "first.json"
+    second = tmp_path / "second.json"
+    first.write_text('{"old": 1}', encoding="utf-8")
+    second.write_text('{"old": 2}', encoding="utf-8")
+
+    import backend.data as data_module
+    real_replace = data_module.os.replace
+    failed = False
+
+    def fail_second_once(source, destination):
+        nonlocal failed
+        if Path(destination) == second and not failed:
+            failed = True
+            raise OSError("fallo simulado")
+        return real_replace(source, destination)
+
+    monkeypatch.setattr(data_module.os, "replace", fail_second_once)
+    with pytest.raises(OSError):
+        transactional_write_json({first: {"new": 1}, second: {"new": 2}})
+
+    assert first.read_text(encoding="utf-8") == '{"old": 1}'
+    assert second.read_text(encoding="utf-8") == '{"old": 2}'
 
 
 def test_watchitem_validation():
@@ -95,6 +121,25 @@ def test_sleep_with_jitter_no_nameerror():
     from backend.yfinance_wrapper import _sleep_with_jitter
     val = _sleep_with_jitter(0)
     assert isinstance(val, float) and val > 0
+
+
+def test_mutations_are_local_without_shipping_a_default_secret(monkeypatch):
+    import backend.main as main
+
+    local_request = SimpleNamespace(client=SimpleNamespace(host="127.0.0.1"))
+    assert main.verify_api_key(local_request, None) is True
+
+    remote_request = SimpleNamespace(client=SimpleNamespace(host="192.168.1.20"))
+    monkeypatch.setattr(main, "API_KEY", "")
+    with pytest.raises(main.HTTPException) as exc:
+        main.verify_api_key(remote_request, None)
+    assert exc.value.status_code == 503
+
+    monkeypatch.setattr(main, "API_KEY", "clave-segura")
+    assert main.verify_api_key(remote_request, "clave-segura") is True
+    with pytest.raises(main.HTTPException) as exc:
+        main.verify_api_key(remote_request, "incorrecta")
+    assert exc.value.status_code == 401
 
 
 def test_screener_mos_zero_sorting():
