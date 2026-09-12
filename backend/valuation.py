@@ -50,7 +50,8 @@ def dcf_fair_value(base_fcf, shares, net_cash=0.0, growth=0.08,
 
 
 def implied_growth(price, base_fcf, shares, net_cash=0.0,
-                   discount=0.10, terminal=0.025, years=10, fade_start=6):
+                   discount=0.10, terminal=0.025, years=10, fade_start=6,
+                   forward_fcf=None):
     """Reverse DCF: crecimiento de FCF que el precio actual está descontando.
     Se resuelve por bisección; acotado a [-20%, +60%]."""
     if not _ok(price) or price <= 0 or not _ok(base_fcf) or base_fcf <= 0 \
@@ -59,7 +60,10 @@ def implied_growth(price, base_fcf, shares, net_cash=0.0,
     lo, hi = -0.20, 0.60
 
     def diff(g):
-        fv = dcf_fair_value(base_fcf, shares, net_cash, g, discount, terminal, years, fade_start)
+        fv = dcf_fair_value(
+            base_fcf, shares, net_cash, g, discount, terminal, years,
+            fade_start, forward_fcf=forward_fcf,
+        )
         return None if fv is None else fv - price
 
     flo, fhi = diff(lo), diff(hi)
@@ -79,6 +83,141 @@ def implied_growth(price, base_fcf, shares, net_cash=0.0,
         else:
             lo = mid
     return (lo + hi) / 2
+
+
+def implied_discount_rate(price, base_fcf, shares, net_cash=0.0,
+                          growth=0.08, terminal=0.025, years=10,
+                          fade_start=6, forward_fcf=None):
+    """Rentabilidad anual implícita en el precio para un escenario de FCF.
+
+    Resuelve la tasa de descuento que iguala el DCF al precio observado. Es
+    más útil para comparar alternativas que presentar un valor justo aislado.
+    Los límites indican que el resultado queda fuera de un rango razonable,
+    no que la rentabilidad esté garantizada.
+    """
+    if not _ok(price) or price <= 0 or not _ok(base_fcf) or base_fcf <= 0 \
+            or not _ok(shares) or shares <= 0:
+        return None
+    lo = max(terminal + 0.0025, 0.03)
+    hi = 0.40
+
+    def diff(rate):
+        value = dcf_fair_value(
+            base_fcf, shares, net_cash, growth, rate, terminal, years,
+            fade_start, forward_fcf=forward_fcf,
+        )
+        return None if value is None else value - price
+
+    flo, fhi = diff(lo), diff(hi)
+    if flo is None or fhi is None:
+        return None
+    if flo <= 0:
+        return lo
+    if fhi >= 0:
+        return hi
+    for _ in range(60):
+        mid = (lo + hi) / 2
+        if diff(mid) >= 0:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2
+
+
+def _median(values):
+    vals = sorted(v for v in values if _ok(v))
+    if not vals:
+        return None
+    n = len(vals)
+    return vals[n // 2] if n % 2 else (vals[n // 2 - 1] + vals[n // 2]) / 2
+
+
+def _relative_dispersion(values):
+    """Desviación media absoluta relativa; robusta ante muestras pequeñas."""
+    vals = [v for v in values if _ok(v)]
+    center = _median(vals)
+    if len(vals) < 3 or not _ok(center) or abs(center) < 1e-9:
+        return None
+    return _median([abs(v - center) for v in vals]) / abs(center)
+
+
+def assess_uncertainty(info, annuals, model_values, fcf_source="historico"):
+    """Clasifica incertidumbre observable y deriva el margen mínimo exigido.
+
+    No intenta medir el foso competitivo. Esa parte requiere una tesis humana;
+    por eso la salida siempre marca la revisión cualitativa como pendiente.
+    """
+    points = 0
+    reasons = []
+    years = {a.get("year") for a in annuals if a.get("year") is not None}
+    if len(years) < 3:
+        points += 30
+        reasons.append("menos de 3 ejercicios comparables")
+    elif len(years) < 5:
+        points += 18
+        reasons.append("historia financiera menor a 5 años")
+
+    recent_fcfs = [a.get("fcf") for a in annuals[-5:] if _ok(a.get("fcf"))]
+    positive_fcfs = sum(1 for value in recent_fcfs if value > 0)
+    if len(recent_fcfs) < 3:
+        points += 15
+        reasons.append("cobertura limitada de flujo de caja")
+    elif positive_fcfs < len(recent_fcfs):
+        points += 18
+        reasons.append("flujo de caja negativo en años recientes")
+    fcf_dispersion = _relative_dispersion(recent_fcfs)
+    if _ok(fcf_dispersion) and fcf_dispersion > 0.45:
+        points += 15
+        reasons.append("flujo de caja volátil")
+
+    margins = [a.get("opMargin") for a in annuals[-5:] if _ok(a.get("opMargin"))]
+    margin_dispersion = _relative_dispersion(margins)
+    if _ok(margin_dispersion) and margin_dispersion > 0.25:
+        points += 10
+        reasons.append("márgenes poco estables")
+
+    beta = info.get("beta")
+    if not _ok(beta):
+        points += 5
+        reasons.append("beta no disponible")
+    elif beta > 1.5:
+        points += 10
+        reasons.append("sensibilidad de mercado elevada")
+
+    if fcf_source != "fmp":
+        points += 7
+        reasons.append("proyección basada en historia, sin consenso forward")
+
+    spread = None
+    clean_models = [v for v in model_values if _ok(v) and v > 0]
+    if len(clean_models) >= 2:
+        med = _median(clean_models)
+        spread = (max(clean_models) - min(clean_models)) / med if med else None
+        if _ok(spread) and spread > 0.75:
+            points += 12
+            reasons.append("gran desacuerdo entre métodos de contraste")
+        elif _ok(spread) and spread > 0.40:
+            points += 7
+            reasons.append("desacuerdo relevante entre métodos")
+
+    points = min(points, 100)
+    if points <= 15:
+        level, label, required = "low", "Baja", 15
+    elif points <= 55:
+        level, label, required = "medium", "Media", 25
+    elif points <= 80:
+        level, label, required = "high", "Alta", 35
+    else:
+        level, label, required = "very_high", "Muy alta", 40
+    return {
+        "score": points,
+        "level": level,
+        "label": label,
+        "requiredMarginPct": required,
+        "reasons": reasons[:5],
+        "modelSpreadPct": round(spread * 100, 1) if _ok(spread) else None,
+        "qualitativeReviewRequired": True,
+    }
 
 
 def graham_number(eps, bvps, fcf_per_share=None):
@@ -103,15 +242,14 @@ def graham_intrinsic_value(eps, growth, bond10y=None):
     return (eps * (8.5 + 2 * g) * 4.4) / y
 
 
-def dividend_discount_model(info, annuals, discount=0.10):
-    """Modelo de Descuento de Dividendos (Gordon Growth) para empresas financieras.
-    V0 = DPS * (1 + g) / (discount - g)."""
+def dividend_discount_inputs(info, annuals):
+    """Obtiene dividendo y crecimiento sostenible usados por el DDM."""
     dps = info.get("trailingAnnualDividendRate") or info.get("dividendRate")
     if not _ok(dps) or dps <= 0:
         dps_list = [a["dividendPS"] for a in annuals if _ok(a.get("dividendPS")) and a["dividendPS"] > 0]
         dps = dps_list[-1] if dps_list else None
     if not _ok(dps) or dps <= 0:
-        return None
+        return None, None
 
     roe = info.get("returnOnEquity") or 0.12
     if _ok(roe) and roe > 1.0:
@@ -123,6 +261,15 @@ def dividend_discount_model(info, annuals, discount=0.10):
         payout = min(abs(payout), 0.95)  # clamp, never divide – it's already decimal
 
     g = max(0.01, min(0.06, roe * (1 - payout))) if (_ok(roe) and _ok(payout) and payout < 1) else 0.03
+
+    return dps, g
+
+
+def dividend_discount_model(info, annuals, discount=0.10):
+    """Modelo de Descuento de Dividendos (Gordon Growth) para financieras."""
+    dps, g = dividend_discount_inputs(info, annuals)
+    if not _ok(dps) or not _ok(g):
+        return None
 
     if discount <= g:
         return None
@@ -322,7 +469,9 @@ def build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=None):
     # El FCF contable de bancos y aseguradoras no refleja su economía:
     # para financieras el DCF de FCF queda excluido y se usa DDM.
     sector = (info.get("sector") or "")
+    industry = (info.get("industry") or "")
     is_financial = "Financial" in sector
+    is_reit = "REIT" in industry.upper()
 
     epv = epv_greenwald(info, annuals, discount) if not is_financial else None
     # EPV (cero crecimiento) castiga injustamente a empresas de hypergrowth:
@@ -347,54 +496,186 @@ def build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=None):
 
     models = []
     if dcf and not is_financial:
-        models.append({"id": "dcf", "name": "Flujo de caja descontado (DCF)", "fair": dcf, "weight": 0.35})
+        models.append({"id": "dcf", "name": "Flujo de caja descontado (DCF)", "fair": dcf})
     if ddm and is_financial:
-        models.append({"id": "ddm", "name": "Modelo Descuento Dividendos (DDM)", "fair": ddm, "weight": 0.30})
+        models.append({"id": "ddm", "name": "Modelo Descuento Dividendos (DDM)", "fair": ddm})
     if reversion:
         pe_target = round(min(pe_med, MAX_TARGET_PE), 1)
         label = f"Reversión al PE mediano ({pe_target}x)"
         if pe_med > MAX_TARGET_PE:
             label = f"Reversión al PE mediano (capado a {pe_target}x)"
-        weight = 0.30 if is_financial else 0.20
-        models.append({"id": "reversion", "name": label, "fair": reversion, "weight": weight})
+        models.append({"id": "reversion", "name": label, "fair": reversion})
     if lynch_fv:
-        weight = 0.20 if is_financial else 0.15
-        models.append({"id": "peter_lynch", "name": "Valor Justo Peter Lynch (PEG 1.0)", "fair": lynch_fv, "weight": weight})
+        models.append({"id": "peter_lynch", "name": "Valor Justo Peter Lynch (PEG 1.0)", "fair": lynch_fv})
     if epv:
-        models.append({"id": "epv", "name": "EPV Greenwald (cero crecimiento)", "fair": epv, "weight": 0.10})
+        models.append({"id": "epv", "name": "EPV Greenwald (cero crecimiento)", "fair": epv})
     if graham_int:
-        weight = 0.10 if is_financial else 0.10
-        models.append({"id": "graham_intrinsic", "name": "Valor Intrínseco de Graham (rev.)", "fair": graham_int, "weight": weight})
+        models.append({"id": "graham_intrinsic", "name": "Valor Intrínseco de Graham (rev.)", "fair": graham_int})
     if graham:
-        weight = 0.10 if is_financial else 0.10
-        models.append({"id": "graham", "name": "Número de Graham", "fair": graham, "weight": weight})
+        models.append({"id": "graham", "name": "Número de Graham", "fair": graham})
 
+    # Un método apropiado dirige la decisión. Los demás sirven para contrastar
+    # supuestos y detectar desacuerdos; no se promedian métodos incompatibles.
+    model_ids = {m["id"] for m in models}
+    applicability_warnings = []
+    if is_reit:
+        primary_id = None
+        applicability_warnings.append(
+            "REIT: falta valoración por AFFO; los modelos mostrados son solo referencias"
+        )
+    elif not is_financial and "dcf" in model_ids:
+        primary_id = "dcf"
+    elif is_financial and "ddm" in model_ids:
+        primary_id = "ddm"
+    elif "reversion" in model_ids:
+        primary_id = "reversion"
+    elif "epv" in model_ids:
+        primary_id = "epv"
+    else:
+        primary_id = None
 
-    consensus, mos = None, None
-    if models and _ok(price) and price > 0:
-        wsum = sum(m["weight"] for m in models)
-        consensus = sum(m["fair"] * m["weight"] for m in models) / wsum
-        mos = (consensus / price - 1) * 100
+    uncertainty = assess_uncertainty(
+        info, annuals, [m["fair"] for m in models], fcf_source=fcf_source,
+    )
+    for m in models:
+        m["role"] = "primary" if m["id"] == primary_id else "cross_check"
+        # Alias temporal para clientes antiguos: ya no representa una ponderación.
+        m["weight"] = 1.0 if m["id"] == primary_id else 0.0
 
-    # Precio de compra aceptable: el que deja un margen de seguridad de 25%
-    # sobre el valor intrínseco (consenso ponderado).
-    buy_price = (consensus / 1.25) if consensus else None
+    primary = next((m for m in models if m["id"] == primary_id), None)
+    base_value = primary["fair"] if primary else None
+    mos = ((base_value / price - 1) * 100
+           if _ok(base_value) and _ok(price) and price > 0 else None)
+    required_mos = uncertainty["requiredMarginPct"]
+    buy_price = (base_value / (1 + required_mos / 100)) if base_value else None
+
+    # Tres escenarios coherentes dentro del modelo principal. No mezclan DCF,
+    # múltiplos y fórmulas de Graham para fabricar una cifra aparentemente exacta.
+    scenarios = []
+    if primary_id == "dcf":
+        risk_step = {"low": 0.015, "medium": 0.025, "high": 0.035,
+                     "very_high": 0.045}[uncertainty["level"]]
+        growth_step = {"low": 0.025, "medium": 0.04, "high": 0.06,
+                       "very_high": 0.08}[uncertainty["level"]]
+        scenario_inputs = [
+            ("bear", "Pesimista", max(-0.10, growth - growth_step),
+             min(0.25, discount + risk_step), max(0.005, terminal - 0.005), 25),
+            ("base", "Base", growth, discount, terminal, 50),
+            ("bull", "Optimista", min(0.30, growth + growth_step * 0.65),
+             max(terminal + 0.02, discount - risk_step * 0.5),
+             min(0.035, terminal + 0.005), 25),
+        ]
+        for key, label, sg, sd, st, probability in scenario_inputs:
+            value = dcf_fair_value(
+                base_fcf, shares, net_cash, sg, sd, st,
+                forward_fcf=fwd_fcfs,
+            )
+            if _ok(value) and value > 0:
+                scenarios.append({
+                    "key": key, "label": label, "value": round(value, 2),
+                    "probabilityPct": probability,
+                    "assumptions": {
+                        "growthPct": round(sg * 100, 1),
+                        "discountPct": round(sd * 100, 1),
+                        "terminalPct": round(st * 100, 1),
+                    },
+                })
+    elif primary_id == "ddm":
+        dps, ddm_growth = dividend_discount_inputs(info, annuals)
+        if _ok(dps) and _ok(ddm_growth):
+            scenario_inputs = [
+                ("bear", "Pesimista", max(0.0, ddm_growth - 0.015), min(0.20, discount + 0.02), 25),
+                ("base", "Base", ddm_growth, discount, 50),
+                ("bull", "Optimista", min(0.06, ddm_growth + 0.01), max(ddm_growth + 0.015, discount - 0.01), 25),
+            ]
+            for key, label, sg, sd, probability in scenario_inputs:
+                value = dps * (1 + sg) / (sd - sg) if sd > sg else None
+                if _ok(value) and value > 0:
+                    scenarios.append({
+                        "key": key, "label": label, "value": round(value, 2),
+                        "probabilityPct": probability,
+                        "assumptions": {"dividendGrowthPct": round(sg * 100, 1),
+                                        "requiredReturnPct": round(sd * 100, 1)},
+                    })
+    elif primary_id == "reversion" and _ok(eps):
+        p25 = pe_stats.get("p25") if pe_stats else None
+        p75 = pe_stats.get("p75") if pe_stats else None
+        base_pe = min(pe_med, MAX_TARGET_PE) if _ok(pe_med) else None
+        pes = [
+            ("bear", "Pesimista", min(p25, MAX_TARGET_PE) if _ok(p25) else base_pe * 0.8, 25),
+            ("base", "Base", base_pe, 50),
+            ("bull", "Optimista", min(p75, MAX_TARGET_PE) if _ok(p75) else base_pe * 1.15, 25),
+        ]
+        for key, label, target_pe, probability in pes:
+            if _ok(target_pe) and target_pe > 0:
+                scenarios.append({
+                    "key": key, "label": label, "value": round(eps * target_pe, 2),
+                    "probabilityPct": probability,
+                    "assumptions": {"normalizedEps": round(eps, 2),
+                                    "targetPe": round(target_pe, 1)},
+                })
+
+    weighted_scenario_value = None
+    if scenarios:
+        probability = sum(s["probabilityPct"] for s in scenarios)
+        if probability:
+            weighted_scenario_value = sum(
+                s["value"] * s["probabilityPct"] for s in scenarios
+            ) / probability
 
     for m in models:
         m["fair"] = round(m["fair"], 2)
         m["upside"] = round((m["fair"] / price - 1) * 100, 1) if (_ok(price) and price > 0) else None
 
     implied = None
+    implied_return = None
     if not is_financial:
-        implied = implied_growth(price, base_fcf, shares, net_cash, discount, terminal)
+        implied = implied_growth(
+            price, base_fcf, shares, net_cash, discount, terminal,
+            forward_fcf=fwd_fcfs,
+        )
+        if primary_id == "dcf":
+            implied_return = implied_discount_rate(
+                price, base_fcf, shares, net_cash, growth, terminal,
+                forward_fcf=fwd_fcfs,
+            )
+    elif primary_id == "ddm" and _ok(price) and price > 0:
+        dps, ddm_growth = dividend_discount_inputs(info, annuals)
+        if _ok(dps) and _ok(ddm_growth):
+            implied_return = dps * (1 + ddm_growth) / price + ddm_growth
+
+    risk_free = bond10y / 100 if _ok(bond10y) else 0.04
+    etf_hurdle = min(max(risk_free + 0.04, 0.07), 0.12)
+    excess_vs_etf = ((implied_return - etf_hurdle) * 100
+                     if _ok(implied_return) else None)
+    verdict = verdict_from_decision(mos, required_mos, primary_id,
+                                    uncertainty["level"])
 
     return {
         "models": models,
-        "consensus": round(consensus, 2) if consensus else None,
+        # `consensus` se conserva para compatibilidad, pero ahora es el valor
+        # base del modelo principal, no un promedio de métodos heterogéneos.
+        "consensus": round(base_value, 2) if base_value else None,
+        "baseValue": round(base_value, 2) if base_value else None,
+        "primaryModel": primary_id,
+        "applicabilityWarnings": applicability_warnings,
         "buyPrice": round(buy_price, 2) if buy_price else None,
         "marginOfSafety": round(mos, 1) if mos is not None else None,
-        "verdict": verdict_from_mos(mos),
+        "requiredMarginPct": required_mos,
+        "verdict": verdict,
+        "uncertainty": uncertainty,
+        "scenarios": scenarios,
+        "probabilityWeightedValue": (round(weighted_scenario_value, 2)
+                                     if weighted_scenario_value else None),
         "impliedGrowth": round(implied * 100, 1) if implied is not None else None,
+        "impliedReturnPct": round(implied_return * 100, 1) if implied_return is not None else None,
+        "etfComparison": {
+            "benchmark": "VT/VOO",
+            "hurdlePct": round(etf_hurdle * 100, 1),
+            "method": "bono EEUU 10A + prima de renta variable de 4 pp",
+            "excessReturnPct": round(excess_vs_etf, 1) if excess_vs_etf is not None else None,
+            "isProxy": True,
+        },
         "earningsYield": round(earnings_yield, 2) if earnings_yield else None,
         "bond10y": round(bond10y, 2) if _ok(bond10y) else None,
         "currencyMismatch": currency_mismatch,
@@ -413,6 +694,20 @@ def build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=None):
             "forwardYears": fwd_years or [],
         },
     }
+
+
+def verdict_from_decision(mos, required_mos, primary_model, uncertainty_level):
+    if mos is None or not primary_model:
+        return {"label": "No valorable con datos actuales", "level": "na"}
+    if uncertainty_level == "very_high":
+        return {"label": "Incertidumbre demasiado alta", "level": "na"}
+    if mos >= required_mos:
+        return {"label": "Candidata para investigar", "level": "buy"}
+    if mos >= 0:
+        return {"label": "Bajo valor base, sin margen suficiente", "level": "hold"}
+    if mos >= -20:
+        return {"label": "Valoración exigente", "level": "warn"}
+    return {"label": "Muy por sobre el valor base", "level": "sell"}
 
 
 def verdict_from_mos(mos):
@@ -437,7 +732,7 @@ def _check(cid, name, desc, value, passed, fmt="x", history=None):
 
 def buffett_scorecard(info, annuals, pe_stats, pe_pairs=None, price=None):
     """Criterios cuantitativos de élite inspirados en la filosofía de Warren Buffett
-    y Charlie Munger (14 puntos de calidad de negocio, foso defensivo y solidez).
+    y Charlie Munger (14 puntos de calidad económica y solidez financiera).
     Incluye series históricas completas para gráficos de tendencia (sparklines)."""
     checks = []
 
@@ -445,11 +740,11 @@ def buffett_scorecard(info, annuals, pe_stats, pe_pairs=None, price=None):
         vals = [a[key] for a in annuals[-last_n:] if _ok(a.get(key))]
         return (sum(vals) / len(vals)) if vals else None
 
-    # 1. ROIC Promedio 5A ≥ 12% (Ventaja competitiva duradera / Moat según Charlie Munger)
+    # 1. ROIC Promedio 5A ≥ 12% (indicio económico; no prueba por sí solo un foso)
     roics = [a["roic"] for a in annuals[-5:] if _ok(a.get("roic"))]
     roic_avg = (sum(roics) / len(roics)) if roics else None
     roic_hist = [[a["year"], round(a["roic"], 1)] for a in annuals[-10:] if _ok(a.get("roic"))]
-    checks.append(_check("roic", "ROIC ≥ 12%", "Retorno sobre capital invertido (Moat / Munger)",
+    checks.append(_check("roic", "ROIC ≥ 12%", "Retorno sobre capital invertido sostenido",
                          round(roic_avg, 1) if roic_avg is not None else None,
                          roic_avg >= 12.0 if roic_avg is not None else None, "pct",
                          history=roic_hist))

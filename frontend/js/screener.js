@@ -1,8 +1,8 @@
 /* Screener de valor: modos rápido/profundo, universos, filtros y export CSV. */
 
-import { fmtPrice, fmtNum, fmtPct, escHtml, pctClass } from "./format.js?v=81";
-import { renderHeatmap } from "./charts.js?v=81";
-import { go } from "./router.js?v=81";
+import { fmtPrice, fmtNum, fmtPct, escHtml, pctClass } from "./format.js?v=87";
+import { renderHeatmap } from "./charts.js?v=87";
+import { go } from "./router.js?v=87";
 
 const scr = {
   universe: "us", mode: "quick", view: "table",
@@ -335,7 +335,7 @@ function renderScreener() {
       `${rows.length} acciones con valoración completa (DCF + reversión al PE de 15 años + Graham). Ordenadas por margen de seguridad.`;
   } else {
     document.getElementById("screener-sub").textContent =
-      `${rows.length} acciones puntuadas por valoración (45%), calidad (30%), salud financiera (15%) y castigo en precio (10%).`;
+      `${rows.length} acciones puntuadas por valoración, calidad, salud financiera, crecimiento y riesgo. La caída desde máximos no suma puntos; el encaje de cartera queda pendiente.`;
   }
   document.getElementById("screener-table").classList.remove("hidden");
 }

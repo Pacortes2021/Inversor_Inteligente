@@ -280,11 +280,17 @@ def api_portfolio_remove(pid: int):
 
 
 class Note(BaseModel):
+    business: str = ""
     thesis: str = ""
+    growthDrivers: str = ""
     risks: str = ""
+    buySignals: str = ""
+    invalidation: str = ""
+    maxWeightPct: float | None = None
     moats: list[str] = []
 
-    @field_validator("thesis", "risks")
+    @field_validator("business", "thesis", "growthDrivers", "risks",
+                     "buySignals", "invalidation")
     @classmethod
     def check_text(cls, v: str) -> str:
         return (v or "").strip()[:2000]
@@ -295,6 +301,11 @@ class Note(BaseModel):
         valid = {"marca", "costos", "red", "switching", "intangibles", "escala"}
         return [m for m in (v or []) if m in valid]
 
+    @field_validator("maxWeightPct")
+    @classmethod
+    def check_weight(cls, v: float | None) -> float | None:
+        return min(max(float(v), 0.0), 100.0) if v is not None else None
+
 
 @app.get("/api/notes/{symbol}")
 def api_notes_get(symbol: str):
@@ -303,7 +314,12 @@ def api_notes_get(symbol: str):
 
 @app.post("/api/notes/{symbol}", dependencies=[Depends(verify_api_key)])
 def api_notes_set(symbol: str, n: Note):
-    return NT.set_note(_clean_symbol(symbol), n.thesis, n.risks, n.moats)
+    return NT.set_note(
+        _clean_symbol(symbol), n.thesis, n.risks, n.moats,
+        business=n.business, growth_drivers=n.growthDrivers,
+        buy_signals=n.buySignals, invalidation=n.invalidation,
+        max_weight_pct=n.maxWeightPct,
+    )
 
 
 @app.get("/api/backup")
@@ -388,9 +404,19 @@ def api_restore(b: Backup):
             continue
         if not isinstance(v, dict):
             continue
+        try:
+            restored_weight = float(v.get("maxWeightPct")) if v.get("maxWeightPct") not in (None, "") else None
+            restored_weight = min(max(restored_weight, 0.0), 100.0) if restored_weight is not None else None
+        except (TypeError, ValueError):
+            restored_weight = None
         notes[k] = {
+            "business": str(v.get("business", ""))[:2000],
             "thesis": str(v.get("thesis", ""))[:2000],
+            "growthDrivers": str(v.get("growthDrivers", ""))[:2000],
             "risks": str(v.get("risks", ""))[:2000],
+            "buySignals": str(v.get("buySignals", ""))[:2000],
+            "invalidation": str(v.get("invalidation", ""))[:2000],
+            "maxWeightPct": restored_weight,
             "moats": [str(m)[:30] for m in v.get("moats", []) if isinstance(m, (str, int))][:10],
         }
     transactional_write_json({

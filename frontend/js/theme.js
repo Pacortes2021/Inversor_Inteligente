@@ -1,6 +1,6 @@
 /* Tema claro/oscuro persistido en localStorage. */
 
-import { $ } from "./dom.js?v=81";
+import { $ } from "./dom.js?v=87";
 
 export function initTheme() {
   const stored = localStorage.getItem("theme") || "light";

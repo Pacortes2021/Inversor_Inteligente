@@ -1,7 +1,7 @@
 /* Gráficos ECharts con tema propio — El Inversor Inteligente */
 
-import { fmtBig, fmtPrice, fmtPct, fmtRatio, fmtNum } from "./format.js?v=81";
-import { state } from "./state.js?v=81";
+import { fmtBig, fmtPrice, fmtPct, fmtRatio, fmtNum } from "./format.js?v=87";
+import { state } from "./state.js?v=87";
 
 /** Colores que se adaptan al tema claro/oscuro en tiempo de ejecución */
 export function getChartColors() {
@@ -727,6 +727,7 @@ export function chartMos(data) {
   showCard('ch-mos');
   const cc = getChartColors();
   const ba = baseAxisStyle(cc);
+  const requiredMos = data.valuation?.requiredMarginPct ?? 25;
   makeChart('ch-mos', timeOption({
     yAxis: Object.assign({ type: 'value', scale: true }, ba,
       { axisLabel: { color: cc.muted, fontSize: 11, formatter: '{value}%' } }),
@@ -737,8 +738,8 @@ export function chartMos(data) {
       markLine: {
         silent: true, symbol: 'none',
         data: [
-          { yAxis: 0, lineStyle: { color: cc.muted, type: 'dashed' }, label: { color: cc.muted, formatter: 'precio justo' } },
-          { yAxis: 25, lineStyle: { color: cc.green, type: 'dashed' }, label: { color: cc.green, formatter: 'zona de compra' } },
+          { yAxis: 0, lineStyle: { color: cc.muted, type: 'dashed' }, label: { color: cc.muted, formatter: 'valor base' } },
+          { yAxis: requiredMos, lineStyle: { color: cc.green, type: 'dashed' }, label: { color: cc.green, formatter: `umbral ${requiredMos}%` } },
         ],
       },
       tooltip: { valueFormatter: v => fmtPct(v, 1, true) },
@@ -1953,7 +1954,7 @@ export function renderQualityScorecardCharts(data) {
         [cc.green, `ROIC 5A: <b>${roicChk.value != null ? roicChk.value + '%' : '—'}</b>`],
         [cc.gold, `ROE 5A: <b>${roeChk.value != null ? roeChk.value + '%' : '—'}</b>`],
         [cc.blue, `Último ROIC: <b>${roicVals.filter(v=>v!=null).slice(-1)[0] != null ? roicVals.filter(v=>v!=null).slice(-1)[0] + '%' : '—'}</b>`],
-        [roicChk.passed ? cc.green : cc.red, `Moat: <b>${roicChk.passed ? 'Sólido' : 'Débil'}</b>`]
+        [roicChk.passed ? cc.green : cc.red, `ROIC: <b>${roicChk.passed ? 'Sólido' : 'Débil'}</b>`]
       ]);
     }
   } catch (err) { console.error("Error rendering ch-qual-roic:", err); }

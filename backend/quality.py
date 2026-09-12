@@ -109,13 +109,14 @@ def build_warnings(info, annuals, valuation, pe_pairs, edgar_hist):
     # 7. Valoración: margen de seguridad negativo significativo
     mos = valuation.get("marginOfSafety")
     consensus_price = valuation.get("consensus")
+    required_mos = valuation.get("requiredMarginPct") or 25
     if _ok(mos) and _ok(consensus_price):
         if mos < -20:
-            w.append(f"El precio actual supera en {abs(mos):.0f}% el valor intrínseco consensuado "
+            w.append(f"El precio actual supera en {abs(mos):.0f}% el valor base del modelo principal "
                      f"({_money(consensus_price, quote_currency)}) — la acción aparenta estar sobrevalorada según los modelos actuales.")
-        elif mos > 30:
-            w.append(f"El precio actual cotiza con un descuento de {mos:.0f}% sobre el valor intrínseco "
-                     f"({_money(consensus_price, quote_currency)}) — puede haber una oportunidad de compra.")
+        elif mos >= required_mos:
+            w.append(f"El precio actual cotiza con un descuento de {mos:.0f}% sobre el valor base "
+                     f"({_money(consensus_price, quote_currency)}) — supera el filtro cuantitativo; falta validar tesis y riesgos.")
 
     # 8. PE actual en extremo superior del rango histórico
     if pe_pairs and len(pe_pairs) > 20:

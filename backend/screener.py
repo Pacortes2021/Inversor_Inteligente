@@ -188,6 +188,9 @@ def score_stock(info):
     roe = info.get("returnOnEquity")
     nm = info.get("profitMargins")
     de = info.get("debtToEquity")
+    rev_growth = info.get("revenueGrowth")
+    earnings_growth = info.get("earningsGrowth")
+    beta = info.get("beta")
     hi52 = info.get("fiftyTwoWeekHigh")
 
     ey = (1 / pe * 100) if pe and pe > 0 else None
@@ -200,22 +203,44 @@ def score_stock(info):
     val_parts = [s for s in (_scale(ey, 1, 10), _scale(fey, 1, 10), _scale(fcfy, 0, 8)) if s is not None]
     quality_parts = [s for s in (_scale((roe or 0) * 100 if roe is not None else None, 0, 30),
                                  _scale((nm or 0) * 100 if nm is not None else None, 0, 25)) if s is not None]
-    health = _scale(2 - (de / 100 if de is not None else 1.0), 0, 2)
-    contrarian = _scale(abs(drawdown) if drawdown is not None else None, 0, 40)
+    health_parts = [s for s in (
+        _scale(2 - (de / 100 if de is not None else 1.0), 0, 2),
+        100.0 if fcf and fcf > 0 else (0.0 if fcf is not None else None),
+    ) if s is not None]
+    growth_parts = [s for s in (
+        _scale(rev_growth * 100 if rev_growth is not None else None, -5, 20),
+        _scale(earnings_growth * 100 if earnings_growth is not None else None, -10, 25),
+    ) if s is not None]
+    risk_parts = [s for s in (
+        _scale(2.0 - beta if beta is not None else None, 0, 1.5),
+    ) if s is not None]
 
     if not val_parts:
         return None
-    score, weights = 0.0, 0.0
-    score += (sum(val_parts) / len(val_parts)) * 0.45; weights += 0.45
-    if quality_parts:
-        score += (sum(quality_parts) / len(quality_parts)) * 0.30; weights += 0.30
-    if health is not None:
-        score += health * 0.15; weights += 0.15
-    if contrarian is not None:
-        score += contrarian * 0.10; weights += 0.10
+    # Matriz automatizable (95 puntos). Los 5 puntos de encaje/diversificación
+    # quedan pendientes hasta evaluar la cartera del usuario. Una caída desde
+    # máximos se muestra como contexto, pero no suma puntos.
+    categories = {
+        "quality": (sum(quality_parts) / len(quality_parts), 25) if quality_parts else (None, 25),
+        "financialHealth": (sum(health_parts) / len(health_parts), 20) if health_parts else (None, 20),
+        "growthReinvestment": (sum(growth_parts) / len(growth_parts), 15) if growth_parts else (None, 15),
+        "valuation": (sum(val_parts) / len(val_parts), 25),
+        "riskPredictability": (sum(risk_parts) / len(risk_parts), 10) if risk_parts else (None, 10),
+    }
+    points, evaluated_max = 0.0, 0.0
+    component_scores = {}
+    for key, (category_score, weight) in categories.items():
+        component_scores[key] = round(category_score, 1) if category_score is not None else None
+        if category_score is not None:
+            points += category_score / 100 * weight
+            evaluated_max += weight
+    score = points / evaluated_max * 100 if evaluated_max else None
 
     return {
-        "score": round(score / weights, 1),
+        "score": round(score, 1) if score is not None else None,
+        "scoreCoveragePct": round(evaluated_max / 95 * 100, 1),
+        "scoreComponents": component_scores,
+        "portfolioFitPending": True,
         "earningsYield": round(ey, 2) if ey else None,
         "fcfYield": round(fcfy, 2) if fcfy else None,
         "drawdown": round(drawdown, 1) if drawdown is not None else None,
@@ -235,10 +260,11 @@ def _calc_target_scenarios(price, pe, fpe, pe_median, info, eps2030_override=Non
     raw_med = clean_med or clean_fpe or clean_pe or 20.0
     if clean_fpe and raw_med > 3 * clean_fpe:
         raw_med = clean_fpe
-    base_pe = max(5.0, min(80.0, raw_med))
+    # La historia es referencia, no permiso para perpetuar múltiplos de euforia.
+    base_pe = max(5.0, min(V.MAX_TARGET_PE, raw_med))
 
     cons_pe = max(5.0, base_pe * 0.80)
-    opt_pe = base_pe * 1.20
+    opt_pe = min(V.MAX_TARGET_PE, base_pe * 1.20)
 
     if eps2030_override is not None and eps2030_override > 0:
         eps_2030 = eps2030_override
@@ -413,14 +439,15 @@ def scan_one_deep(symbol, bond10y):
         val = V.build_valuation(price, info, annuals, pe_stats, bond10y)
         quick = score_stock(info) or {}
 
-        # guardas de calidad: MoS extremos suelen ser datos malos, no gangas;
-        # con un solo modelo el consenso no es confiable
+        # Guardas de calidad: MoS extremos suelen ser datos malos, no gangas.
+        # Se exige un método principal aplicable; ya no se exige acumular y
+        # promediar varios modelos incompatibles.
         mos, fair, verdict = val["marginOfSafety"], val["consensus"], val["verdict"]
         if mos is not None and mos > 300:
             mos, fair = None, None
             verdict = {"label": "Datos poco confiables", "level": "na"}
-        elif len(val["models"]) < 2:
-            verdict = {"label": "Modelos insuficientes", "level": "na"}
+        elif not val.get("primaryModel"):
+            verdict = {"label": "Sin método aplicable", "level": "na"}
 
         roc = V.greenblatt_roc(info, annuals)
         f_score_details = V.piotroski_f_score_details(annuals)
@@ -447,12 +474,17 @@ def scan_one_deep(symbol, bond10y):
             "earningsYield": quick.get("earningsYield"),
             "drawdown": quick.get("drawdown"),
             "score": quick.get("score"),
+            "scoreCoveragePct": quick.get("scoreCoveragePct"),
+            "portfolioFitPending": True,
             "peMedian": pe_stats["median"] if pe_stats else None,
             "vsMedian": pe_stats["vsMedian"] if pe_stats else None,
             "mos": mos,
             "verdict": verdict,
             "fairValue": fair,
             "nModels": len(val["models"]),
+            "primaryModel": val.get("primaryModel"),
+            "requiredMarginPct": val.get("requiredMarginPct"),
+            "uncertainty": val.get("uncertainty"),
             "roc": round(roc, 1) if roc else None,
             "fScore": f_score,
             "fScoreEvaluated": f_score_details["evaluated"],

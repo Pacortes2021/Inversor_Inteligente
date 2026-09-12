@@ -1127,7 +1127,8 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
-.notes-grid textarea {
+.notes-grid textarea,
+.notes-grid input {
   background: var(--panel-2);
   border: 1px solid var(--border-dark);
   border-radius: 8px;
@@ -1139,7 +1140,8 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   font-size: 13px;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.notes-grid textarea:focus {
+.notes-grid textarea:focus,
+.notes-grid input:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-soft);
 }

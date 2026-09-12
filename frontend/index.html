@@ -11,9 +11,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   
   <!-- CSS Principal -->
-  <link rel="stylesheet" href="css/style.css?v=81.0">
-  <link rel="stylesheet" href="css/additions.css?v=81.0">
-  <link rel="stylesheet" href="css/koyfin.css?v=81.0">
+  <link rel="stylesheet" href="css/style.css?v=87.0">
+  <link rel="stylesheet" href="css/additions.css?v=87.0">
+  <link rel="stylesheet" href="css/koyfin.css?v=87.0">
   
   <!-- ECharts CDN -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
@@ -570,6 +570,41 @@
         </div>
       </section>
 
+      <section class="card u-mt20" id="investment-thesis-section">
+        <div class="flex-between-center u-mb16">
+          <div>
+            <h2 class="section-heading u-m0">Ficha de decisión</h2>
+            <p class="card-sub section-sub u-mt4">Completa el juicio que los datos no pueden automatizar. Una valoración atractiva queda incompleta sin negocio, foso, riesgos e invalidación.</p>
+          </div>
+          <span id="note-status" class="muted">—</span>
+        </div>
+        <div class="notes-grid">
+          <label>Cómo gana dinero y variable clave
+            <textarea id="note-business" rows="4" maxlength="2000" placeholder="Clientes, producto, economía unitaria y variable que mueve los resultados"></textarea>
+          </label>
+          <label>Tesis en una frase
+            <textarea id="note-thesis" rows="4" maxlength="2000" placeholder="Por qué esta empresa debería crear valor desde el precio actual"></textarea>
+          </label>
+          <label>Tres motores de crecimiento
+            <textarea id="note-growth-drivers" rows="4" maxlength="2000" placeholder="1. …&#10;2. …&#10;3. …"></textarea>
+          </label>
+          <label>Tres riesgos principales
+            <textarea id="note-risks" rows="4" maxlength="2000" placeholder="1. …&#10;2. …&#10;3. …"></textarea>
+          </label>
+          <label>Señales para comprar más
+            <textarea id="note-buy-signals" rows="4" maxlength="2000" placeholder="Resultados observables que aumentarían tu convicción"></textarea>
+          </label>
+          <label>Condiciones que invalidan la tesis
+            <textarea id="note-invalidation" rows="4" maxlength="2000" placeholder="Hechos que obligarían a revisar o vender, sin depender del precio pagado"></textarea>
+          </label>
+          <label>Peso máximo de cartera (%)
+            <input id="note-max-weight" type="number" min="0" max="100" step="0.5" placeholder="Ej. 5">
+          </label>
+        </div>
+        <h3 class="u-mt16">Foso competitivo observado</h3>
+        <div class="moats" id="moat-checks"></div>
+        <p class="muted" style="font-size:12px">Marca solo ventajas para las que puedas escribir evidencia concreta en la tesis. La app no las da por ciertas automáticamente.</p>
+      </section>
 
 
       <!-- EARNINGS SURPRISES Y CALENDARIO -->
@@ -1090,10 +1125,10 @@
       <!-- MATRIZ COMPARATIVA DE MODELOS DE VALORACIÓN -->
       <section class="card">
         <h2 class="section-heading-lg">
-          <svg class="h-ico "><use href="#i-diamond"/></svg>Consenso & Matriz Comparativa de Valor Intrínseco
+          <svg class="h-ico "><use href="#i-diamond"/></svg>Modelo principal y controles de valoración
         </h2>
         <p class="card-sub section-sub">
-          Comparación directa del precio actual vs los modelos DCF, PER Mediano Histórico, Dividendos (DDM) y Graham.
+          El modelo apropiado para el negocio define el valor base. Los demás revelan sensibilidad o desacuerdo y no se promedian.
         </p>
         <div id="models-table"></div>
       </section>
@@ -1277,9 +1312,10 @@
             </div>
             
             <div id="implied-growth" class="yield-compare hidden u-note-box" ></div>
+            <div id="yield-compare" class="yield-compare hidden u-note-box u-mt8"></div>
             
             <div id="dcf-scenarios" class="hidden u-mt16">
-              <p class="card-sub u-section-label" >Escenarios de valoración — valor justo según crecimiento del FCF <span id="dcf-scenarios-source" style="vertical-align:middle"></span></p>
+              <p class="card-sub u-section-label" >Escenarios de valoración — crecimiento, tasa exigida y valor terminal <span id="dcf-scenarios-source" style="vertical-align:middle"></span></p>
               <div class="grid-auto-fit-sm" id="dcf-scenario-cards" ></div>
             </div>
             
@@ -1715,7 +1751,7 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script type="module" src="js/init.js?v=81"></script>
+<script type="module" src="js/init.js?v=87"></script>
 
 </body>
 </html>

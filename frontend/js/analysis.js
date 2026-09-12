@@ -2,18 +2,18 @@
    cualitativas, scorecard Buffett, tabla de crecimiento, sidebar y
    orquestación de pestañas de acción. */
 
-import { $, toast, apiFetch } from "./dom.js?v=81";
-import { state, currentPeriodYears, currentMultiplesRange, setCurrentMultiplesRange } from "./state.js?v=81";
-import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, escHtml, pctClass } from "./format.js?v=81";
-import { termify } from "./glossary.js?v=81";
-import { chartPrice, chartRatio, chartDividends, chartEps, chartEarningsSurprise, renderAllCharts, renderPriceOverlay, renderKoyfinLayout, renderQualityScorecardCharts, C, charts } from "./charts.js?v=81";
+import { $, toast, apiFetch } from "./dom.js?v=87";
+import { state, currentPeriodYears, currentMultiplesRange, setCurrentMultiplesRange } from "./state.js?v=87";
+import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, escHtml, pctClass } from "./format.js?v=87";
+import { termify } from "./glossary.js?v=87";
+import { chartPrice, chartRatio, chartDividends, chartEps, chartEarningsSurprise, renderAllCharts, renderPriceOverlay, renderKoyfinLayout, renderQualityScorecardCharts, C, charts } from "./charts.js?v=87";
 
-import { checkStockAlerts } from "./alerts.js?v=81";
+import { checkStockAlerts } from "./alerts.js?v=87";
 import {
   renderValuationCard, renderRatiosGrid, renderEstimates, renderEpsEstimatesChart,
   renderInsidersHolders, renderFinancialStatements, renderEpsFv, renderDcfFv,
   renderDdmFv, renderHistoricalRatios, renderAdditional, renderScenarios, renderFcfHistory,
-} from "./valuation.js?v=81";
+} from "./valuation.js?v=87";
 
 /* ---------------------------------------------------------- render */
 export function renderAnalysis(d) {
@@ -106,13 +106,13 @@ export function renderSummary(d) {
   const cur = d.profile.currency;
   const px = d.quote.price;
 
-  // Tarjeta 1: Fair Value
-  $("fv-symbol-title").textContent = `${d.symbol} Fair Value`;
-  const consensusVal = d.valuation.consensus;
+  // Tarjeta 1: valor base del método principal (sin mezclar modelos)
+  $("fv-symbol-title").textContent = `${d.symbol} Valor base`;
+  const consensusVal = d.valuation.baseValue ?? d.valuation.consensus;
   $("fv-consensus-val").textContent = consensusVal ? fmtPrice(consensusVal, cur) : "—";
   const mos = d.valuation.marginOfSafety;
   $("fv-mos-pct").innerHTML = mos != null
-    ? `Margin of Safety: <b class="${mos >= 0 ? "up" : "down"}">${fmtPct(mos, 1, true)}</b>`
+    ? `Margen actual: <b class="${mos >= 0 ? "up" : "down"}">${fmtPct(mos, 1, true)}</b> · exigido ${fmtPct(d.valuation.requiredMarginPct ?? 25, 0)}`
     : "No hay datos";
 
   if (d.current.analystTarget && d.current.analystRecommendation) {
@@ -478,10 +478,16 @@ export async function loadNotes(symbol) {
       $("note-thesis").value = note.thesis || "";
       $("note-thesis").oninput = saveNotesDebounced;
     }
-    if ($("note-risks")) {
-      $("note-risks").value = note.risks || "";
-      $("note-risks").oninput = saveNotesDebounced;
-    }
+    const fields = [
+      ["note-business", "business"], ["note-growth-drivers", "growthDrivers"],
+      ["note-risks", "risks"], ["note-buy-signals", "buySignals"],
+      ["note-invalidation", "invalidation"], ["note-max-weight", "maxWeightPct"],
+    ];
+    fields.forEach(([id, key]) => {
+      if (!$(id)) return;
+      $(id).value = note[key] ?? "";
+      $(id).oninput = saveNotesDebounced;
+    });
   } catch {
     if (noteSymbol === symbol && $("note-status")) $("note-status").textContent = "⚠ no se pudo cargar";
   }
@@ -499,10 +505,16 @@ export async function saveNotes() {
   const moats = moatBox ? [...moatBox.querySelectorAll("input:checked")].map(cb => cb.value) : [];
   const thesis = $("note-thesis") ? $("note-thesis").value : "";
   const risks = $("note-risks") ? $("note-risks").value : "";
+  const business = $("note-business") ? $("note-business").value : "";
+  const growthDrivers = $("note-growth-drivers") ? $("note-growth-drivers").value : "";
+  const buySignals = $("note-buy-signals") ? $("note-buy-signals").value : "";
+  const invalidation = $("note-invalidation") ? $("note-invalidation").value : "";
+  const rawWeight = $("note-max-weight") ? $("note-max-weight").value : "";
+  const maxWeightPct = rawWeight === "" ? null : Number(rawWeight);
   try {
     const r = await apiFetch(`/api/notes/${encodeURIComponent(noteSymbol.replace(/\//g, '-'))}`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ thesis, risks, moats }),
+      body: JSON.stringify({ business, thesis, growthDrivers, risks, buySignals, invalidation, maxWeightPct, moats }),
     });
     if (!r.ok) throw new Error(`Error ${r.status}`);
     if ($("note-status")) $("note-status").textContent = "guardado ✓";

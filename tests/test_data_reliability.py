@@ -6,6 +6,7 @@ from backend import data as D
 from backend import currency as C
 from backend import estimates as E
 from backend import metrics as M
+from backend import notes as N
 from backend import portfolio as P
 from backend import ratios as R
 from backend import quality as Q
@@ -117,6 +118,38 @@ def test_screener_does_not_use_fcf_yield_when_currency_is_unresolved():
         "freeCashflow": 100, "_currencyMismatch": True,
     }
     assert screener.score_stock(info)["fcfYield"] is None
+
+
+def test_screener_drawdown_is_context_and_does_not_raise_score():
+    from backend import screener
+
+    base = {
+        "currentPrice": 100, "trailingPE": 15, "forwardPE": 14,
+        "marketCap": 10_000, "freeCashflow": 600,
+        "returnOnEquity": 0.18, "profitMargins": 0.15,
+        "debtToEquity": 50, "revenueGrowth": 0.08,
+        "earningsGrowth": 0.10, "beta": 1.0,
+    }
+    near_high = screener.score_stock({**base, "fiftyTwoWeekHigh": 105})
+    deep_drop = screener.score_stock({**base, "fiftyTwoWeekHigh": 200})
+    assert near_high["score"] == deep_drop["score"]
+    assert near_high["drawdown"] != deep_drop["drawdown"]
+    assert deep_drop["portfolioFitPending"] is True
+
+
+def test_investment_thesis_fields_are_persisted_and_weight_is_bounded(tmp_path, monkeypatch):
+    monkeypatch.setattr(N, "NOTES_FILE", tmp_path / "notes.json")
+    saved = N.set_note(
+        "MSFT", thesis="Tesis", risks="Riesgos", moats=["red", "inventado"],
+        business="Suscripciones", growth_drivers="Azure", buy_signals="Mejor FCF",
+        invalidation="Pérdida de clientes", max_weight_pct=120,
+    )
+    assert saved["business"] == "Suscripciones"
+    assert saved["growthDrivers"] == "Azure"
+    assert saved["buySignals"] == "Mejor FCF"
+    assert saved["invalidation"] == "Pérdida de clientes"
+    assert saved["maxWeightPct"] == 100.0
+    assert saved["moats"] == ["red"]
 
 
 def test_quality_warning_labels_chilean_fair_value_in_clp():

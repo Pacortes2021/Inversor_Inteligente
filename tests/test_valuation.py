@@ -99,6 +99,43 @@ def test_financieras_con_ddm_sin_dcf_ni_epv():
     assert out["impliedGrowth"] is None
 
 
+def test_valuation_uses_applicable_primary_model_without_averaging():
+    info = {
+        "sector": "Technology", "sharesOutstanding": 100,
+        "freeCashflow": 1_000, "trailingEps": 25, "bookValue": 80,
+        "totalCash": 0, "totalDebt": 0, "beta": 1.0,
+    }
+    annuals = [
+        {"year": 2021 + i, "fcf": 800 + i * 50, "revenue": 5_000 + i * 200,
+         "opMargin": 25, "eps": 20 + i, "dividendPS": 0}
+        for i in range(5)
+    ]
+    out = V.build_valuation(10, info, annuals, {"median": 15, "p25": 12, "p75": 20}, 4.0)
+    dcf = next(m for m in out["models"] if m["id"] == "dcf")
+    assert out["primaryModel"] == "dcf"
+    assert out["baseValue"] == dcf["fair"] == out["consensus"]
+    assert dcf["role"] == "primary"
+    assert all(m["role"] == "cross_check" for m in out["models"] if m["id"] != "dcf")
+    assert len(out["scenarios"]) == 3
+    assert sum(s["probabilityPct"] for s in out["scenarios"]) == 100
+
+
+def test_implied_discount_rate_recovers_dcf_required_return():
+    price = V.dcf_fair_value(1_000, 100, growth=0.08, discount=0.12, terminal=0.025)
+    implied = V.implied_discount_rate(price, 1_000, 100, growth=0.08, terminal=0.025)
+    assert math.isclose(implied, 0.12, abs_tol=1e-5)
+
+
+def test_reit_is_not_given_a_false_dcf_verdict_before_affo_model_exists():
+    info = {"sector": "Real Estate", "industry": "REIT - Diversified",
+            "sharesOutstanding": 100, "freeCashflow": 1_000, "beta": 0.9}
+    out = V.build_valuation(10, info, _annuals(5), None, 4.0)
+    assert out["primaryModel"] is None
+    assert out["baseValue"] is None
+    assert out["verdict"]["level"] == "na"
+    assert "AFFO" in out["applicabilityWarnings"][0]
+
+
 def test_scorecard_cuenta_bien():
     annuals = [{"year": 2020 + i, "roe": 20, "grossMargin": 50, "netMargin": 15,
                 "debtToEquity": 0.5, "interestCoverage": 10, "fcf": 1e8,
