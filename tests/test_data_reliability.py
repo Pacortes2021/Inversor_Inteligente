@@ -143,6 +143,9 @@ def test_investment_thesis_fields_are_persisted_and_weight_is_bounded(tmp_path, 
         "MSFT", thesis="Tesis", risks="Riesgos", moats=["red", "inventado"],
         business="Suscripciones", growth_drivers="Azure", buy_signals="Mejor FCF",
         invalidation="Pérdida de clientes", max_weight_pct=120,
+        moat_rating="strong", organic_growth_rating="positive",
+        cyclicality_rating="neutral", concentration_rating="weak",
+        portfolio_fit_rating="negative",
     )
     assert saved["business"] == "Suscripciones"
     assert saved["growthDrivers"] == "Azure"
@@ -150,6 +153,11 @@ def test_investment_thesis_fields_are_persisted_and_weight_is_bounded(tmp_path, 
     assert saved["invalidation"] == "Pérdida de clientes"
     assert saved["maxWeightPct"] == 100.0
     assert saved["moats"] == ["red"]
+    assert saved["moatRating"] == "strong"
+    assert saved["organicGrowthRating"] == "positive"
+    assert saved["cyclicalityRating"] == "neutral"
+    assert saved["concentrationRating"] == "weak"
+    assert saved["portfolioFitRating"] == "negative"
 
 
 def test_quality_warning_labels_chilean_fair_value_in_clp():

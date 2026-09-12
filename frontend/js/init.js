@@ -1,24 +1,24 @@
 /* Punto de entrada (ES module). Importa todos los módulos con efectos y
    conecta los handlers globales restantes, luego arranca el routing. */
 
-import { $, toast } from "./dom.js?v=87";
-import { state, setCurrentPeriodYears } from "./state.js?v=87";
-import { priceView } from "./charts.js?v=87";
-import { route } from "./router.js?v=87";
-import { chartPriceSummary, sbSetHidden, refreshSidebar, setStarState, updateCagrModal, triggerTabSpecificActions } from "./analysis.js?v=87";
-import { renderAlertsList, getAlerts, saveAlerts } from "./alerts.js?v=87";
-import { wlAdd, wlRemove } from "./watchlist.js?v=87";
-import { cmpAdd } from "./compare.js?v=87";
+import { $, toast } from "./dom.js?v=90";
+import { state, setCurrentPeriodYears } from "./state.js?v=90";
+import { priceView } from "./charts.js?v=90";
+import { route } from "./router.js?v=90";
+import { chartPriceSummary, sbSetHidden, refreshSidebar, setStarState, updateCagrModal, triggerTabSpecificActions } from "./analysis.js?v=90";
+import { renderAlertsList, getAlerts, saveAlerts } from "./alerts.js?v=90";
+import { wlAdd, wlRemove } from "./watchlist.js?v=90";
+import { cmpAdd } from "./compare.js?v=90";
 
 // Módulos con efectos laterales al cargarse (bindings de DOM propios).
-import "./theme.js?v=87";
-import "./charts.js?v=87";
-import "./glossary.js?v=87";
-import "./screener.js?v=87";
-import "./watchlist.js?v=87";
-import "./portfolio.js?v=87";
-import "./dashboard.js?v=87";
-import "./mobile-nav.js?v=87";
+import "./theme.js?v=90";
+import "./charts.js?v=90";
+import "./glossary.js?v=90";
+import "./screener.js?v=90";
+import "./watchlist.js?v=90";
+import "./portfolio.js?v=90";
+import "./dashboard.js?v=90";
+import "./mobile-nav.js?v=90";
 
 // Compat para consola del desarrollador.
 window.state = state;

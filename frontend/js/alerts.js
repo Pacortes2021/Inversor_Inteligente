@@ -1,6 +1,6 @@
 /* Sistema de alertas de precios / margen de seguridad (localStorage). */
 
-import { $, toast } from "./dom.js?v=87";
+import { $, toast } from "./dom.js?v=90";
 
 const ALERTS_KEY = "stock_alerts_v1";
 

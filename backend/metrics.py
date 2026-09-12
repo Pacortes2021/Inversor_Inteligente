@@ -326,6 +326,7 @@ def build_fundamentals(inc, bs, cf, dividends=None):
 
         ocf = _g(cf, col_cf, "Operating Cash Flow")
         capex = _g(cf, col_cf, "Capital Expenditure")
+        stock_comp = _g(cf, col_cf, "Stock Based Compensation", "Stock Based Compensation Expense")
         fcf = _g(cf, col_cf, "Free Cash Flow")
         if fcf is None and ocf is not None and capex is not None:
             fcf = (ocf - abs(capex)) if capex > 0 else (ocf + capex)
@@ -345,10 +346,11 @@ def build_fundamentals(inc, bs, cf, dividends=None):
             "quarter": quarter,
             "endDate": _ts(col),
             "revenue": rev, "netIncome": ni, "eps": eps,
+            "ebit": ebit, "interestExpense": interest, "taxRate": tax_rate,
             "grossMargin": (gp / rev * 100) if (gp is not None and rev) else None,
             "opMargin": (op / rev * 100) if (op is not None and rev) else None,
             "netMargin": (ni / rev * 100) if (ni is not None and rev) else None,
-            "ocf": ocf, "capex": capex, "fcf": fcf,
+            "ocf": ocf, "capex": capex, "fcf": fcf, "stockCompensation": stock_comp,
             "fcfMargin": (fcf / rev * 100) if (fcf is not None and rev) else None,
             "equity": equity, "totalDebt": debt, "cash": cash,
             "debtToEquity": (debt / equity) if (debt is not None and equity and equity > 0) else None,

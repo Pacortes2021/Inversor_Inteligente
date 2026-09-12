@@ -1,6 +1,6 @@
 /* Helpers de DOM y fetch con autenticación para endpoints que mutan datos. */
 
-import { API_KEY } from "./config.js?v=87";
+import { API_KEY } from "./config.js?v=90";
 
 export const $ = id => document.getElementById(id);
 

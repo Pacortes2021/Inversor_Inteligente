@@ -2,18 +2,18 @@
    cualitativas, scorecard Buffett, tabla de crecimiento, sidebar y
    orquestación de pestañas de acción. */
 
-import { $, toast, apiFetch } from "./dom.js?v=87";
-import { state, currentPeriodYears, currentMultiplesRange, setCurrentMultiplesRange } from "./state.js?v=87";
-import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, escHtml, pctClass } from "./format.js?v=87";
-import { termify } from "./glossary.js?v=87";
-import { chartPrice, chartRatio, chartDividends, chartEps, chartEarningsSurprise, renderAllCharts, renderPriceOverlay, renderKoyfinLayout, renderQualityScorecardCharts, C, charts } from "./charts.js?v=87";
+import { $, toast, apiFetch } from "./dom.js?v=90";
+import { state, currentPeriodYears, currentMultiplesRange, setCurrentMultiplesRange } from "./state.js?v=90";
+import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, escHtml, pctClass } from "./format.js?v=90";
+import { termify } from "./glossary.js?v=90";
+import { chartPrice, chartRatio, chartDividends, chartEps, chartEarningsSurprise, renderAllCharts, renderPriceOverlay, renderKoyfinLayout, renderQualityScorecardCharts, C, charts } from "./charts.js?v=90";
 
-import { checkStockAlerts } from "./alerts.js?v=87";
+import { checkStockAlerts } from "./alerts.js?v=90";
 import {
   renderValuationCard, renderRatiosGrid, renderEstimates, renderEpsEstimatesChart,
   renderInsidersHolders, renderFinancialStatements, renderEpsFv, renderDcfFv,
   renderDdmFv, renderHistoricalRatios, renderAdditional, renderScenarios, renderFcfHistory,
-} from "./valuation.js?v=87";
+} from "./valuation.js?v=90";
 
 /* ---------------------------------------------------------- render */
 export function renderAnalysis(d) {
@@ -71,6 +71,7 @@ export function renderAnalysis(d) {
 
   safeCall(renderWarnings, d.warnings);
   safeCall(renderSummary, d);
+  safeCall(renderInvestmentFramework, d, {});
   safeCall(renderValuationCard, d);
   safeCall(renderScenarios, d);
   safeCall(renderFcfHistory, d);
@@ -343,6 +344,112 @@ export function renderSummary(d) {
   }
 }
 
+/* ---------------------------------------- matriz integral de inversión */
+const MANUAL_RATING = { strong: 1, positive: .75, neutral: .5, weak: .25, negative: 0 };
+
+function metricValue(metric) {
+  if (metric.value == null) return metric.status === "pending" ? "Pendiente" : "—";
+  const ratingNames = { strong: "Fuerte", positive: "Positivo", neutral: "Neutro", weak: "Débil", negative: "Negativo" };
+  if (metric.value in ratingNames) return ratingNames[metric.value];
+  const pctIds = new Set(["roic_wacc", "margin_quality", "cash_conversion", "fcf_positive",
+    "dilution", "revenue_growth", "eps_growth", "fcf_growth", "reinvestment",
+    "margin_safety", "etf_hurdle", "reverse_dcf", "historical_multiple",
+    "fcf_predictability", "earnings_predictability"]);
+  if (pctIds.has(metric.id)) return fmtPct(metric.value, 1, true);
+  if (["debt_payback", "interest_cover", "liquidity", "leverage_risk", "scenario_asymmetry"].includes(metric.id)) return `${fmtNum(metric.value, 1)}x`;
+  if (metric.id === "market_sensitivity") return fmtNum(metric.value, 2);
+  return String(metric.value);
+}
+
+export function renderInvestmentFramework(d, note = {}) {
+  const analysis = d?.investmentAnalysis;
+  const grid = $("investment-category-grid");
+  if (!analysis || !grid) return;
+  const categories = (analysis.categories || []).map(category => ({
+    ...category,
+    metrics: (category.metrics || []).map(metric => {
+      const manualValue = note[metric.manualKey];
+      const autoValue = metric.manualKey === "portfolioFitRating" ? portfolioFitAuto?.suggestedRating : null;
+      const selectedValue = manualValue || autoValue;
+      if (!metric.manualKey || !selectedValue || !(selectedValue in MANUAL_RATING)) return { ...metric };
+      const rating = MANUAL_RATING[selectedValue];
+      return { ...metric, rating: rating * 100, earnedPoints: metric.maxPoints * rating,
+        status: rating >= .75 ? "pass" : rating >= .4 ? "watch" : "fail",
+        value: selectedValue,
+        detail: autoValue && !manualValue ? portfolioFitAuto.detail : metric.detail,
+        source: autoValue && !manualValue ? "Portafolio registrado" : "Evaluación documentada" };
+    }),
+  }));
+
+  let earned = 0, evaluated = 0;
+  categories.forEach(category => {
+    category.earnedPoints = category.metrics.reduce((sum, metric) => sum + (metric.earnedPoints ?? 0), 0);
+    category.evaluatedPoints = category.metrics.reduce((sum, metric) => sum + (metric.earnedPoints == null ? 0 : metric.maxPoints), 0);
+    category.pendingPoints = category.weight - category.evaluatedPoints;
+    earned += category.earnedPoints;
+    evaluated += category.evaluatedPoints;
+  });
+  const pending = Math.max(0, 100 - evaluated);
+  $("investment-score-range").textContent = pending > 0 ? `${fmtNum(earned, 1)}–${fmtNum(earned + pending, 1)} / 100` : `${fmtNum(earned, 1)} / 100`;
+  $("investment-score-coverage").textContent = `Cobertura ${fmtPct(evaluated, 0)} · nota evaluada ${evaluated ? fmtPct(earned / evaluated * 100, 0) : "—"}`;
+
+  const icons = { pass: "✓", watch: "!", fail: "×", pending: "?" };
+  grid.innerHTML = categories.map(category => `
+    <article class="investment-category">
+      <div class="investment-category-head"><h3>${escHtml(category.name)} <span class="muted">(${category.weight})</span></h3>
+        <span class="investment-category-score">${fmtNum(category.earnedPoints, 1)} / ${category.weight}</span></div>
+      ${category.metrics.map(metric => `<div class="investment-metric ${metric.status}">
+        <span class="investment-metric-icon">${icons[metric.status] || "?"}</span>
+        <div><span class="investment-metric-label">${escHtml(metric.label)}</span>
+          <span class="investment-metric-detail">${escHtml(metric.detail)} · Fuente: ${escHtml(metric.source)}</span></div>
+        <span class="investment-metric-points">${escHtml(metricValue(metric))}<br><span class="muted">${metric.earnedPoints == null ? "?" : fmtNum(metric.earnedPoints, 1)}/${metric.maxPoints}</span></span>
+      </div>`).join("")}
+    </article>`).join("");
+
+  const requiredText = [
+    ["business", "cómo gana dinero"], ["thesis", "tesis"], ["growthDrivers", "motores"],
+    ["risks", "riesgos"], ["invalidation", "invalidación"],
+  ];
+  const missingText = requiredText.filter(([key]) => !(note[key] || "").trim()).map(([, label]) => label);
+  const blockers = [...(analysis.blockers || [])];
+  if (missingText.length) blockers.push(`Ficha cualitativa incompleta: falta ${missingText.join(", ")}`);
+  if (pending > 0) blockers.push(`${fmtNum(pending, 0)} puntos requieren revisión manual o datos no disponibles`);
+  const blockerBox = $("investment-blockers");
+  if (blockerBox) {
+    blockerBox.innerHTML = blockers.map(item => `<div class="investment-blocker">${escHtml(item)}</div>`).join("");
+    blockerBox.classList.toggle("hidden", blockers.length === 0);
+  }
+
+  const norm = analysis.normalizationAudit || {};
+  const cur = d.profile?.currency || "USD";
+  if ($("normalization-audit")) $("normalization-audit").innerHTML = `
+    <div class="investment-detail-row"><span>FCF reportado</span><b>${fmtBig(norm.reportedFcf, cur)}</b></div>
+    <div class="investment-detail-row"><span>FCF base DCF</span><b>${fmtBig(norm.dcfBaseFcf, cur)}</b></div>
+    <div class="investment-detail-row"><span>Mediana FCF 5A</span><b>${fmtBig(norm.medianFcf5y, cur)}</b></div>
+    <div class="investment-detail-row"><span>Compensación en acciones / FCF</span><b>${norm.stockCompPctFcf != null ? fmtPct(norm.stockCompPctFcf, 1) : "Sin dato"}</b></div>
+    <div class="investment-detail-row"><span>FCF después de SBC</span><b>${fmtBig(norm.fcfAfterStockComp, cur)}</b></div>
+    <div class="investment-detail-row"><span>Capex / ventas</span><b>${norm.capexPctRevenue != null ? fmtPct(norm.capexPctRevenue, 1) : "—"}</b></div>
+    <ul class="investment-audit-list">${(norm.flags || []).map(flag => `<li>${escHtml(flag)}</li>`).join("")}${(norm.unavailableAdjustments || []).map(flag => `<li>Pendiente: ${escHtml(flag)}</li>`).join("")}</ul>`;
+
+  const exp = analysis.expectations || {};
+  if ($("market-expectations")) $("market-expectations").innerHTML = `
+    <div class="investment-detail-row"><span>Crecimiento exigido</span><b>${exp.impliedGrowthPct != null ? fmtPct(exp.impliedGrowthPct, 1, true) : "—"}</b></div>
+    <div class="investment-detail-row"><span>Crecimiento escenario base</span><b>${exp.baseGrowthPct != null ? fmtPct(exp.baseGrowthPct, 1, true) : "—"}</b></div>
+    <div class="investment-detail-row"><span>Colchón de crecimiento</span><b class="${pctClass(exp.growthCushionPct)}">${exp.growthCushionPct != null ? fmtPct(exp.growthCushionPct, 1, true) : "—"}</b></div>
+    <div class="investment-detail-row"><span>Rentabilidad implícita</span><b>${exp.impliedReturnPct != null ? fmtPct(exp.impliedReturnPct, 1) : "—"}</b></div>
+    <div class="investment-detail-row"><span>Umbral VT/VOO</span><b>${exp.etfHurdlePct != null ? fmtPct(exp.etfHurdlePct, 1) : "—"}</b></div>
+    <div class="investment-detail-row"><span>Prima frente al ETF</span><b class="${pctClass(exp.excessReturnPct)}">${exp.excessReturnPct != null ? fmtPct(exp.excessReturnPct, 1, true) : "—"}</b></div>
+    <div class="investment-detail-row"><span>Asimetría escenarios</span><b>${exp.scenarioAsymmetry != null ? fmtNum(exp.scenarioAsymmetry, 2) + "x" : "—"}</b></div>`;
+
+  const model = analysis.modelReview || {};
+  const typeNames = { operating: "Empresa operativa", financial: "Financiera", reit: "REIT", cyclical: "Cíclica", conglomerate: "Conglomerado" };
+  if ($("model-applicability")) $("model-applicability").innerHTML = `
+    <div class="investment-detail-row"><span>Tipo</span><b>${escHtml(typeNames[model.companyType] || model.companyType || "—")}</b></div>
+    <div class="investment-detail-row"><span>Modelo principal</span><b>${escHtml(model.primaryModel || "Pendiente")}</b></div>
+    <p class="muted" style="font-size:12px">${escHtml(model.reason || "")}</p>
+    <ul class="investment-audit-list">${(model.recommendedMethods || []).map(item => `<li>${escHtml(item)}</li>`).join("")}</ul>`;
+}
+
 export function renderNews(news) {
   const container = $("news-container");
   const section = $("news-section");
@@ -456,9 +563,22 @@ const MOATS = [
 ];
 let noteTimer = null;
 let noteSymbol = null;
+let portfolioFitAuto = null;
+
+async function loadPortfolioFit(symbol, note) {
+  try {
+    const response = await fetch(`/api/portfolio/fit/${encodeURIComponent(symbol.replace(/\//g, '-'))}`);
+    if (!response.ok) return;
+    const fit = await response.json();
+    if (noteSymbol !== symbol) return;
+    portfolioFitAuto = fit?.available ? fit : null;
+    if (state.data?.symbol === symbol) renderInvestmentFramework(state.data, note);
+  } catch { portfolioFitAuto = null; }
+}
 
 export async function loadNotes(symbol) {
   noteSymbol = symbol;
+  portfolioFitAuto = null;
   if (!$("moat-checks") && !$("note-thesis")) return;
   try {
     const r = await fetch(`/api/notes/${encodeURIComponent(symbol.replace(/\//g, '-'))}`);
@@ -482,12 +602,18 @@ export async function loadNotes(symbol) {
       ["note-business", "business"], ["note-growth-drivers", "growthDrivers"],
       ["note-risks", "risks"], ["note-buy-signals", "buySignals"],
       ["note-invalidation", "invalidation"], ["note-max-weight", "maxWeightPct"],
+      ["note-moat-rating", "moatRating"], ["note-organic-rating", "organicGrowthRating"],
+      ["note-cyclicality-rating", "cyclicalityRating"],
+      ["note-concentration-rating", "concentrationRating"],
+      ["note-portfolio-fit-rating", "portfolioFitRating"],
     ];
     fields.forEach(([id, key]) => {
       if (!$(id)) return;
       $(id).value = note[key] ?? "";
       $(id).oninput = saveNotesDebounced;
     });
+    if (state.data?.symbol === symbol) renderInvestmentFramework(state.data, note);
+    loadPortfolioFit(symbol, note);
   } catch {
     if (noteSymbol === symbol && $("note-status")) $("note-status").textContent = "⚠ no se pudo cargar";
   }
@@ -511,12 +637,21 @@ export async function saveNotes() {
   const invalidation = $("note-invalidation") ? $("note-invalidation").value : "";
   const rawWeight = $("note-max-weight") ? $("note-max-weight").value : "";
   const maxWeightPct = rawWeight === "" ? null : Number(rawWeight);
+  const moatRating = $("note-moat-rating")?.value || "";
+  const organicGrowthRating = $("note-organic-rating")?.value || "";
+  const cyclicalityRating = $("note-cyclicality-rating")?.value || "";
+  const concentrationRating = $("note-concentration-rating")?.value || "";
+  const portfolioFitRating = $("note-portfolio-fit-rating")?.value || "";
   try {
     const r = await apiFetch(`/api/notes/${encodeURIComponent(noteSymbol.replace(/\//g, '-'))}`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ business, thesis, growthDrivers, risks, buySignals, invalidation, maxWeightPct, moats }),
+      body: JSON.stringify({ business, thesis, growthDrivers, risks, buySignals, invalidation,
+        maxWeightPct, moats, moatRating, organicGrowthRating, cyclicalityRating,
+        concentrationRating, portfolioFitRating }),
     });
     if (!r.ok) throw new Error(`Error ${r.status}`);
+    const saved = await r.json();
+    if (state.data?.symbol === noteSymbol) renderInvestmentFramework(state.data, saved);
     if ($("note-status")) $("note-status").textContent = "guardado ✓";
   } catch (e) {
     if ($("note-status")) $("note-status").textContent = "⚠ error de guardado";

@@ -20,6 +20,7 @@ FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
 _sec_lock = threading.Lock()
 _last_sec_req_time = 0.0
 MIN_SEC_INTERVAL = 0.11  # Máximo ~9 peticiones/segundo (SEC permite máximo 10 req/s)
+EDGAR_CACHE_VERSION = "v2"
 
 
 def _sec_rate_limit():
@@ -41,9 +42,14 @@ TAGS = {
     "eps": ["EarningsPerShareDiluted", "EarningsPerShareBasic"],
     "grossProfit": ["GrossProfit"],
     "opIncome": ["OperatingIncomeLoss"],
+    "pretaxIncome": ["IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest",
+                     "IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments"],
+    "taxProvision": ["IncomeTaxExpenseBenefit"],
+    "interestExpense": ["InterestExpenseNonOperating", "InterestAndDebtExpense"],
     "ocf": ["NetCashProvidedByUsedInOperatingActivities",
             "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations"],
     "capex": ["PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets"],
+    "stockCompensation": ["ShareBasedCompensation", "AllocatedShareBasedCompensationExpense"],
     "equity": ["StockholdersEquity",
                "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"],
     "shares": ["WeightedAverageNumberOfDilutedSharesOutstanding",
@@ -120,7 +126,7 @@ def _extract(facts):
 def get_annual_history(symbol: str):
     """Series anuales largas para un símbolo, o None si no está en EDGAR."""
     sym = symbol.upper()
-    key = f"edgar_{sym.replace('/', '_').replace('.', '_')}"
+    key = f"edgar_{EDGAR_CACHE_VERSION}_{sym.replace('/', '_').replace('.', '_')}"
     cached = cache_get(key)
     if cached is not None:
         return cached or None  # {} = ya sabemos que no hay datos
@@ -169,6 +175,8 @@ def to_annual_rows(hist):
             return v[0] if v else None
 
         rev, ni, gp, op = g("revenue"), g("netIncome"), g("grossProfit"), g("opIncome")
+        pretax, tax = g("pretaxIncome"), g("taxProvision")
+        interest = g("interestExpense")
         ocf, capex, eq, sh = g("ocf"), g("capex"), g("equity"), g("shares")
         fcf = (ocf - capex) if (ocf is not None and capex is not None) else None
         end_date = end("revenue") or end("netIncome") or end("eps") or end("equity")
@@ -176,10 +184,13 @@ def to_annual_rows(hist):
             "year": yr,
             "endDate": int(pd.Timestamp(end_date).timestamp() * 1000) if end_date else None,
             "revenue": rev, "netIncome": ni, "eps": g("eps"),
+            "ebit": op, "interestExpense": interest,
+            "taxRate": (tax / pretax) if (tax is not None and pretax and pretax > 0) else None,
             "grossMargin": (gp / rev * 100) if (gp is not None and rev) else None,
             "opMargin": (op / rev * 100) if (op is not None and rev) else None,
             "netMargin": (ni / rev * 100) if (ni is not None and rev) else None,
             "ocf": ocf, "capex": (-capex if capex is not None else None), "fcf": fcf,
+            "stockCompensation": g("stockCompensation"),
             "fcfMargin": (fcf / rev * 100) if (fcf is not None and rev) else None,
             "equity": eq, "totalDebt": None, "cash": None,
             "debtToEquity": None, "currentRatio": None,

@@ -35,6 +35,7 @@ ANNUAL_FINANCIAL_AMOUNTS = {
     "revenue", "netIncome", "ocf", "capex", "fcf", "equity", "totalDebt",
     "cash", "ebitda", "assets", "totalLiabilities", "retainedEarnings",
     "workingCapital", "longTermDebt",
+    "ebit", "interestExpense", "stockCompensation",
 }
 
 FMP_FINANCIAL_AMOUNTS = {

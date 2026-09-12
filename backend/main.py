@@ -64,7 +64,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="El Inversor Inteligente", lifespan=lifespan)
 
 FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
-APP_BUILD = "2026.09.11.1"
+APP_BUILD = "2026.09.11.3"
 
 
 @app.get("/server-ready.js")
@@ -278,6 +278,11 @@ def api_portfolio():
     return PF.get_portfolio()
 
 
+@app.get("/api/portfolio/fit/{symbol}")
+def api_portfolio_fit(symbol: str):
+    return PF.get_portfolio_fit(_clean_symbol(symbol))
+
+
 @app.post("/api/portfolio", dependencies=[Depends(verify_api_key)])
 def api_portfolio_add(p: Position):
     PF.add_position(p.symbol, p.date, p.price, p.shares, p.note, p.currency)
@@ -299,6 +304,11 @@ class Note(BaseModel):
     invalidation: str = ""
     maxWeightPct: float | None = None
     moats: list[str] = []
+    moatRating: str = ""
+    organicGrowthRating: str = ""
+    cyclicalityRating: str = ""
+    concentrationRating: str = ""
+    portfolioFitRating: str = ""
 
     @field_validator("business", "thesis", "growthDrivers", "risks",
                      "buySignals", "invalidation")
@@ -317,6 +327,12 @@ class Note(BaseModel):
     def check_weight(cls, v: float | None) -> float | None:
         return min(max(float(v), 0.0), 100.0) if v is not None else None
 
+    @field_validator("moatRating", "organicGrowthRating", "cyclicalityRating",
+                     "concentrationRating", "portfolioFitRating")
+    @classmethod
+    def check_rating(cls, v: str) -> str:
+        return v if v in {"strong", "positive", "neutral", "weak", "negative", ""} else ""
+
 
 @app.get("/api/notes/{symbol}")
 def api_notes_get(symbol: str):
@@ -330,6 +346,10 @@ def api_notes_set(symbol: str, n: Note):
         business=n.business, growth_drivers=n.growthDrivers,
         buy_signals=n.buySignals, invalidation=n.invalidation,
         max_weight_pct=n.maxWeightPct,
+        moat_rating=n.moatRating, organic_growth_rating=n.organicGrowthRating,
+        cyclicality_rating=n.cyclicalityRating,
+        concentration_rating=n.concentrationRating,
+        portfolio_fit_rating=n.portfolioFitRating,
     )
 
 
@@ -429,6 +449,11 @@ def api_restore(b: Backup):
             "invalidation": str(v.get("invalidation", ""))[:2000],
             "maxWeightPct": restored_weight,
             "moats": [str(m)[:30] for m in v.get("moats", []) if isinstance(m, (str, int))][:10],
+            "moatRating": str(v.get("moatRating", ""))[:20],
+            "organicGrowthRating": str(v.get("organicGrowthRating", ""))[:20],
+            "cyclicalityRating": str(v.get("cyclicalityRating", ""))[:20],
+            "concentrationRating": str(v.get("concentrationRating", ""))[:20],
+            "portfolioFitRating": str(v.get("portfolioFitRating", ""))[:20],
         }
     transactional_write_json({
         WL.WL_FILE: b.watchlist,

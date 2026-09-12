@@ -149,6 +149,12 @@ def assess_uncertainty(info, annuals, model_values, fcf_source="historico"):
     """
     points = 0
     reasons = []
+    business_text = f"{info.get('sector') or ''} {info.get('industry') or ''}".lower()
+    cyclical_terms = ("oil", "gas", "mining", "steel", "copper", "gold",
+                      "commodity", "paper", "forest products")
+    if any(term in business_text for term in cyclical_terms):
+        points += 15
+        reasons.append("negocio cíclico: requiere beneficios de ciclo medio")
     years = {a.get("year") for a in annuals if a.get("year") is not None}
     if len(years) < 3:
         points += 30

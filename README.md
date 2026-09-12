@@ -9,12 +9,14 @@ Herramienta personal de análisis de acciones con mentalidad **value investing**
 - **Gráficos históricos de hasta 16 años** (SEC EDGAR + Yahoo): precio, PE/P S/P B históricos (TTM) con mediana y rango p25-p75, ingresos y utilidad, márgenes, FCF, ROE/ROIC, deuda vs caja, acciones en circulación (recompras), EPS y dividendos. Cada gráfico se puede descargar como PNG.
 - **Valoración por modelo aplicable**: DCF para empresas operativas con FCF válido, DDM para financieras y controles con PE histórico, Graham, Lynch o EPV. Los modelos no se promedian mecánicamente.
 - Escenarios pesimista/base/optimista, **Reverse DCF**, incertidumbre observable y margen exigido variable entre 15% y 40%.
+- **Matriz integral de 100 puntos**: calidad y foso (25), salud financiera/FCF (20), crecimiento/reinversión (15), valoración (25), riesgos/previsibilidad (10) y encaje de cartera (5). Cada criterio muestra su fuente; los faltantes amplían un rango y reducen la cobertura.
+- **Auditoría de normalización**: FCF y utilidad frente a medianas de 5 años, compensación en acciones, FCF después de SBC, intensidad de capex y capital de trabajo.
 - **Scorecard Buffett**: 14 criterios cuantitativos de calidad económica y solidez. El foso competitivo se valida en la ficha cualitativa.
 - Comparación de la rentabilidad implícita contra un umbral VT/VOO basado en bono de EE.UU. a 10 años + prima de renta variable.
 
 **Vista Screener**: dos universos (EE.UU. ~220 acciones / Chile-IPSA ~30) y dos modos:
 - *Rápido*: puntaje de valoración, calidad, salud financiera, crecimiento y riesgo. Una caída desde máximos no suma puntos y el encaje de cartera queda pendiente.
-- *Profundo*: valoración por modelo principal, controles, margen exigido e incertidumbre, corriendo en segundo plano con barra de progreso.
+- *Profundo*: la misma matriz integral del análisis, nota mínima-máxima, cobertura, valoración por modelo principal, margen exigido e incertidumbre, corriendo en segundo plano con barra de progreso.
 Con filtros por sector y texto, y exportación a CSV.
 
 **Vista Comparar**: hasta 4 empresas lado a lado (tabla de métricas + retorno normalizado, PE histórico y margen neto superpuestos).
@@ -32,7 +34,7 @@ Con filtros por sector y texto, y exportación a CSV.
 **Glosario interactivo**: clic en cualquier indicador (PER, ROE, FCF yield, margen de seguridad, EPV…) abre una explicación en español simple con ejemplo — cualquiera puede leer la app sin saber finanzas.
 
 **Confianza, Seguridad y Madurez**:
-- Suite de **tests** (`pytest` — 78 pruebas de valoración, métricas, monedas, portafolio, EDGAR, calidad, validaciones de API y escrituras atómicas).
+- Suite de **tests** (`pytest` — 84 pruebas de valoración, métricas, monedas, portafolio, EDGAR, calidad, validaciones de API y escrituras atómicas).
 - **Avisos de calidad de datos** en cada análisis: FCF deprimido/inflado vs su historia, saltos de utilidad, patrimonio negativo, historial de PE corto, discrepancias Yahoo vs SEC.
 - **Historial de margen de seguridad**: cada análisis y escaneo profundo guarda una foto diaria (`data/mos_history.jsonl`) y el análisis muestra cómo evoluciona el MoS en el tiempo.
 - **Ficha de decisión por acción**: negocio, tesis, motores, riesgos, señales para aumentar, invalidación, peso máximo y checklist de foso, con autoguardado (`data/notes.json`).

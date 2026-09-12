@@ -14,6 +14,7 @@ import pandas as pd
 from . import currency as C
 from . import edgar as E
 from . import metrics as M
+from . import investment as I
 from . import valuation as V
 from .data import TTL_SCREENER, bond_yield_10y, cache_get, cache_set, jclean, price_history
 from .config import CACHE_VERSION
@@ -437,6 +438,9 @@ def scan_one_deep(symbol, bond10y):
         annuals = C.convert_annuals(annuals, currency_conversion)
 
         val = V.build_valuation(price, info, annuals, pe_stats, bond10y)
+        investment = I.build_investment_analysis(
+            info, annuals, val, pe_stats=pe_stats, price=price,
+        )
         quick = score_stock(info) or {}
 
         # Guardas de calidad: MoS extremos suelen ser datos malos, no gangas.
@@ -476,6 +480,11 @@ def scan_one_deep(symbol, bond10y):
             "score": quick.get("score"),
             "scoreCoveragePct": quick.get("scoreCoveragePct"),
             "portfolioFitPending": True,
+            "investmentScore": investment["score"]["normalizedEvaluatedScore"],
+            "investmentScoreMin": investment["score"]["earnedMin"],
+            "investmentScoreMax": investment["score"]["earnedMax"],
+            "investmentCoveragePct": investment["score"]["coveragePct"],
+            "investmentBlockers": investment["blockers"],
             "peMedian": pe_stats["median"] if pe_stats else None,
             "vsMedian": pe_stats["vsMedian"] if pe_stats else None,
             "mos": mos,

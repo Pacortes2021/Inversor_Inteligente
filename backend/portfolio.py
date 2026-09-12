@@ -287,6 +287,45 @@ def get_portfolio():
     return {"positions": positions, "totals": totals, "warnings": warnings}
 
 
+def get_portfolio_fit(symbol):
+    """Exposición actual del candidato por empresa, sector y moneda."""
+    portfolio = get_portfolio()
+    positions = portfolio.get("positions") or []
+    values = [p for p in positions if isinstance(p.get("value"), (int, float)) and p["value"] >= 0]
+    total = sum(p["value"] for p in values)
+    if total <= 0:
+        return {
+            "available": False, "suggestedRating": None,
+            "detail": "Portafolio vacío o sin valores convertibles",
+        }
+    candidate = _instrument_meta(symbol)
+    candidate_sector = candidate.get("sector") or "Otro"
+    candidate_currency = candidate.get("currency") or ("CLP" if symbol.upper().endswith(".SN") else "USD")
+    symbol_pct = sum(p["value"] for p in values if p.get("symbol") == symbol.upper()) / total * 100
+    sector_pct = sum(p["value"] for p in values if p.get("sector") == candidate_sector) / total * 100
+    currency_pct = sum(p["value"] for p in values if p.get("currency") == candidate_currency) / total * 100
+
+    if symbol_pct >= 15 or sector_pct >= 45:
+        rating = "weak"
+    elif symbol_pct > 0 or sector_pct >= 30 or currency_pct >= 90:
+        rating = "neutral"
+    elif sector_pct < 15 and currency_pct < 75:
+        rating = "strong"
+    else:
+        rating = "positive"
+    return {
+        "available": True,
+        "suggestedRating": rating,
+        "symbolWeightPct": round(symbol_pct, 1),
+        "sectorWeightPct": round(sector_pct, 1),
+        "currencyWeightPct": round(currency_pct, 1),
+        "sector": candidate_sector,
+        "currency": candidate_currency,
+        "detail": (f"Exposición actual: empresa {symbol_pct:.1f}%, sector {sector_pct:.1f}%, "
+                   f"moneda {currency_pct:.1f}%"),
+    }
+
+
 def add_position(symbol, date, price, shares, note="", currency="USD"):
     with _pf_lock:
         items = _load()

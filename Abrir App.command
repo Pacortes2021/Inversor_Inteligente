@@ -4,7 +4,7 @@ set -e
 APP_ROOT="$(cd "$(dirname "$0")" && pwd)"
 APP_URL="http://127.0.0.1:8756/#/inicio"
 LOG_FILE="$APP_ROOT/data/server.log"
-EXPECTED_BUILD="2026.09.11.1"
+EXPECTED_BUILD="2026.09.11.3"
 
 if curl -fsS "http://127.0.0.1:8756/server-ready.js" 2>/dev/null | grep -q "$EXPECTED_BUILD"; then
   open "$APP_URL"

@@ -11,9 +11,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   
   <!-- CSS Principal -->
-  <link rel="stylesheet" href="css/style.css?v=87.0">
-  <link rel="stylesheet" href="css/additions.css?v=87.0">
-  <link rel="stylesheet" href="css/koyfin.css?v=87.0">
+  <link rel="stylesheet" href="css/style.css?v=90.0">
+  <link rel="stylesheet" href="css/additions.css?v=90.0">
+  <link rel="stylesheet" href="css/koyfin.css?v=90.0">
   
   <!-- ECharts CDN -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
@@ -462,6 +462,35 @@
         </div>
       </div>
 
+      <section class="card u-mt20" id="investment-matrix-section">
+        <div class="investment-matrix-head">
+          <div>
+            <h2 class="section-heading u-m0">Matriz integral de inversión</h2>
+            <p class="card-sub section-sub u-mt4">Calidad, balance, reinversión, valoración, riesgos y encaje de cartera. Cada resultado muestra su evidencia y los puntos que aún requieren juicio.</p>
+          </div>
+          <div class="investment-score-box">
+            <div id="investment-score-range" class="investment-score-range">—</div>
+            <div id="investment-score-coverage" class="muted">—</div>
+          </div>
+        </div>
+        <div id="investment-blockers" class="hidden"></div>
+        <div id="investment-category-grid" class="investment-category-grid"></div>
+        <div class="investment-detail-grid">
+          <article class="investment-detail-card">
+            <h3>Normalización y calidad del beneficio</h3>
+            <div id="normalization-audit"></div>
+          </article>
+          <article class="investment-detail-card">
+            <h3>Expectativas que exige el precio</h3>
+            <div id="market-expectations"></div>
+          </article>
+          <article class="investment-detail-card">
+            <h3>Método aplicable al negocio</h3>
+            <div id="model-applicability"></div>
+          </article>
+        </div>
+      </section>
+
       <!-- EVALUADOR DE CALIDAD (BUFFETT SCORECARD) ESTILO MÚLTIPLOS HISTÓRICOS -->
       <section class="card u-mt20" id="buffett-quality-section">
         <div class="multiples-header flex-between-center u-mb16">
@@ -599,6 +628,31 @@
           </label>
           <label>Peso máximo de cartera (%)
             <input id="note-max-weight" type="number" min="0" max="100" step="0.5" placeholder="Ej. 5">
+          </label>
+          <label>Foso competitivo — evaluación
+            <select id="note-moat-rating">
+              <option value="">Pendiente</option><option value="strong">Fuerte y demostrado</option><option value="positive">Creíble</option><option value="neutral">Incierto</option><option value="weak">Débil</option><option value="negative">No existe / se deteriora</option>
+            </select>
+          </label>
+          <label>Crecimiento orgánico — evaluación
+            <select id="note-organic-rating">
+              <option value="">Pendiente</option><option value="strong">Fuerte</option><option value="positive">Positivo</option><option value="neutral">Moderado / incierto</option><option value="weak">Débil</option><option value="negative">Negativo</option>
+            </select>
+          </label>
+          <label>Ciclicidad y previsibilidad
+            <select id="note-cyclicality-rating">
+              <option value="">Pendiente</option><option value="strong">Muy predecible</option><option value="positive">Bastante estable</option><option value="neutral">Ciclo moderado</option><option value="weak">Muy cíclica</option><option value="negative">Tesis binaria / impredecible</option>
+            </select>
+          </label>
+          <label>Concentración de productos/clientes
+            <select id="note-concentration-rating">
+              <option value="">Pendiente</option><option value="strong">Muy diversificada</option><option value="positive">Diversificación adecuada</option><option value="neutral">Concentración moderada</option><option value="weak">Alta concentración</option><option value="negative">Dependencia crítica</option>
+            </select>
+          </label>
+          <label>Encaje en tu portafolio
+            <select id="note-portfolio-fit-rating">
+              <option value="">Pendiente</option><option value="strong">Mejora mucho la cartera</option><option value="positive">Aporta diversificación</option><option value="neutral">Neutro</option><option value="weak">Aumenta concentración</option><option value="negative">No encaja</option>
+            </select>
           </label>
         </div>
         <h3 class="u-mt16">Foso competitivo observado</h3>
@@ -1756,7 +1810,7 @@
   const startFrontend = () => {
     const script = document.createElement("script");
     script.type = "module";
-    script.src = "js/init.js?v=88";
+    script.src = "js/init.js?v=90";
     document.body.appendChild(script);
   };
   if (location.protocol !== "file:") {
@@ -1766,7 +1820,7 @@
 
   const requestedHash = /^#\/[A-Za-z0-9._~%\/-]*$/.test(location.hash) ? location.hash : "#/inicio";
   const appUrl = `http://127.0.0.1:8756/${requestedHash}`;
-  const expectedBuild = "2026.09.11.1";
+  const expectedBuild = "2026.09.11.3";
   const showLaunchHelp = () => {
     const box = document.createElement("div");
     box.style.cssText = "position:fixed;inset:0;z-index:99999;background:#f5f7fa;display:grid;place-items:center;padding:24px;font-family:system-ui;color:#172033";

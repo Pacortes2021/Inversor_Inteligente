@@ -1,11 +1,11 @@
 /* Valoración (DCF interactivo, modelos, sensibilidad), estimaciones,
    insiders, estados financieros y paneles de valoración standalone. */
 
-import { $, toast } from "./dom.js?v=87";
-import { state } from "./state.js?v=87";
-import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, fmtDate, escHtml, pctClass } from "./format.js?v=87";
-import { termify } from "./glossary.js?v=87";
-import { charts } from "./charts.js?v=87";
+import { $, toast } from "./dom.js?v=90";
+import { state } from "./state.js?v=90";
+import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, fmtDate, escHtml, pctClass } from "./format.js?v=90";
+import { termify } from "./glossary.js?v=90";
+import { charts } from "./charts.js?v=90";
 
 /* ------------------------------------------- valoración + DCF live */
 export function dcfJs(inp, growth, discount, terminal) {

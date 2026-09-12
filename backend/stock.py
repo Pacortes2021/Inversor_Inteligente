@@ -8,6 +8,7 @@ import pandas as pd
 from . import edgar as E
 from . import currency as C
 from . import fmp as F
+from . import investment as I
 from . import metrics as M
 from . import quality as Q
 from . import snapshots as S
@@ -741,6 +742,9 @@ def build_payload(symbol: str, refresh: bool = False):
     bond10y = bond_yield_10y()
     fmp_rows = C.convert_fmp_rows(F.fetch_analyst_estimates(symbol), currency_conversion)
     valuation = V.build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=fmp_rows)
+    investment_analysis = I.build_investment_analysis(
+        info, annuals, valuation, pe_stats=pe_stats, price=price,
+    )
     scorecard = V.buffett_scorecard(info, annuals, pe_stats, pe_pairs=pe_pairs, price=price)
     next_earnings, next_earnings_est, sec_filings = _sec_context(symbol, raw.calendar)
 
@@ -815,6 +819,7 @@ def build_payload(symbol: str, refresh: bool = False):
 
         "growthTable": _growth_table(annuals),
         "valuation": valuation,
+        "investmentAnalysis": investment_analysis,
         "scorecard": scorecard,
         "dividendSafety": div_safety,
         "warnings": warnings,
