@@ -11,9 +11,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   
   <!-- CSS Principal -->
-  <link rel="stylesheet" href="css/style.css?v=80.0">
-  <link rel="stylesheet" href="css/additions.css?v=80.0">
-  <link rel="stylesheet" href="css/koyfin.css?v=80.0">
+  <link rel="stylesheet" href="css/style.css?v=90.0">
+  <link rel="stylesheet" href="css/additions.css?v=90.0">
+  <link rel="stylesheet" href="css/koyfin.css?v=90.0">
   
   <!-- ECharts CDN -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
@@ -462,6 +462,35 @@
         </div>
       </div>
 
+      <section class="card u-mt20" id="investment-matrix-section">
+        <div class="investment-matrix-head">
+          <div>
+            <h2 class="section-heading u-m0">Matriz integral de inversión</h2>
+            <p class="card-sub section-sub u-mt4">Calidad, balance, reinversión, valoración, riesgos y encaje de cartera. Cada resultado muestra su evidencia y los puntos que aún requieren juicio.</p>
+          </div>
+          <div class="investment-score-box">
+            <div id="investment-score-range" class="investment-score-range">—</div>
+            <div id="investment-score-coverage" class="muted">—</div>
+          </div>
+        </div>
+        <div id="investment-blockers" class="hidden"></div>
+        <div id="investment-category-grid" class="investment-category-grid"></div>
+        <div class="investment-detail-grid">
+          <article class="investment-detail-card">
+            <h3>Normalización y calidad del beneficio</h3>
+            <div id="normalization-audit"></div>
+          </article>
+          <article class="investment-detail-card">
+            <h3>Expectativas que exige el precio</h3>
+            <div id="market-expectations"></div>
+          </article>
+          <article class="investment-detail-card">
+            <h3>Método aplicable al negocio</h3>
+            <div id="model-applicability"></div>
+          </article>
+        </div>
+      </section>
+
       <!-- EVALUADOR DE CALIDAD (BUFFETT SCORECARD) ESTILO MÚLTIPLOS HISTÓRICOS -->
       <section class="card u-mt20" id="buffett-quality-section">
         <div class="multiples-header flex-between-center u-mb16">
@@ -570,6 +599,66 @@
         </div>
       </section>
 
+      <section class="card u-mt20" id="investment-thesis-section">
+        <div class="flex-between-center u-mb16">
+          <div>
+            <h2 class="section-heading u-m0">Ficha de decisión</h2>
+            <p class="card-sub section-sub u-mt4">Completa el juicio que los datos no pueden automatizar. Una valoración atractiva queda incompleta sin negocio, foso, riesgos e invalidación.</p>
+          </div>
+          <span id="note-status" class="muted">—</span>
+        </div>
+        <div class="notes-grid">
+          <label>Cómo gana dinero y variable clave
+            <textarea id="note-business" rows="4" maxlength="2000" placeholder="Clientes, producto, economía unitaria y variable que mueve los resultados"></textarea>
+          </label>
+          <label>Tesis en una frase
+            <textarea id="note-thesis" rows="4" maxlength="2000" placeholder="Por qué esta empresa debería crear valor desde el precio actual"></textarea>
+          </label>
+          <label>Tres motores de crecimiento
+            <textarea id="note-growth-drivers" rows="4" maxlength="2000" placeholder="1. …&#10;2. …&#10;3. …"></textarea>
+          </label>
+          <label>Tres riesgos principales
+            <textarea id="note-risks" rows="4" maxlength="2000" placeholder="1. …&#10;2. …&#10;3. …"></textarea>
+          </label>
+          <label>Señales para comprar más
+            <textarea id="note-buy-signals" rows="4" maxlength="2000" placeholder="Resultados observables que aumentarían tu convicción"></textarea>
+          </label>
+          <label>Condiciones que invalidan la tesis
+            <textarea id="note-invalidation" rows="4" maxlength="2000" placeholder="Hechos que obligarían a revisar o vender, sin depender del precio pagado"></textarea>
+          </label>
+          <label>Peso máximo de cartera (%)
+            <input id="note-max-weight" type="number" min="0" max="100" step="0.5" placeholder="Ej. 5">
+          </label>
+          <label>Foso competitivo — evaluación
+            <select id="note-moat-rating">
+              <option value="">Pendiente</option><option value="strong">Fuerte y demostrado</option><option value="positive">Creíble</option><option value="neutral">Incierto</option><option value="weak">Débil</option><option value="negative">No existe / se deteriora</option>
+            </select>
+          </label>
+          <label>Crecimiento orgánico — evaluación
+            <select id="note-organic-rating">
+              <option value="">Pendiente</option><option value="strong">Fuerte</option><option value="positive">Positivo</option><option value="neutral">Moderado / incierto</option><option value="weak">Débil</option><option value="negative">Negativo</option>
+            </select>
+          </label>
+          <label>Ciclicidad y previsibilidad
+            <select id="note-cyclicality-rating">
+              <option value="">Pendiente</option><option value="strong">Muy predecible</option><option value="positive">Bastante estable</option><option value="neutral">Ciclo moderado</option><option value="weak">Muy cíclica</option><option value="negative">Tesis binaria / impredecible</option>
+            </select>
+          </label>
+          <label>Concentración de productos/clientes
+            <select id="note-concentration-rating">
+              <option value="">Pendiente</option><option value="strong">Muy diversificada</option><option value="positive">Diversificación adecuada</option><option value="neutral">Concentración moderada</option><option value="weak">Alta concentración</option><option value="negative">Dependencia crítica</option>
+            </select>
+          </label>
+          <label>Encaje en tu portafolio
+            <select id="note-portfolio-fit-rating">
+              <option value="">Pendiente</option><option value="strong">Mejora mucho la cartera</option><option value="positive">Aporta diversificación</option><option value="neutral">Neutro</option><option value="weak">Aumenta concentración</option><option value="negative">No encaja</option>
+            </select>
+          </label>
+        </div>
+        <h3 class="u-mt16">Foso competitivo observado</h3>
+        <div class="moats" id="moat-checks"></div>
+        <p class="muted" style="font-size:12px">Marca solo ventajas para las que puedas escribir evidencia concreta en la tesis. La app no las da por ciertas automáticamente.</p>
+      </section>
 
 
       <!-- EARNINGS SURPRISES Y CALENDARIO -->
@@ -1090,10 +1179,10 @@
       <!-- MATRIZ COMPARATIVA DE MODELOS DE VALORACIÓN -->
       <section class="card">
         <h2 class="section-heading-lg">
-          <svg class="h-ico "><use href="#i-diamond"/></svg>Consenso & Matriz Comparativa de Valor Intrínseco
+          <svg class="h-ico "><use href="#i-diamond"/></svg>Modelo principal y controles de valoración
         </h2>
         <p class="card-sub section-sub">
-          Comparación directa del precio actual vs los modelos DCF, PER Mediano Histórico, Dividendos (DDM) y Graham.
+          El modelo apropiado para el negocio define el valor base. Los demás revelan sensibilidad o desacuerdo y no se promedian.
         </p>
         <div id="models-table"></div>
       </section>
@@ -1277,9 +1366,10 @@
             </div>
             
             <div id="implied-growth" class="yield-compare hidden u-note-box" ></div>
+            <div id="yield-compare" class="yield-compare hidden u-note-box u-mt8"></div>
             
             <div id="dcf-scenarios" class="hidden u-mt16">
-              <p class="card-sub u-section-label" >Escenarios de valoración — valor justo según crecimiento del FCF <span id="dcf-scenarios-source" style="vertical-align:middle"></span></p>
+              <p class="card-sub u-section-label" >Escenarios de valoración — crecimiento, tasa exigida y valor terminal <span id="dcf-scenarios-source" style="vertical-align:middle"></span></p>
               <div class="grid-auto-fit-sm" id="dcf-scenario-cards" ></div>
             </div>
             
@@ -1595,6 +1685,7 @@
       <div class="control"><label>Símbolo</label><input type="text" id="pf-symbol" placeholder="KO" required></div>
       <div class="control"><label>Fecha compra</label><input type="date" id="pf-date" required></div>
       <div class="control"><label>Precio</label><input type="number" id="pf-price" step="0.01" min="0.01" placeholder="61.50" required></div>
+      <div class="control"><label>Moneda</label><select id="pf-currency"><option value="USD">USD</option><option value="CLP">CLP</option></select></div>
       <div class="control"><label>Cantidad</label><input type="number" id="pf-shares" step="any" min="0.0001" placeholder="10" required></div>
       <div class="control pf-note"><label>Tesis / nota</label><input type="text" id="pf-note" maxlength="300" placeholder="¿por qué compraste? (opcional)"></div>
       <button type="submit" class="btn">Registrar compra</button>
@@ -1714,7 +1805,40 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script type="module" src="js/init.js?v=80"></script>
+<script>
+(() => {
+  const startFrontend = () => {
+    const script = document.createElement("script");
+    script.type = "module";
+    script.src = "js/init.js?v=90";
+    document.body.appendChild(script);
+  };
+  if (location.protocol !== "file:") {
+    startFrontend();
+    return;
+  }
+
+  const requestedHash = /^#\/[A-Za-z0-9._~%\/-]*$/.test(location.hash) ? location.hash : "#/inicio";
+  const appUrl = `http://127.0.0.1:8756/${requestedHash}`;
+  const expectedBuild = "2026.09.11.3";
+  const showLaunchHelp = () => {
+    const box = document.createElement("div");
+    box.style.cssText = "position:fixed;inset:0;z-index:99999;background:#f5f7fa;display:grid;place-items:center;padding:24px;font-family:system-ui;color:#172033";
+    box.innerHTML = `<div style="max-width:620px;background:white;border:1px solid #dbe3ec;border-radius:16px;padding:30px;box-shadow:0 18px 60px #17203322">
+      <h1 style="margin-top:0">La aplicación necesita su servidor local</h1>
+      <p>Abre <b>Abrir App.command</b> desde la carpeta del proyecto. Esa acción inicia o actualiza el servidor y abre la dirección correcta.</p>
+      <p style="color:#667085">También puedes ejecutar <code>./run.sh</code> en Terminal y luego entrar a <code>http://127.0.0.1:8756</code>.</p>
+      <a href="${appUrl}" style="display:inline-block;margin-top:8px;padding:10px 16px;border-radius:8px;background:#079b83;color:white;text-decoration:none;font-weight:700">Reintentar conexión</a>
+    </div>`;
+    document.body.appendChild(box);
+  };
+  const probe = document.createElement("script");
+  probe.src = `http://127.0.0.1:8756/server-ready.js?t=${Date.now()}`;
+  probe.onload = () => window.__INVERSOR_BUILD__ === expectedBuild ? location.replace(appUrl) : showLaunchHelp();
+  probe.onerror = showLaunchHelp;
+  document.head.appendChild(probe);
+})();
+</script>
 
 </body>
 </html>

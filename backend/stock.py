@@ -6,7 +6,9 @@ import numpy as np
 import pandas as pd
 
 from . import edgar as E
+from . import currency as C
 from . import fmp as F
+from . import investment as I
 from . import metrics as M
 from . import quality as Q
 from . import snapshots as S
@@ -393,6 +395,41 @@ def _calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps
     }
 
 
+def _altman_z_score(annual, market_cap):
+    """Altman Z clásico; devuelve None si falta un insumo exacto.
+
+    No sustituye retained earnings, pasivos o capital de trabajo por proxies,
+    porque hacerlo produce una clasificación de solvencia ficticia.
+    """
+    assets = annual.get("assets")
+    working_capital = annual.get("workingCapital")
+    retained = annual.get("retainedEarnings")
+    liabilities = annual.get("totalLiabilities")
+    sales = annual.get("revenue")
+    op_margin = annual.get("opMargin")
+    net_income = annual.get("netIncome")
+    ebit = (sales * op_margin / 100) if (sales is not None and op_margin is not None) else net_income
+    required = (assets, working_capital, retained, ebit, market_cap, liabilities, sales)
+    if not all(M._f(v) is not None for v in required) or assets <= 0 or liabilities <= 0:
+        return None
+    score = (
+        1.2 * working_capital / assets
+        + 1.4 * retained / assets
+        + 3.3 * ebit / assets
+        + 0.6 * market_cap / liabilities
+        + 0.99 * sales / assets
+    )
+    return round(score, 2)
+
+
+def _altman_applicable(info):
+    """El modelo clásico no es interpretable para bancos y aseguradoras."""
+    sector = str((info or {}).get("sector") or "").lower()
+    industry = str((info or {}).get("industry") or "").lower()
+    excluded = ("financial", "bank", "insurance", "asset management", "credit services")
+    return not any(term in sector or term in industry for term in excluded)
+
+
 def build_payload(symbol: str, refresh: bool = False):
     from .main import CACHE_VERSION
     key = f"stock_{CACHE_VERSION}_{symbol.upper().replace('/', '_')}"
@@ -404,16 +441,21 @@ def build_payload(symbol: str, refresh: bool = False):
     # EDGAR se descarga en paralelo con Yahoo (ahorra varios segundos)
     with ThreadPoolExecutor(max_workers=1) as _ex:
         _edgar_fut = _ex.submit(E.get_annual_history, symbol)
-        raw = RawData(symbol)
+        raw = RawData(symbol, refresh=refresh)
         edgar_hist = _edgar_fut.result()
     if not raw.is_valid():
         return None
 
-    info = raw.info
+    info, currency_conversion = C.normalize_info(symbol, raw.info)
+    raw.info = info
+    C.convert_raw_estimates(raw, currency_conversion)
     prices = raw.prices
     monthly = M.monthly_prices(prices)
     weekly = M.weekly_prices(prices)  # Para ratios más detallados
     price = M._f(info.get("currentPrice")) or float(prices["Close"].dropna().iloc[-1])
+    quote_currency = str(info.get("currency") or "").upper()
+    financial_currency = str(info.get("reportedFinancialCurrency") or info.get("financialCurrency") or "").upper()
+    currency_mismatch = bool(info.get("_currencyMismatch"))
 
     # ------------------------------------------------ series históricas
     shares = M.shares_series(raw)
@@ -422,6 +464,10 @@ def build_payload(symbol: str, refresh: bool = False):
     rev_ttm = M.ttm_from_statements(raw.inc_a, raw.inc_q, "Total Revenue", "Operating Revenue")
     equity = M.step_series(raw.bs_a, raw.bs_q, "Stockholders Equity", "Common Stock Equity")
     fcf_ttm = M.fcf_ttm_series(raw.cf_a, raw.cf_q)
+    eps_ttm = C.convert_series(eps_ttm, currency_conversion)
+    rev_ttm = C.convert_series(rev_ttm, currency_conversion)
+    equity = C.convert_series(equity, currency_conversion)
+    fcf_ttm = C.convert_series(fcf_ttm, currency_conversion)
 
     # EDGAR extiende la historia a 10-15+ años (solo empresas que reportan a la SEC).
     # Sus valores por acción vienen as-reported: hay que ajustarlos por splits
@@ -450,7 +496,7 @@ def build_payload(symbol: str, refresh: bool = False):
             pass
 
     cur_pe = M._f(info.get("trailingPE"))
-    if eps_ttm_computed and eps_ttm_computed > 0 and price and price > 0:
+    if not currency_mismatch and eps_ttm_computed and eps_ttm_computed > 0 and price and price > 0:
         pe_computed = price / eps_ttm_computed
         if cur_pe is None or abs(cur_pe - pe_computed) / max(pe_computed, 1e-4) > 0.20:
             if cur_pe is not None:
@@ -461,13 +507,13 @@ def build_payload(symbol: str, refresh: bool = False):
             info["trailingEps"] = round(eps_ttm_computed, 2)
 
     # Usar precios semanales para charts más detallados
-    pe_hist = M.ratio_history(weekly, eps_ttm, "per_share")
+    pe_hist = M.ratio_history(weekly, eps_ttm, "per_share") if not currency_mismatch else None
     if pe_hist is not None:
         # PE > 200 no es una señal de valoración: utilidad casi nula distorsiona
         pe_hist = pe_hist[pe_hist <= 200]
-    ps_hist = M.ratio_history(weekly, rev_ttm, "total", shares)
-    pb_hist = M.ratio_history(weekly, equity, "total", shares)
-    pcf_hist = M.ratio_history(weekly, fcf_ttm, "total", shares)
+    ps_hist = M.ratio_history(weekly, rev_ttm, "total", shares) if not currency_mismatch else None
+    pb_hist = M.ratio_history(weekly, equity, "total", shares) if not currency_mismatch else None
+    pcf_hist = M.ratio_history(weekly, fcf_ttm, "total", shares) if not currency_mismatch else None
     if pcf_hist is not None:
         pcf_hist = pcf_hist[pcf_hist <= 500]  # Filtrar valores extremos
 
@@ -509,6 +555,7 @@ def build_payload(symbol: str, refresh: bool = False):
 
     # series TTM para el overlay interactivo (precio vs fundamentales)
     ni_ttm = M.ttm_from_statements(raw.inc_a, raw.inc_q, "Net Income", "Net Income Common Stockholders")
+    ni_ttm = C.convert_series(ni_ttm, currency_conversion)
     net_margin_ttm_series = None
     if rev_ttm is not None and ni_ttm is not None and len(rev_ttm) and len(ni_ttm):
         _idx = rev_ttm.index.union(ni_ttm.index).sort_values()
@@ -524,11 +571,13 @@ def build_payload(symbol: str, refresh: bool = False):
     annuals = _merge_annuals(M.annual_fundamentals(raw), E.to_annual_rows(edgar_hist),
                              raw.dividends, splits)
     quarterlies = M.quarterly_fundamentals(raw)
+    annuals = C.convert_annuals(annuals, currency_conversion)
+    quarterlies = C.convert_annuals(quarterlies, currency_conversion)
 
     # ------------------------------------------------ snapshot actual
     # FCF TTM único (computado o fallback Yahoo), usado en fcfYield, P/CF del
     # grid de ratios y ancla del chart — un solo número en toda la app.
-    fcf_now = fcf_t_now
+    fcf_now = None if currency_mismatch else fcf_t_now
     mc = mc_px
 
     sma50 = None
@@ -572,7 +621,8 @@ def build_payload(symbol: str, refresh: bool = False):
         except Exception:
             pass
 
-    f_score = V.piotroski_f_score(annuals)
+    f_score_details = V.piotroski_f_score_details(annuals)
+    f_score = f_score_details["score"]
     roc = V.greenblatt_roc(info, annuals)
 
     payout_val = M._f(info.get("payoutRatio"))
@@ -666,6 +716,7 @@ def build_payload(symbol: str, refresh: bool = False):
         "sma200": round(sma200, 2) if sma200 else None,
         "rsi": rsi,
         "fScore": f_score,
+        "fScoreEvaluated": f_score_details["evaluated"],
         "roc": round(roc, 1) if roc else None,
         "perf1m": perf_1m,
         "perf1y": perf_1y,
@@ -681,34 +732,19 @@ def build_payload(symbol: str, refresh: bool = False):
         "shortRatio": M._f(info.get("shortRatio")),
     }
 
-    altman_z = None
-    try:
-        last_a = annuals[-1] if annuals else {}
-        assets_val = last_a.get("assets")
-        eq_val = last_a.get("equity")
-        wc_val = current.get("workingCapital")
-        debt_val = current.get("totalDebt")
-        sales_val = last_a.get("revenue")
-        ni_val = last_a.get("netIncome")
-        op_val = last_a.get("opMargin")
-        ebit_val = (sales_val * op_val / 100) if (sales_val and op_val) else ni_val
-
-        if assets_val and assets_val > 0:
-            x1 = (wc_val / assets_val) if wc_val else 0.2
-            x2 = (eq_val * 0.5 / assets_val) if eq_val else 0.15
-            x3 = (ebit_val / assets_val) if ebit_val else 0.15
-            x4 = (eq_val / debt_val) if (eq_val and debt_val and debt_val > 0) else 1.0
-            x5 = (sales_val / assets_val) if sales_val else 0.8
-            altman_z = round(1.2 * x1 + 1.4 * x2 + 3.3 * x3 + 0.6 * x4 + 0.99 * x5, 2)
-    except Exception:
-        pass
+    altman_applicable = _altman_applicable(info)
+    altman_z = _altman_z_score(annuals[-1], mc) if annuals and altman_applicable else None
 
     current["altmanZ"] = altman_z
+    current["altmanApplicable"] = altman_applicable
 
 
     bond10y = bond_yield_10y()
-    fmp_rows = F.fetch_analyst_estimates(symbol)
+    fmp_rows = C.convert_fmp_rows(F.fetch_analyst_estimates(symbol), currency_conversion)
     valuation = V.build_valuation(price, info, annuals, pe_stats, bond10y, fmp_rows=fmp_rows)
+    investment_analysis = I.build_investment_analysis(
+        info, annuals, valuation, pe_stats=pe_stats, price=price,
+    )
     scorecard = V.buffett_scorecard(info, annuals, pe_stats, pe_pairs=pe_pairs, price=price)
     next_earnings, next_earnings_est, sec_filings = _sec_context(symbol, raw.calendar)
 
@@ -736,6 +772,10 @@ def build_payload(symbol: str, refresh: bool = False):
             "summary": (info.get("longBusinessSummary") or info.get("description") or info.get("summary") or "")[:600],
             "exchange": info.get("fullExchangeName") or info.get("exchange"),
             "currency": info.get("currency") or ("CLP" if symbol.upper().endswith(".SN") else "USD"),
+            "financialCurrency": financial_currency or quote_currency,
+            "calculationCurrency": quote_currency,
+            "currencyMismatch": currency_mismatch,
+            "currencyConversion": currency_conversion,
             "nextEarnings": next_earnings,
             "nextEarningsEst": next_earnings_est,
             "secFilings": sec_filings,
@@ -779,6 +819,7 @@ def build_payload(symbol: str, refresh: bool = False):
 
         "growthTable": _growth_table(annuals),
         "valuation": valuation,
+        "investmentAnalysis": investment_analysis,
         "scorecard": scorecard,
         "dividendSafety": div_safety,
         "warnings": warnings,

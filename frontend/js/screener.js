@@ -1,8 +1,8 @@
 /* Screener de valor: modos rápido/profundo, universos, filtros y export CSV. */
 
-import { fmtPrice, fmtNum, fmtPct, escHtml, pctClass } from "./format.js?v=80";
-import { renderHeatmap } from "./charts.js?v=80";
-import { go } from "./router.js?v=80";
+import { fmtPrice, fmtNum, fmtPct, escHtml, pctClass } from "./format.js?v=90";
+import { renderHeatmap } from "./charts.js?v=90";
+import { go } from "./router.js?v=90";
 
 const scr = {
   universe: "us", mode: "quick", view: "table",
@@ -29,7 +29,8 @@ const COLS_DEEP = [
   ["mos", "Margen seg.", "num"], ["verdict", "Veredicto"],
   ["distSma200d", "vs SMA200d", "num"], ["distSma200w", "vs SMA200w", "num"],
   ["roc", "ROC", "num"], ["fScore", "F-Score", "num"],
-  ["score", "Puntaje", "num"],
+  ["investmentScore", "Nota método", "num"],
+  ["investmentCoveragePct", "Cobertura", "num"],
 ];
 
 const COLS_TARGETS2030 = [
@@ -82,7 +83,7 @@ async function pollDeep(refresh = false) {
   if (token !== scr.pollToken) return; // universo/modo cambió mientras se consultaba
   if (d.status === "done") {
     scr.data = d.results || [];
-    scr.sortKey = "mos"; scr.sortDir = -1;
+    scr.sortKey = "investmentScore"; scr.sortDir = -1;
     finishScreenerLoad(`deep_${scr.universe}`);
     return;
   }
@@ -262,7 +263,7 @@ function renderScreener() {
 
   const TERMS = { pe: "pe", forwardPe: "pefwd", peMedian: "banda", vsMedian: "banda",
     fcfYield: "fcfyield", roe: "roe", debtToEquity: "de", drawdown: "drawdown",
-    score: "score", mos: "mos", fairValue: "dcf", pb: "pb" };
+    score: "score", investmentScore: "score", mos: "mos", fairValue: "dcf", pb: "pb" };
   document.getElementById("screener-thead").innerHTML = cols.map(([k, label, cls]) =>
     `<th data-k="${k}" class="${cls || ""}">${escHtml(label)}${TERMS[k] ? ` <span class="info-i" data-term="${TERMS[k]}">ⓘ</span>` : ""}${scr.sortKey === k ? (scr.sortDir < 0 ? " ↓" : " ↑") : ""}</th>`).join("");
 
@@ -294,7 +295,7 @@ function renderScreener() {
         case 'fcfYield': v = fmtPct(r.fcfYield, 2); break;
         case 'roe': v = r.roe != null ? fmtPct(r.roe, 1) : '—'; break;
         case 'roc': v = r.roc != null ? fmtPct(r.roc, 1) : '—'; break;
-        case "fScore": v = r.fScore != null ? r.fScore + " / 9" : "—"; break;
+        case "fScore": v = r.fScore != null ? r.fScore + " / " + (r.fScoreEvaluated || 9) : "—"; break;
         case "debtToEquity": v = r.debtToEquity != null ? fmtNum(r.debtToEquity, 2) : "—"; break;
         case "drawdown": return `<td class="num ${pctClass(r.drawdown)}">${fmtPct(r.drawdown, 1)}</td>`;
         case "distSma200d": {
@@ -320,6 +321,15 @@ function renderScreener() {
           const cls2 = r.score >= 65 ? "hi" : r.score >= 45 ? "mid" : "lo";
           return `<td class="num"><span class="score-chip ${cls2}">${r.score != null ? fmtNum(r.score, 0) : "—"}</span></td>`;
         }
+        case "investmentScore": {
+          const cls2 = r.investmentScore >= 70 ? "hi" : r.investmentScore >= 50 ? "mid" : "lo";
+          const range = r.investmentScoreMin != null && r.investmentScoreMax != null
+            ? `${fmtNum(r.investmentScoreMin, 0)}–${fmtNum(r.investmentScoreMax, 0)}` : "—";
+          const blockers = (r.investmentBlockers || []).join(" · ");
+          return `<td class="num" title="Nota normalizada sobre lo evaluado: ${r.investmentScore != null ? fmtNum(r.investmentScore, 0) : '—'}${blockers ? ' · ' + escHtml(blockers) : ''}"><span class="score-chip ${cls2}">${range}</span></td>`;
+        }
+        case "investmentCoveragePct":
+          return `<td class="num">${r.investmentCoveragePct != null ? fmtPct(r.investmentCoveragePct, 0) : "—"}</td>`;
         default: v = r[k] ?? "—";
       }
       return `<td class="${cls || ""}">${v}</td>`;
@@ -332,10 +342,10 @@ function renderScreener() {
       `${rows.length} acciones analizadas con proyecciones a 2030E en 3 escenarios PER (Conservador -20%, Base Mediana y Optimista +20%).`;
   } else if (scr.mode === "deep") {
     document.getElementById("screener-sub").textContent =
-      `${rows.length} acciones con valoración completa (DCF + reversión al PE de 15 años + Graham). Ordenadas por margen de seguridad.`;
+      `${rows.length} acciones con matriz integral y valoración aplicable. La nota muestra el rango por datos pendientes y la cobertura evita falsa precisión.`;
   } else {
     document.getElementById("screener-sub").textContent =
-      `${rows.length} acciones puntuadas por valoración (45%), calidad (30%), salud financiera (15%) y castigo en precio (10%).`;
+      `${rows.length} acciones puntuadas por valoración, calidad, salud financiera, crecimiento y riesgo. La caída desde máximos no suma puntos; el encaje de cartera queda pendiente.`;
   }
   document.getElementById("screener-table").classList.remove("hidden");
 }
@@ -493,7 +503,7 @@ document.getElementById('f-universe').addEventListener('change', e => {
 });
 document.getElementById('f-mode').addEventListener('change', e => {
   scr.mode = e.target.value;
-  scr.sortKey = scr.mode === 'deep' ? 'mos' : 'score'; scr.sortDir = -1;
+  scr.sortKey = scr.mode === 'deep' ? 'investmentScore' : 'score'; scr.sortDir = -1;
   scr.data = null; loadScreener();
 });
 document.getElementById('f-sector').addEventListener('change', renderScreener);

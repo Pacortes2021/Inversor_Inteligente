@@ -8,12 +8,12 @@ from ..edgar import get_annual_history
 
 logger = logging.getLogger(__name__)
 
-def fetch_data_with_fallback(symbol: str) -> Dict[str, Any]:
+def fetch_data_with_fallback(symbol: str, refresh: bool = False) -> Dict[str, Any]:
     """Obtiene los datos históricos fundamentales auditados exclusivamente desde Yahoo Finance y SEC EDGAR.
     FMP se reserva de forma exclusiva para el endpoint de estimaciones forward de analistas."""
     logger.info(f"Obteniendo datos históricos de {symbol} vía Yahoo Finance + SEC EDGAR...")
     yf_prov = YFinanceProvider()
-    yf_data = yf_prov.fetch_raw_data(symbol)
+    yf_data = yf_prov.fetch_raw_data(symbol, refresh=refresh)
 
     edgar_hist = None
     try:
@@ -32,5 +32,4 @@ def fetch_data_with_fallback(symbol: str) -> Dict[str, Any]:
         merged["isFallback"] = True
 
     return merged
-
 

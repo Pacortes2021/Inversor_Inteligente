@@ -168,7 +168,7 @@ def calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps_
 
     # P/CF actual: usa el FCF TTM computado de estados de flujos si se entregó
     # (misma fuente que el último punto del chart), con fallback al FCF anual.
-    fcf_now = fcf_ttm_now or (annuals[-1].get("fcf") if annuals else None)
+    fcf_now = None if info.get("_currencyMismatch") else (fcf_ttm_now or (annuals[-1].get("fcf") if annuals else None))
     mc = mc_now or M._f(info.get("marketCap"))
     fcf_yield = (fcf_now / mc * 100) if (fcf_now and mc) else None
     pcf_ttm = 100.0 / fcf_yield if fcf_yield and fcf_yield > 0 else None
@@ -220,20 +220,19 @@ def calculate_ratios_payload(price, info, annuals, prices, pe_hist, pb_hist, ps_
         if not fcf or not sh or sh <= 0:
             return None
         val = fcf / sh
-        if val > 500:
-            val = fcf / (sh * 1_000_000.0)
-        elif val > 50:
-            val = fcf / (sh * 1_000.0)
-        return round(val, 2) if (val and val > 0 and val < 500) else None
+        # FCF y acciones deben venir normalizados por el proveedor. Inferir una
+        # escala por el tamaño destruye valores legítimos, especialmente en CLP.
+        return round(val, 2) if np.isfinite(val) and val > 0 else None
 
     shares_now = M._f(info.get("sharesOutstanding"))
     fcf_ps_ttm = _calc_fcf_ps(fcf_now, shares_now) if (fcf_now and shares_now) else None
 
     fcf_ps_vals = []
-    for a in last_5_annuals:
-        fps = _calc_fcf_ps(a.get("fcf"), a.get("sharesOut"))
-        if fps:
-            fcf_ps_vals.append(fps)
+    if not info.get("_currencyMismatch"):
+        for a in last_5_annuals:
+            fps = _calc_fcf_ps(a.get("fcf"), a.get("sharesOut"))
+            if fps:
+                fcf_ps_vals.append(fps)
     fcf_ps_5y_avg = round(sum(fcf_ps_vals) / len(fcf_ps_vals), 2) if fcf_ps_vals else None
 
     roc_ttm = V.greenblatt_roc(info, annuals)

@@ -49,6 +49,51 @@ def atomic_write_json(file_path: Path, data):
             raise
 
 
+def transactional_write_json(files):
+    """Actualiza varios JSON como una unidad y restaura todos si uno falla."""
+    targets = [(Path(path).resolve(), data) for path, data in files.items()]
+    staged = []
+    originals = {}
+    with _file_lock:
+        try:
+            for path, data in targets:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                originals[path] = path.read_bytes() if path.exists() else None
+                fd, temp_name = tempfile.mkstemp(dir=path.parent, prefix=".tmp_tx_", suffix=".json")
+                with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                    json.dump(data, stream, indent=2, ensure_ascii=False)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                staged.append((path, temp_name))
+
+            for path, temp_name in staged:
+                os.replace(temp_name, path)
+        except Exception:
+            for path, original in originals.items():
+                try:
+                    if original is None:
+                        path.unlink(missing_ok=True)
+                    else:
+                        fd, restore_name = tempfile.mkstemp(
+                            dir=path.parent, prefix=".tmp_rollback_", suffix=".json"
+                        )
+                        with os.fdopen(fd, "wb") as stream:
+                            stream.write(original)
+                            stream.flush()
+                            os.fsync(stream.fileno())
+                        os.replace(restore_name, path)
+                except Exception:
+                    pass
+            raise
+        finally:
+            for _, temp_name in staged:
+                try:
+                    if os.path.exists(temp_name):
+                        os.remove(temp_name)
+                except Exception:
+                    pass
+
+
 def load_json(file_path: Path, default=None):
     """Carga JSON de forma segura. Si el archivo está corrupto, lo respalda a
     `<nombre>.corrupt` (evitando que el siguiente write sobreescriba datos
@@ -122,11 +167,11 @@ def jclean(obj):
 class RawData:
     """Descarga datos para un símbolo utilizando el proveedor configurado (FMP o yfinance fallback)."""
 
-    def __init__(self, symbol: str):
+    def __init__(self, symbol: str, refresh: bool = False):
         from .providers.factory import fetch_data_with_fallback
 
         self.symbol = symbol
-        data = fetch_data_with_fallback(symbol)
+        data = fetch_data_with_fallback(symbol, refresh=refresh)
 
         self.provider = data.get("provider", "unknown")
         self.info = data.get("info") or {}
@@ -220,6 +265,31 @@ def nasdaq_history(symbol, start, end, interval="1d"):
     return df
 
 
+def normalize_price_history(df, symbol):
+    """Normaliza la salida de yf.download para un único símbolo.
+
+    Versiones recientes de yfinance devuelven MultiIndex incluso al pedir un
+    solo ticker. El resto del backend espera columnas OHLCV simples.
+    """
+    if df is None or getattr(df, "empty", True):
+        return df
+    if isinstance(df.columns, pd.MultiIndex):
+        symbol_upper = str(symbol).upper()
+        for level in range(df.columns.nlevels):
+            values = {str(v).upper() for v in df.columns.get_level_values(level)}
+            if symbol_upper in values:
+                df = df.xs(symbol, axis=1, level=level, drop_level=True)
+                break
+        if isinstance(df.columns, pd.MultiIndex):
+            # Caso de un único ticker sin etiqueta idéntica (p. ej. alias).
+            varying = [i for i in range(df.columns.nlevels)
+                       if len(set(df.columns.get_level_values(i))) > 1]
+            if len(varying) == 1:
+                keep = varying[0]
+                df.columns = df.columns.get_level_values(keep)
+    return df
+
+
 def price_history(symbol, period=None, start=None, end=None, interval="1d"):
     """Serie de precios ajustada: Yahoo primero, fallback Nasdaq (US)."""
     try:
@@ -228,7 +298,7 @@ def price_history(symbol, period=None, start=None, end=None, interval="1d"):
         else:
             h = safe_download(symbol, start=start, end=end, interval=interval, progress=False, auto_adjust=True)
         if h is not None and not h.empty:
-            return h
+            return normalize_price_history(h, symbol)
     except Exception:
         pass
     if not start:

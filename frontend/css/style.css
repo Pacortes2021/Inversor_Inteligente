@@ -1127,7 +1127,9 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
-.notes-grid textarea {
+.notes-grid textarea,
+.notes-grid input,
+.notes-grid select {
   background: var(--panel-2);
   border: 1px solid var(--border-dark);
   border-radius: 8px;
@@ -1139,9 +1141,43 @@ b, .num, td.num, th.num, .price, .val, .score-chip, .verdict-chip {
   font-size: 13px;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.notes-grid textarea:focus {
+.notes-grid textarea:focus,
+.notes-grid input:focus,
+.notes-grid select:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+/* Matriz integral de inversión */
+.investment-matrix-head { display:flex; justify-content:space-between; gap:20px; align-items:flex-start; margin-bottom:16px; }
+.investment-score-box { min-width:170px; text-align:right; padding:10px 14px; border:1px solid var(--border); border-radius:10px; background:var(--panel-2); }
+.investment-score-range { font-size:24px; font-weight:800; color:var(--primary); font-variant-numeric:tabular-nums; }
+.investment-category-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.investment-category { border:1px solid var(--border); border-radius:10px; background:var(--panel-2); overflow:hidden; }
+.investment-category-head { display:flex; justify-content:space-between; gap:10px; padding:12px 14px; border-bottom:1px solid var(--border); }
+.investment-category-head h3 { margin:0; font-size:14px; }
+.investment-category-score { font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.investment-metric { display:grid; grid-template-columns:22px minmax(150px,1fr) 70px; gap:8px; padding:10px 12px; border-bottom:1px solid var(--border); align-items:start; }
+.investment-metric:last-child { border-bottom:0; }
+.investment-metric-icon { width:20px; height:20px; border-radius:50%; display:grid; place-items:center; font-size:11px; font-weight:800; }
+.investment-metric.pass .investment-metric-icon { background:var(--green-soft); color:var(--green-text); }
+.investment-metric.watch .investment-metric-icon { background:var(--gold-soft); color:var(--gold-text); }
+.investment-metric.fail .investment-metric-icon { background:var(--red-soft); color:var(--red-text); }
+.investment-metric.pending .investment-metric-icon { background:var(--panel); color:var(--muted); }
+.investment-metric-label { font-size:12.5px; font-weight:700; color:var(--text); }
+.investment-metric-detail { display:block; margin-top:2px; color:var(--muted); font-size:11px; line-height:1.35; }
+.investment-metric-points { text-align:right; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }
+.investment-detail-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:14px; }
+.investment-detail-card { border:1px solid var(--border); border-radius:10px; padding:14px; background:var(--panel-2); }
+.investment-detail-card h3 { font-size:14px; margin:0 0 10px; }
+.investment-detail-row { display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-bottom:1px solid var(--border); font-size:12px; }
+.investment-detail-row:last-child { border-bottom:0; }
+.investment-audit-list { margin:8px 0 0; padding-left:18px; color:var(--muted); font-size:11.5px; }
+.investment-blocker { padding:9px 12px; margin-bottom:8px; border-radius:8px; background:var(--red-soft); color:var(--red-text); font-size:12px; font-weight:650; }
+@media (max-width: 900px) {
+  .investment-category-grid, .investment-detail-grid { grid-template-columns:1fr; }
+  .investment-matrix-head { flex-direction:column; }
+  .investment-score-box { text-align:left; width:100%; }
 }
 
 /* =====================================================================

@@ -1,10 +1,10 @@
 /* Portafolio: posiciones, concentración por sector y respaldo de datos. */
 
-import { toast, apiFetch } from "./dom.js?v=80";
-import { fmtBig, fmtNum, fmtPct, fmtPrice, escHtml, pctClass } from "./format.js?v=80";
-import { getChartColors } from "./charts.js?v=80";
-import { refreshSidebar } from "./analysis.js?v=80";
-import { wlInvalidate } from "./watchlist.js?v=80";
+import { toast, apiFetch } from "./dom.js?v=90";
+import { fmtBig, fmtNum, fmtPct, fmtPrice, escHtml, pctClass } from "./format.js?v=90";
+import { getChartColors } from "./charts.js?v=90";
+import { refreshSidebar } from "./analysis.js?v=90";
+import { wlInvalidate } from "./watchlist.js?v=90";
 
 let pfLoaded = false;
 let pfSectorChartInstance = null;
@@ -28,7 +28,7 @@ export async function loadPortfolio(refresh = false) {
   }
 }
 
-function renderPortfolio({ positions, totals }) {
+function renderPortfolio({ positions, totals, warnings = [] }) {
   if (!positions.length) {
     document.getElementById("pf-empty").classList.remove("hidden");
     document.getElementById("pf-summary-grid").classList.add("hidden");
@@ -38,10 +38,11 @@ function renderPortfolio({ positions, totals }) {
 
   // Actualizar resumen del portafolio
   if (totals) {
-    document.getElementById("pf-sum-val").textContent = fmtBig(totals.value, "USD");
+    const totalValue = totals.totalValue ?? totals.value;
+    document.getElementById("pf-sum-val").textContent = fmtBig(totalValue, "USD");
     document.getElementById("pf-sum-inv").textContent = "Invertido: " + fmtBig(totals.invested, "USD");
     
-    const profit = totals.value - totals.invested;
+    const profit = totalValue - totals.invested;
     const profitEl = document.getElementById("pf-sum-profit");
     profitEl.textContent = (profit >= 0 ? "+" : "") + fmtBig(profit, "USD");
     profitEl.className = "card-value " + (profit >= 0 ? "up" : "down");
@@ -55,22 +56,27 @@ function renderPortfolio({ positions, totals }) {
       alphaEl.textContent = fmtPct(totals.alpha, 1, true);
       alphaEl.className = "card-value " + (totals.alpha >= 0 ? "up" : "down");
       document.getElementById("pf-sum-alpha-lbl").textContent = totals.alpha >= 0 ? "Ganando al S&P 500 ✓" : "S&P 500 rinde más";
+    } else {
+      alphaEl.textContent = "—";
+      alphaEl.className = "card-value";
+      document.getElementById("pf-sum-alpha-lbl").textContent = "Benchmark incompleto";
     }
     
     // Posición Top por valor
-    const sortedByVal = [...positions].sort((a, b) => (b.value || 0) - (a.value || 0));
-    const topPos = sortedByVal[0];
+    const bySymbol = {};
+    positions.forEach(p => { bySymbol[p.symbol] = (bySymbol[p.symbol] || 0) + (p.value || 0); });
+    const topPos = Object.entries(bySymbol).sort((a, b) => b[1] - a[1])[0];
     if (topPos) {
-      const pct = totals.value > 0 ? ((topPos.value / totals.value) * 100).toFixed(1) : "0.0";
-      document.getElementById("pf-sum-top").textContent = topPos.symbol;
-      document.getElementById("pf-sum-top-val").textContent = fmtBig(topPos.value, "USD") + ` (${pct}%)`;
+      const pct = totals.value > 0 ? ((topPos[1] / totals.value) * 100).toFixed(1) : "0.0";
+      document.getElementById("pf-sum-top").textContent = topPos[0];
+      document.getElementById("pf-sum-top-val").textContent = fmtBig(topPos[1], "USD") + ` (${pct}%)`;
     }
     document.getElementById("pf-sum-count").textContent = positions.length;
     document.getElementById("pf-summary-grid").classList.remove("hidden");
   }
 
   // Renderizar gráfico de distribución por sector si ECharts está listo
-  renderPortfolioSectorChart(positions, totals);
+  renderPortfolioSectorChart(positions, totals, warnings);
 
   const tbody = document.querySelector("#pf-table tbody");
   tbody.innerHTML = positions.map(p => {
@@ -86,10 +92,10 @@ function renderPortfolio({ positions, totals }) {
     return `<tr${p.overConcentrated ? ' style="background:rgba(239,68,68,0.03)"' : ''}>
       <td class="sym" data-symbol="${escHtml(p.symbol)}" style="cursor:pointer;">${escHtml(p.symbol)}</td>
       <td>${escHtml(p.date)}</td>
-      <td class="num">${fmtNum(p.price, 2)}</td>
-      <td class="num">${p.priceNow != null ? fmtNum(p.priceNow, 2) : "—"}</td>
-      <td class="num">${fmtNum(p.shares, p.shares % 1 ? 2 : 0)}</td>
-      <td class="num">${p.value != null ? fmtBig(p.value, "USD") : "—"}</td>
+      <td class="num">${fmtPrice(p.price, p.currency)}</td>
+      <td class="num">${p.priceNow != null ? fmtPrice(p.priceNow, p.currency) : "—"}</td>
+      <td class="num" title="${p.splitFactor > 1 ? `Cantidad original: ${p.shares} · ajuste por split ${p.splitFactor}x` : ''}">${fmtNum(p.adjustedShares ?? p.shares, (p.adjustedShares ?? p.shares) % 1 ? 2 : 0)}</td>
+      <td class="num">${p.value != null ? `${fmtBig(p.value, "USD")}${p.dividends > 0 ? `<div class="muted" style="font-size:10px">+ ${fmtBig(p.dividends, "USD")} dividendos</div>` : ''}` : "—"}</td>
       ${pctCell}
       <td class="num ${pctClass(p.return)}"><b>${fmtPct(p.return, 1, true)}</b></td>
       <td class="num ${pctClass(p.spyReturn)}">${fmtPct(p.spyReturn, 1, true)}</td>
@@ -102,8 +108,8 @@ function renderPortfolio({ positions, totals }) {
   const tfoot = document.querySelector("#pf-table tfoot");
   tfoot.innerHTML = totals ? `
     <tr class="pf-totals">
-      <td colspan="5"><b>Total</b> · invertido ${fmtBig(totals.invested, "USD")}</td>
-      <td class="num"><b>${fmtBig(totals.value, "USD")}</b></td>
+      <td colspan="5"><b>Total</b> · invertido ${fmtBig(totals.invested, "USD")}${totals.dividends > 0 ? ` · dividendos ${fmtBig(totals.dividends, "USD")}` : ''}</td>
+      <td class="num"><b>${fmtBig(totals.totalValue ?? totals.value, "USD")}</b></td>
       <td></td>
       <td class="num ${pctClass(totals.return)}"><b>${fmtPct(totals.return, 1, true)}</b></td>
       <td class="num ${pctClass(totals.spyReturn)}">${fmtPct(totals.spyReturn, 1, true)}</td>
@@ -113,7 +119,7 @@ function renderPortfolio({ positions, totals }) {
   document.getElementById("pf-table").classList.remove("hidden");
 }
 
-function renderPortfolioSectorChart(positions, totals) {
+function renderPortfolioSectorChart(positions, totals, warnings = []) {
   const chartEl = document.getElementById("pf-sector-chart");
   const cardEl = document.getElementById("pf-sector-card");
   if (!chartEl || !cardEl || !positions.length) return;
@@ -131,13 +137,19 @@ function renderPortfolioSectorChart(positions, totals) {
     .sort((a, b) => b.value - a.value);
 
   // Alertas de concentración > 25%
-  const overConc = positions.filter(p => p.overConcentrated);
+  const overConc = [...new Map(
+    positions.filter(p => p.overConcentrated).map(p => [p.symbol, p])
+  ).values()];
   const alertDiv = document.getElementById("pf-concentration-alert");
   if (alertDiv) {
+    const messages = warnings.map(w => `<div>⚠️ ${escHtml(w)}</div>`);
     if (overConc.length > 0) {
-      alertDiv.innerHTML = `⚠️ <b>Concentración alta:</b> ${overConc.map(p =>
+      messages.push(`<div>⚠️ <b>Concentración alta:</b> ${overConc.map(p =>
         `<span style="font-weight:700; color:var(--gold)">${escHtml(p.symbol)} (${p.pctOfPortfolio?.toFixed(1)}%)</span>`
-      ).join(", ")} supera el 25% del portafolio. Considera diversificar.`;
+      ).join(", ")} supera el 25% del portafolio. Considera diversificar.</div>`);
+    }
+    if (messages.length) {
+      alertDiv.innerHTML = messages.join("");
       alertDiv.classList.remove("hidden");
     } else {
       alertDiv.classList.add("hidden");
@@ -204,6 +216,7 @@ document.getElementById("pf-form").addEventListener("submit", async e => {
     date: document.getElementById("pf-date").value,
     price: parseFloat(document.getElementById("pf-price").value),
     shares: parseFloat(document.getElementById("pf-shares").value),
+    currency: document.getElementById("pf-currency").value,
     note: document.getElementById("pf-note").value,
   };
   if (!body.symbol || !body.date || !isFinite(body.price) || !isFinite(body.shares)) return;
@@ -223,6 +236,12 @@ document.getElementById("pf-form").addEventListener("submit", async e => {
 
 document.getElementById("pf-refresh").addEventListener("click", () => loadPortfolio(true));
 
+document.getElementById("pf-symbol").addEventListener("input", e => {
+  if (e.target.value.trim().toUpperCase().endsWith(".SN")) {
+    document.getElementById("pf-currency").value = "CLP";
+  }
+});
+
 /* Exportar Portafolio a CSV */
 document.getElementById("pf-csv").addEventListener("click", async () => {
   try {
@@ -230,10 +249,10 @@ document.getElementById("pf-csv").addEventListener("click", async () => {
     const { positions } = await r.json();
     if (!positions || !positions.length) return toast("No hay posiciones para exportar");
     const esc = s => `"${String(s ?? "").replace(/"/g, '""')}"`;
-    const headers = ["Símbolo", "Fecha", "Precio Compra", "Precio Actual", "Cantidad", "Valor Total", "Retorno %", "Retorno S&P 500 %", "Alfa %", "Nota"];
+    const headers = ["Símbolo", "Fecha", "Moneda", "Precio Compra", "Precio Actual", "Cantidad Original", "Cantidad Ajustada", "Valor USD", "Dividendos USD", "Valor Total USD", "Retorno Total %", "Retorno S&P 500 %", "Alfa %", "Nota"];
     const rows = positions.map(p => [
-      esc(p.symbol), esc(p.date), esc(p.price), esc(p.priceNow), esc(p.shares),
-      esc(p.value), esc(p.return), esc(p.spyReturn), esc(p.alpha), esc(p.note)
+      esc(p.symbol), esc(p.date), esc(p.currency), esc(p.price), esc(p.priceNow), esc(p.shares), esc(p.adjustedShares),
+      esc(p.value), esc(p.dividends), esc(p.totalValue), esc(p.return), esc(p.spyReturn), esc(p.alpha), esc(p.note)
     ]);
     const csvContent = [headers.map(esc).join(";"), ...rows.map(r => r.join(";"))].join("\n");
     const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8" });

@@ -1,8 +1,8 @@
 /* Carga del análisis de un símbolo con manejo de carga/error. */
 
-import { $ } from "./dom.js?v=80";
-import { state } from "./state.js?v=80";
-import { renderAnalysis } from "./analysis.js?v=80";
+import { $ } from "./dom.js?v=90";
+import { state } from "./state.js?v=90";
+import { renderAnalysis } from "./analysis.js?v=90";
 
 const LOADING_MSGS = [
   "Descargando fundamentales…",
@@ -64,9 +64,18 @@ export async function loadSymbol(symbol) {
     if (token !== _loadToken) return;
     const retryBtn = $("error-box");
     if (retryBtn) {
-      retryBtn.innerHTML = `
-        <span style="margin-right:8px">⚠ ${e.message || "No se pudo cargar el símbolo."}</span>
-        <button class="tg-btn active" style="cursor:pointer" onclick="location.hash = '#/analisis/${encodeURIComponent(symbol)}'">Reintentar</button>`;
+      retryBtn.replaceChildren();
+      const message = document.createElement("span");
+      message.style.marginRight = "8px";
+      message.textContent = `⚠ ${e.message || "No se pudo cargar el símbolo."}`;
+      const button = document.createElement("button");
+      button.className = "tg-btn active";
+      button.style.cursor = "pointer";
+      button.textContent = "Reintentar";
+      button.addEventListener("click", () => {
+        location.hash = `#/analisis/${encodeURIComponent(symbol)}`;
+      });
+      retryBtn.append(message, button);
       retryBtn.classList.remove("hidden");
     }
   } finally {
@@ -74,4 +83,3 @@ export async function loadSymbol(symbol) {
     $("loading").classList.add("hidden");
   }
 }
-

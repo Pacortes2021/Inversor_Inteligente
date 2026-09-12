@@ -5,10 +5,9 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pandas as pd
-import yfinance as yf
-
 from .data import TTL_SCREENER, bond_yield_10y, cache_get, cache_set, jclean, price_history
 from .screener import UNIVERSE_US
+from .yfinance_wrapper import safe_download, safe_history, safe_info, safe_ticker
 
 
 def _calc_rsi(closes, period=14):
@@ -38,8 +37,8 @@ def get_indices():
     bond = bond_yield_10y()
 
     try:
-        df = yf.download(list(tickers.keys()), period="3mo", interval="1d",
-                         progress=False, auto_adjust=True)["Close"]
+        df = safe_download(list(tickers.keys()), period="3mo", interval="1d",
+                           progress=False, auto_adjust=True)["Close"]
         out = []
         for sym, meta in tickers.items():
             if sym not in df.columns:
@@ -83,9 +82,9 @@ def get_oversold():
 
     def _scan(sym):
         try:
-            t = yf.Ticker(sym)
+            t = safe_ticker(sym)
             try:
-                h = t.history(period="3mo", interval="1d", auto_adjust=True)
+                h = safe_history(t, period="3mo", interval="1d", auto_adjust=True)
                 if h is None or h.empty:
                     h = None
             except Exception:
@@ -103,7 +102,7 @@ def get_oversold():
             chg = round((price / prev - 1) * 100, 2)
             info = {}
             try:
-                info = t.info or {}
+                info = safe_info(t)
             except Exception:
                 pass
             return {
@@ -137,8 +136,8 @@ def get_movers():
         return cached
 
     try:
-        df = yf.download(UNIVERSE_US, period="5d", interval="1d",
-                         progress=False, auto_adjust=True)["Close"]
+        df = safe_download(UNIVERSE_US, period="5d", interval="1d",
+                           progress=False, auto_adjust=True)["Close"]
         results = []
         for sym in UNIVERSE_US:
             if sym not in df.columns:

@@ -1,6 +1,8 @@
 """El Inversor Inteligente — servidor FastAPI (API + frontend estático)."""
 
 import os
+import hmac
+import ipaddress
 from pathlib import Path
 
 # Cargar variables de entorno desde .env
@@ -16,7 +18,8 @@ import re
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 
-from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi import FastAPI, HTTPException, Depends, Header, Request
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator, Field
 
@@ -24,18 +27,27 @@ from pydantic import BaseModel, field_validator, Field
 from . import notes as NT
 from . import portfolio as PF
 from . import watchlist as WL
-from .data import atomic_write_json, clean_expired_cache
+from .data import clean_expired_cache, transactional_write_json
 from .market import get_indices, get_movers, get_oversold
 from .screener import run_deep_screener, run_screener
 from .stock import build_payload
 from .config import API_KEY, CACHE_VERSION
+from .yfinance_wrapper import safe_download, safe_search
 
 
 # ─── Auth simple para endpoints mutantes ───
 
 
-def verify_api_key(x_api_key: str = Header(default=None, alias="X-API-Key")):
-    if x_api_key != API_KEY:
+def verify_api_key(request: Request, x_api_key: str = Header(default=None, alias="X-API-Key")):
+    client_host = request.client.host if request.client else ""
+    try:
+        if ipaddress.ip_address(client_host).is_loopback:
+            return True
+    except ValueError:
+        pass
+    if not API_KEY:
+        raise HTTPException(503, "Configura INVERSOR_API_KEY para modificar datos desde la red local")
+    if not x_api_key or not hmac.compare_digest(x_api_key, API_KEY):
         raise HTTPException(401, "API key inválida o faltante")
     return True
 
@@ -52,6 +64,16 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="El Inversor Inteligente", lifespan=lifespan)
 
 FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
+APP_BUILD = "2026.09.11.3"
+
+
+@app.get("/server-ready.js")
+def server_ready_probe():
+    """Permite que index.html detecte un backend local sin depender de CORS."""
+    return Response(
+                    f'window.__INVERSOR_SERVER_READY__=true;window.__INVERSOR_BUILD__="{APP_BUILD}";',
+                    media_type="application/javascript",
+                    headers={"Cache-Control": "no-store"})
 
 
 @app.middleware("http")
@@ -90,8 +112,7 @@ def api_stock(symbol: str, refresh: bool = False):
 @app.get("/api/search")
 def api_search(q: str):
     try:
-        import yfinance as yf
-        res = yf.Search(q, max_results=8)
+        res = safe_search(q, max_results=8)
         out = []
         for it in (res.quotes or []):
             if it.get("symbol") and it.get("quoteType") in ("EQUITY", "ETF"):
@@ -119,8 +140,6 @@ def api_screener_deep(universe: str = "us", refresh: bool = False):
 def api_quotes(symbols: str):
     """Cotizaciones en lote con sparkline de 30 días (sidebar de favoritos)."""
     import pandas as pd
-    import yfinance as yf
-
     from .data import cache_get, cache_set
 
     syms = []
@@ -140,8 +159,8 @@ def api_quotes(symbols: str):
         return cached
 
     try:
-        df = yf.download(syms, period="1mo", interval="1d", progress=False,
-                         auto_adjust=True)["Close"]
+        df = safe_download(syms, period="1mo", interval="1d", progress=False,
+                           auto_adjust=True)["Close"]
         if isinstance(df, pd.Series):
             df = df.to_frame(name=syms[0])
         out = []
@@ -210,6 +229,7 @@ class Position(BaseModel):
     date: str
     price: float = Field(..., gt=0, le=1_000_000_000)
     shares: float = Field(..., gt=0, le=1_000_000_000)
+    currency: str = "USD"
     note: str = ""
 
     @field_validator("symbol")
@@ -239,6 +259,14 @@ class Position(BaseModel):
     def round_values(cls, v: float) -> float:
         return round(v, 4)
 
+    @field_validator("currency")
+    @classmethod
+    def check_currency(cls, v: str) -> str:
+        currency = (v or "USD").strip().upper()
+        if currency not in {"USD", "CLP"}:
+            raise ValueError("Moneda no compatible; usa USD o CLP")
+        return currency
+
     @field_validator("note")
     @classmethod
     def check_note(cls, v: str) -> str:
@@ -250,9 +278,14 @@ def api_portfolio():
     return PF.get_portfolio()
 
 
+@app.get("/api/portfolio/fit/{symbol}")
+def api_portfolio_fit(symbol: str):
+    return PF.get_portfolio_fit(_clean_symbol(symbol))
+
+
 @app.post("/api/portfolio", dependencies=[Depends(verify_api_key)])
 def api_portfolio_add(p: Position):
-    PF.add_position(p.symbol, p.date, p.price, p.shares, p.note)
+    PF.add_position(p.symbol, p.date, p.price, p.shares, p.note, p.currency)
     return {"ok": True}
 
 
@@ -263,11 +296,22 @@ def api_portfolio_remove(pid: int):
 
 
 class Note(BaseModel):
+    business: str = ""
     thesis: str = ""
+    growthDrivers: str = ""
     risks: str = ""
+    buySignals: str = ""
+    invalidation: str = ""
+    maxWeightPct: float | None = None
     moats: list[str] = []
+    moatRating: str = ""
+    organicGrowthRating: str = ""
+    cyclicalityRating: str = ""
+    concentrationRating: str = ""
+    portfolioFitRating: str = ""
 
-    @field_validator("thesis", "risks")
+    @field_validator("business", "thesis", "growthDrivers", "risks",
+                     "buySignals", "invalidation")
     @classmethod
     def check_text(cls, v: str) -> str:
         return (v or "").strip()[:2000]
@@ -278,6 +322,17 @@ class Note(BaseModel):
         valid = {"marca", "costos", "red", "switching", "intangibles", "escala"}
         return [m for m in (v or []) if m in valid]
 
+    @field_validator("maxWeightPct")
+    @classmethod
+    def check_weight(cls, v: float | None) -> float | None:
+        return min(max(float(v), 0.0), 100.0) if v is not None else None
+
+    @field_validator("moatRating", "organicGrowthRating", "cyclicalityRating",
+                     "concentrationRating", "portfolioFitRating")
+    @classmethod
+    def check_rating(cls, v: str) -> str:
+        return v if v in {"strong", "positive", "neutral", "weak", "negative", ""} else ""
+
 
 @app.get("/api/notes/{symbol}")
 def api_notes_get(symbol: str):
@@ -286,7 +341,16 @@ def api_notes_get(symbol: str):
 
 @app.post("/api/notes/{symbol}", dependencies=[Depends(verify_api_key)])
 def api_notes_set(symbol: str, n: Note):
-    return NT.set_note(_clean_symbol(symbol), n.thesis, n.risks, n.moats)
+    return NT.set_note(
+        _clean_symbol(symbol), n.thesis, n.risks, n.moats,
+        business=n.business, growth_drivers=n.growthDrivers,
+        buy_signals=n.buySignals, invalidation=n.invalidation,
+        max_weight_pct=n.maxWeightPct,
+        moat_rating=n.moatRating, organic_growth_rating=n.organicGrowthRating,
+        cyclicality_rating=n.cyclicalityRating,
+        concentration_rating=n.concentrationRating,
+        portfolio_fit_rating=n.portfolioFitRating,
+    )
 
 
 @app.get("/api/backup")
@@ -353,6 +417,9 @@ class Backup(BaseModel):
                     "date": date,
                     "price": price,
                     "shares": shares,
+                    "currency": (str(item.get("currency") or ("CLP" if sym.endswith(".SN") else "USD")).upper()
+                                 if str(item.get("currency") or "").upper() in {"USD", "CLP"}
+                                 else ("CLP" if sym.endswith(".SN") else "USD")),
                     "note": str(item.get("note", ""))[:300],
                 })
         return out
@@ -368,15 +435,31 @@ def api_restore(b: Backup):
             continue
         if not isinstance(v, dict):
             continue
+        try:
+            restored_weight = float(v.get("maxWeightPct")) if v.get("maxWeightPct") not in (None, "") else None
+            restored_weight = min(max(restored_weight, 0.0), 100.0) if restored_weight is not None else None
+        except (TypeError, ValueError):
+            restored_weight = None
         notes[k] = {
+            "business": str(v.get("business", ""))[:2000],
             "thesis": str(v.get("thesis", ""))[:2000],
+            "growthDrivers": str(v.get("growthDrivers", ""))[:2000],
             "risks": str(v.get("risks", ""))[:2000],
+            "buySignals": str(v.get("buySignals", ""))[:2000],
+            "invalidation": str(v.get("invalidation", ""))[:2000],
+            "maxWeightPct": restored_weight,
             "moats": [str(m)[:30] for m in v.get("moats", []) if isinstance(m, (str, int))][:10],
+            "moatRating": str(v.get("moatRating", ""))[:20],
+            "organicGrowthRating": str(v.get("organicGrowthRating", ""))[:20],
+            "cyclicalityRating": str(v.get("cyclicalityRating", ""))[:20],
+            "concentrationRating": str(v.get("concentrationRating", ""))[:20],
+            "portfolioFitRating": str(v.get("portfolioFitRating", ""))[:20],
         }
-    # Escritura transaccional: validar ambos guardados antes de escribir notas
-    WL._save(b.watchlist)
-    PF._save(b.portfolio)
-    atomic_write_json(NT.NOTES_FILE, notes)
+    transactional_write_json({
+        WL.WL_FILE: b.watchlist,
+        PF.PF_FILE: b.portfolio,
+        NT.NOTES_FILE: notes,
+    })
     return {"ok": True}
 
 

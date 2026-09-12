@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .data import atomic_write_json, bond_yield_10y, load_json, price_history
 from .screener import scan_one_deep
+from .yfinance_wrapper import safe_download
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
@@ -30,14 +31,13 @@ def get_watchlist():
     if not items:
         return {"items": []}
     
-    import yfinance as yf
     import pandas as pd
     bond10y = bond_yield_10y()
     
     symbols = [it["symbol"] for it in items]
     df = None
     try:
-        df = yf.download(symbols, period="1y", group_by="ticker", auto_adjust=True, progress=False)
+        df = safe_download(symbols, period="1y", group_by="ticker", auto_adjust=True, progress=False)
     except Exception:
         df = None
 

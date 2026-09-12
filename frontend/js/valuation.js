@@ -1,11 +1,11 @@
 /* Valoración (DCF interactivo, modelos, sensibilidad), estimaciones,
    insiders, estados financieros y paneles de valoración standalone. */
 
-import { $, toast } from "./dom.js?v=80";
-import { state } from "./state.js?v=80";
-import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, fmtDate, escHtml, pctClass } from "./format.js?v=80";
-import { termify } from "./glossary.js?v=80";
-import { charts } from "./charts.js?v=80";
+import { $, toast } from "./dom.js?v=90";
+import { state } from "./state.js?v=90";
+import { fmtPrice, fmtPct, fmtBig, fmtNum, fmtRatio, fmtDate, escHtml, pctClass } from "./format.js?v=90";
+import { termify } from "./glossary.js?v=90";
+import { charts } from "./charts.js?v=90";
 
 /* ------------------------------------------- valoración + DCF live */
 export function dcfJs(inp, growth, discount, terminal) {
@@ -105,19 +105,23 @@ export function renderValuationCard(d) {
         ? `<span class="up">pesimista vs el ${fmtPct(est, 1)} estimado — las expectativas son bajas.</span>`
         : `razonable frente al ${fmtPct(est, 1)} estimado.`;
     $("implied-growth").innerHTML =
-      `<b>Reverse DCF:</b> para justificar el precio actual, el FCF debe crecer ${label} durante la próxima década (descuento 10%). Eso es ${judge}`;
+      `<b>Reverse DCF:</b> para justificar el precio actual, el FCF debe crecer ${label} durante la próxima década ` +
+      `(descuento ${fmtPct(inp.discount * 100, 1)}). Eso es ${judge}`;
   }
 
   const v = d.valuation;
   const yc = $("yield-compare");
   if (yc) {
-    if (v.earningsYield != null && v.bond10y != null) {
-      const diff = v.earningsYield - v.bond10y;
+    const etf = v.etfComparison;
+    if (v.impliedReturnPct != null && etf?.hurdlePct != null) {
+      const diff = etf.excessReturnPct;
       yc.innerHTML =
-        `Rendimiento de utilidades (earnings yield): <b>${fmtPct(v.earningsYield, 2)}</b> vs bono EE.UU. 10 años: <b>${fmtPct(v.bond10y, 2)}</b> — ` +
-        (diff > 0
-          ? `la acción rinde <b class="up">${fmtPct(diff, 2)}</b> más que el bono.`
-          : `la acción rinde <b class="down">${fmtPct(Math.abs(diff), 2)}</b> menos que el bono (exige crecimiento futuro).`);
+        `Rentabilidad implícita del escenario base: <b>${fmtPct(v.impliedReturnPct, 1)}</b>. ` +
+        `Umbral comparativo ${escHtml(etf.benchmark)}: <b>${fmtPct(etf.hurdlePct, 1)}</b> ` +
+        `<span class="muted">(${escHtml(etf.method)}; es una referencia, no un pronóstico del ETF)</span>. ` +
+        (diff >= 0
+          ? `Prima implícita: <b class="up">${fmtPct(diff, 1, true)}</b>.`
+          : `Déficit implícito: <b class="down">${fmtPct(diff, 1, true)}</b>.`);
       yc.classList.remove("hidden");
     } else {
       yc.classList.add("hidden");
@@ -135,18 +139,19 @@ export function renderModels(d, dcfLive) {
     dcfModel.fair = dcfLive;
     dcfModel.upside = (dcfLive / price - 1) * 100;
   }
-  let consensus = null, mos = null;
-  if (models.length) {
-    const w = models.reduce((s, m) => s + m.weight, 0);
-    consensus = models.reduce((s, m) => s + m.fair * m.weight, 0) / w;
-    mos = (consensus / price - 1) * 100;
-  }
+  const primaryId = d.valuation?.primaryModel;
+  const primary = models.find(m => m.id === primaryId);
+  const baseValue = primary?.fair ?? null;
+  const mos = baseValue != null && price > 0 ? (baseValue / price - 1) * 100 : null;
+  const requiredMos = d.valuation?.requiredMarginPct ?? 25;
+  const buyPrice = baseValue != null ? baseValue / (1 + requiredMos / 100) : null;
+  const buyUpside = buyPrice != null && price > 0 ? buyPrice / price * 100 - 100 : null;
 
   const termKey = { dcf: "dcf", reversion: "reversion", graham: "graham", graham_intrinsic: "graham", epv: "epv", peter_lynch: "peg", ddm: "ddm" };
 
   const rows = models.map(m => `
     <tr>
-      <td>${termify(m.name, termKey[m.id])}</td>
+      <td>${termify(m.name, termKey[m.id])} <span class="badge ${m.id === primaryId ? "badge-base" : "badge-cons"}">${m.id === primaryId ? "principal" : "contraste"}</span></td>
       <td class="fair">${fmtPrice(m.fair, cur)}</td>
       <td class="upside ${pctClass(m.upside)}">${fmtPct(m.upside, 1, true)}</td>
     </tr>`).join("");
@@ -156,19 +161,21 @@ export function renderModels(d, dcfLive) {
       <tbody>
         ${rows}
         <tr class="consensus-row">
-          <td>${termify("Valor intrínseco (consenso ponderado)", "consenso")}</td>
-          <td class="fair">${fmtPrice(consensus, cur)}</td>
+          <td><b>Valor base</b> <span class="muted" style="font-weight:400">(modelo principal)</span></td>
+          <td class="fair">${fmtPrice(baseValue, cur)}</td>
           <td class="upside ${pctClass(mos)}">${fmtPct(mos, 1, true)}</td>
         </tr>
         <tr class="buy-price-row">
-          <td>${termify("Precio de compra aceptable", "buyprice")} <span class="muted" style="font-weight:400">(MoS 25%)</span></td>
-          <td class="fair">${fmtPrice(consensus / 1.25, cur)}</td>
-          <td class="upside ${pctClass(consensus / 1.25 / price * 100 - 100)}">${fmtPct(consensus / 1.25 / price * 100 - 100, 1, true)}</td>
+          <td>${termify("Precio de compra aceptable", "buyprice")} <span class="muted" style="font-weight:400">(margen exigido ${fmtPct(requiredMos, 0)})</span></td>
+          <td class="fair">${fmtPrice(buyPrice, cur)}</td>
+          <td class="upside ${pctClass(buyUpside)}">${fmtPct(buyUpside, 1, true)}</td>
         </tr>
         <tr><td class="muted">Precio actual</td><td class="fair muted">${fmtPrice(price, cur)}</td><td></td></tr>
       </tbody>
     </table>
-    ${price > 0 && price <= consensus / 1.25 ? `<p class="u-note-box" style="margin-top:8px">✔ El precio actual está <b class="up">en zona de compra</b> (≤ precio de compra aceptable con 25% de margen).</p>` : ""}
+    ${price > 0 && buyPrice != null && price <= buyPrice ? `<p class="u-note-box" style="margin-top:8px">El precio supera el filtro cuantitativo de margen, pero la tesis, el foso y los riesgos deben validarse antes de decidir.</p>` : ""}
+    ${(d.valuation?.applicabilityWarnings || []).map(w => `<p class="u-note-box" style="margin-top:8px">${escHtml(w)}</p>`).join("")}
+    ${d.valuation?.uncertainty ? `<p class="muted" style="font-size:12.5px;margin-top:8px"><b>Incertidumbre ${escHtml(d.valuation.uncertainty.label.toLowerCase())}</b> (${d.valuation.uncertainty.score}/100): ${(d.valuation.uncertainty.reasons || []).map(escHtml).join("; ") || "sin alertas cuantitativas relevantes"}.</p>` : ""}
     ` : `<p class="muted">No hay datos suficientes para los modelos de valoración (EPS o FCF negativos).</p>`;
 
   if (mos != null) {
@@ -176,10 +183,10 @@ export function renderModels(d, dcfLive) {
 
     // También actualizamos los elementos de Summary
     const consensusEl = $("fv-consensus-val");
-    if (consensusEl) consensusEl.textContent = fmtPrice(consensus, cur);
+    if (consensusEl) consensusEl.textContent = fmtPrice(baseValue, cur);
     const mosEl = $("fv-mos-pct");
     if (mosEl) {
-      mosEl.innerHTML = `Margin of Safety: <b class="${mos >= 0 ? "up" : "down"}">${fmtPct(mos, 1, true)}</b>`;
+      mosEl.innerHTML = `Margen actual: <b class="${mos >= 0 ? "up" : "down"}">${fmtPct(mos, 1, true)}</b> · exigido ${fmtPct(requiredMos, 0)}`;
     }
   }
 }
@@ -207,21 +214,25 @@ export function renderScenarios(d, g, r, t) {
   if (r == null) r = inp.discount;
   if (t == null) t = inp.terminal;
 
+  const level = d.valuation?.uncertainty?.level || "medium";
+  const growthStep = { low: .025, medium: .04, high: .06, very_high: .08 }[level];
+  const riskStep = { low: .015, medium: .025, high: .035, very_high: .045 }[level];
   const scenarios = [
-    { key: "low",  label: "Conservador", growth: Math.max(-0.05, g - 0.05) },
-    { key: "med",  label: "Base",         growth: g },
-    { key: "high", label: "Optimista",    growth: Math.min(0.40, g + 0.05) },
+    { key: "low", label: "Pesimista", growth: Math.max(-.10, g - growthStep), discount: Math.min(.25, r + riskStep), terminal: Math.max(.005, t - .005), probability: 25 },
+    { key: "med", label: "Base", growth: g, discount: r, terminal: t, probability: 50 },
+    { key: "high", label: "Optimista", growth: Math.min(.30, g + growthStep * .65), discount: Math.max(t + .02, r - riskStep * .5), terminal: Math.min(.035, t + .005), probability: 25 },
   ];
   const cards = scenarios.map(s => {
-    const fv = dcfJs(inp, s.growth, r, t);
+    const fv = dcfJs(inp, s.growth, s.discount, s.terminal);
     if (fv == null) return null;
     const up = (fv / price - 1) * 100;
     const badge = s.key === "low" ? "badge-cons" : s.key === "med" ? "badge-base" : "badge-opt";
     return `
       <div class="scenario-card ${s.key === "med" ? "active" : ""}">
-        <span class="badge ${badge}">${s.label} (${fmtPct(s.growth * 100, 1)})</span>
+        <span class="badge ${badge}">${s.label} · ${s.probability}%</span>
         <div class="${s.key === "med" ? "scenario-price-xl" : "scenario-price-lg"}">${fmtPrice(fv, cur)}</div>
         <div class="scenario-ret"><span class="${pctClass(up)}">${fmtPct(up, 1, true)}</span> vs precio</div>
+        <div class="muted" style="font-size:11.5px">crec. ${fmtPct(s.growth * 100, 1)} · tasa ${fmtPct(s.discount * 100, 1)} · terminal ${fmtPct(s.terminal * 100, 1)}</div>
       </div>`;
   }).filter(Boolean).join("");
   wrap.innerHTML = cards;
@@ -628,7 +639,7 @@ export function renderGrowthEstimatesGrid(grid) {
 
   const curr = grid.currency || state.data?.profile?.currency || "USD";
   if (subtextEl) {
-    subtextEl.textContent = `Currency in ${curr}. All numbers in millions.`;
+    subtextEl.textContent = `Moneda contable: ${curr}. Importes corporativos en millones; EPS y dividendos por acción.`;
   }
 
   const src = grid.epsSources;
@@ -638,8 +649,14 @@ export function renderGrowthEstimatesGrid(grid) {
     const mrq = grid.mostRecentQuarter ? fmtDate(grid.mostRecentQuarter) : null;
     const dateBadge = `<span class="badge badge-base" style="font-size:11px; margin-left:8px; font-weight:600; padding:2px 8px; border-radius:4px;" title="Fecha de captura y actualización de previsiones post-reporte de ganancias">📅 Previsiones: ${lastUp}${mrq ? ` | Último Reporte: ${mrq}` : ''}</span>`;
 
-    const srcLabel = src?.source || (src?.fmp ? "FMP (Financial Modeling Prep)" : "Yahoo Finance Official Consensus");
-    warnEl.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;"><span>✅ Proyecciones 100% directas de <b>${escHtml(srcLabel)}</b> — sin estimaciones inventadas.</span> ${dateBadge}</div>`;
+    const srcLabel = src?.source || "Fuente de proyección no identificada";
+    const icon = src?.kind === "consensus" ? "✅" : "ℹ️";
+    const detail = src?.kind === "model"
+      ? "Estas cifras son escenarios de la app y no consenso externo."
+      : src?.kind === "mixed"
+        ? "Los años sin cobertura externa se completan con supuestos de la app."
+        : "Las cifras proyectadas tienen cobertura directa del proveedor.";
+    warnEl.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;"><span>${icon} <b>${escHtml(srcLabel)}</b>. ${escHtml(detail)}</span> ${dateBadge}</div>`;
     warnEl.style.display = "block";
   }
 
