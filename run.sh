@@ -1,7 +1,20 @@
 #!/bin/bash
 # Lanza El Inversor Inteligente.
-cd "$(dirname "$0")"
-source .venv/bin/activate 2>/dev/null || true
+set -e
+APP_ROOT="$(cd "$(dirname "$0")" && pwd)"
+cd "$APP_ROOT"
+
+PYTHON_BIN="$APP_ROOT/.venv/bin/python"
+if [ ! -x "$PYTHON_BIN" ] && [ -x "$APP_ROOT/../../../.venv/bin/python" ]; then
+  # Compatibilidad con el worktree aislado usado por Codex.
+  PYTHON_BIN="$APP_ROOT/../../../.venv/bin/python"
+fi
+if [ ! -x "$PYTHON_BIN" ]; then
+  echo "No encontré el entorno Python. Ejecuta primero:"
+  echo "  python3 -m venv .venv"
+  echo "  .venv/bin/pip install -r requirements.txt"
+  exit 1
+fi
 
 HOST="127.0.0.1"
 
@@ -20,4 +33,4 @@ else
   echo "  (Para habilitar acceso en tu red local usa: ./run.sh --lan)"
 fi
 
-exec uvicorn backend.main:app --host "$HOST" --port 8756
+exec "$PYTHON_BIN" -m uvicorn backend.main:app --host "$HOST" --port 8756

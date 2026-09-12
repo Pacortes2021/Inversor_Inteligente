@@ -19,6 +19,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 
 from fastapi import FastAPI, HTTPException, Depends, Header, Request
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator, Field
 
@@ -63,6 +64,16 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="El Inversor Inteligente", lifespan=lifespan)
 
 FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
+APP_BUILD = "2026.09.11.1"
+
+
+@app.get("/server-ready.js")
+def server_ready_probe():
+    """Permite que index.html detecte un backend local sin depender de CORS."""
+    return Response(
+                    f'window.__INVERSOR_SERVER_READY__=true;window.__INVERSOR_BUILD__="{APP_BUILD}";',
+                    media_type="application/javascript",
+                    headers={"Cache-Control": "no-store"})
 
 
 @app.middleware("http")

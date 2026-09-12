@@ -1751,7 +1751,40 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script type="module" src="js/init.js?v=87"></script>
+<script>
+(() => {
+  const startFrontend = () => {
+    const script = document.createElement("script");
+    script.type = "module";
+    script.src = "js/init.js?v=88";
+    document.body.appendChild(script);
+  };
+  if (location.protocol !== "file:") {
+    startFrontend();
+    return;
+  }
+
+  const requestedHash = /^#\/[A-Za-z0-9._~%\/-]*$/.test(location.hash) ? location.hash : "#/inicio";
+  const appUrl = `http://127.0.0.1:8756/${requestedHash}`;
+  const expectedBuild = "2026.09.11.1";
+  const showLaunchHelp = () => {
+    const box = document.createElement("div");
+    box.style.cssText = "position:fixed;inset:0;z-index:99999;background:#f5f7fa;display:grid;place-items:center;padding:24px;font-family:system-ui;color:#172033";
+    box.innerHTML = `<div style="max-width:620px;background:white;border:1px solid #dbe3ec;border-radius:16px;padding:30px;box-shadow:0 18px 60px #17203322">
+      <h1 style="margin-top:0">La aplicación necesita su servidor local</h1>
+      <p>Abre <b>Abrir App.command</b> desde la carpeta del proyecto. Esa acción inicia o actualiza el servidor y abre la dirección correcta.</p>
+      <p style="color:#667085">También puedes ejecutar <code>./run.sh</code> en Terminal y luego entrar a <code>http://127.0.0.1:8756</code>.</p>
+      <a href="${appUrl}" style="display:inline-block;margin-top:8px;padding:10px 16px;border-radius:8px;background:#079b83;color:white;text-decoration:none;font-weight:700">Reintentar conexión</a>
+    </div>`;
+    document.body.appendChild(box);
+  };
+  const probe = document.createElement("script");
+  probe.src = `http://127.0.0.1:8756/server-ready.js?t=${Date.now()}`;
+  probe.onload = () => window.__INVERSOR_BUILD__ === expectedBuild ? location.replace(appUrl) : showLaunchHelp();
+  probe.onerror = showLaunchHelp;
+  document.head.appendChild(probe);
+})();
+</script>
 
 </body>
 </html>
