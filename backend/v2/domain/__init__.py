@@ -2,6 +2,7 @@
 
 from .assessments import Assessment, AssessmentResult, Coverage
 from .errors import ApiError, ContractViolation, ErrorEnvelope, ErrorCode
+from .documents import Document
 from .facts import Fact, validate_lineage
 from .identity import (
     DepositaryRelation,
@@ -24,6 +25,7 @@ __all__ = [
     "Coverage",
     "DatasetSnapshot",
     "DepositaryRelation",
+    "Document",
     "ErrorCode",
     "ErrorEnvelope",
     "Fact",

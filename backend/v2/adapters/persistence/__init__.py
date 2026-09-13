@@ -2,5 +2,7 @@
 
 from .connection import Database
 from .identity_repository import IdentityRepository
+from .fact_repository import FactRepository
+from .raw_store import RawStore
 
-__all__ = ["Database", "IdentityRepository"]
+__all__ = ["Database", "FactRepository", "IdentityRepository", "RawStore"]

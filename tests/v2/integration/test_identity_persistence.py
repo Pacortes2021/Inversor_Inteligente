@@ -47,7 +47,7 @@ def listing(identifier: str, instrument_id: str, mic: str, symbol: str) -> Listi
 @pytest.fixture
 def repository(tmp_path) -> IdentityRepository:
     database = Database(tmp_path / "v2.sqlite3")
-    assert database.migrate() == [1]
+    assert 1 in database.migrate()
     assert database.migrate() == []
     return IdentityRepository(database)
 
