@@ -18,10 +18,10 @@ Base: `origin/codex/rework-core` en `3575d9b2e42e139367b0c810d1654ee563da008e`. 
 | `.venv/bin/python -m pytest -q tests/test_*.py` | 84 aprobadas. Suite legada. |
 | `.venv/bin/python -m pytest -q tests/v2/characterization` | 2 aprobadas. Sólo caracterización; no aceptación de v2. |
 | `.venv/bin/python -m pytest -q tests/v2/acceptance` | 2 aprobadas. Catálogo/oráculos de M0. |
-| `.venv/bin/python -m pytest -q tests/v2/contract` | 29 aprobadas; incluye regresiones de revisión Astra y dos advertencias deprecadas de TestClient aguas arriba. |
-| `.venv/bin/python -m pytest -q` | 117 aprobadas; mismas dos advertencias. |
+| `.venv/bin/python -m pytest -q tests/v2/contract` | 32 aprobadas; incluye regresiones de dos rondas de revisión Astra y dos advertencias deprecadas de TestClient aguas arriba. |
+| `.venv/bin/python -m pytest -q` | 120 aprobadas; mismas dos advertencias. |
 | `npm --prefix web run build` | TypeScript y Vite aprobados; 15 módulos transformados. |
-| `uv sync --frozen --dev` en entorno temporal vacío y `pytest -q tests/v2` | Instalación reproducible; 33 aprobadas tras correcciones de revisión. |
+| `uv sync --frozen --dev` en entorno temporal vacío y `pytest -q tests/v2` | Instalación reproducible; 36 aprobadas tras correcciones de revisión. |
 | `python scripts/export_v2_schemas.py` seguido de diff | Generación determinista, sin divergencias. |
 
 Los tests normales no usan red ni proveedores. Los casos sintéticos no verifican datos de una empresa real y la suite histórica no prueba exactitud financiera integral.

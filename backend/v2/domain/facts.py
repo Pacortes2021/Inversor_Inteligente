@@ -282,7 +282,7 @@ class Fact(CanonicalModel):
     original_scale: int | None = Field(default=None, ge=1)
     period: FactPeriod
     context: FactContext
-    published_at: date | datetime | None
+    published_at: datetime | date | None
     first_seen_at: datetime
     retrieved_at: datetime
     timestamp_precision: TimestampPrecision
@@ -299,9 +299,19 @@ class Fact(CanonicalModel):
     def timestamps_are_aware(cls, value: datetime) -> datetime:
         return utc_datetime(value)
 
+    @field_validator("published_at", mode="before")
+    @classmethod
+    def preserve_publication_precision(cls, value: object) -> object:
+        if isinstance(value, str) and len(value) == 10:
+            try:
+                return date.fromisoformat(value)
+            except ValueError:
+                return value
+        return value
+
     @field_validator("published_at")
     @classmethod
-    def publication_timestamp_is_aware(cls, value: date | datetime | None) -> date | datetime | None:
+    def publication_timestamp_is_aware(cls, value: datetime | date | None) -> datetime | date | None:
         if isinstance(value, datetime):
             return utc_datetime(value)
         return value

@@ -45,15 +45,10 @@ CANONICAL_MODELS: dict[str, type[BaseModel]] = {
 def component_refs(value: Any, component_name: str) -> Any:
     """Keep each model's private $defs addressable inside OpenAPI components."""
 
+    if isinstance(value, str) and value.startswith("#/$defs/"):
+        return value.replace("#/$defs/", f"#/components/schemas/{component_name}/$defs/", 1)
     if isinstance(value, dict):
-        return {
-            key: (
-                item.replace("#/$defs/", f"#/components/schemas/{component_name}/$defs/")
-                if key == "$ref" and isinstance(item, str)
-                else component_refs(item, component_name)
-            )
-            for key, item in value.items()
-        }
+        return {key: component_refs(item, component_name) for key, item in value.items()}
     if isinstance(value, list):
         return [component_refs(item, component_name) for item in value]
     return value

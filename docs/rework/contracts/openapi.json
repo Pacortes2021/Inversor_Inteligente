@@ -1381,11 +1381,11 @@
           "publishedAt": {
             "anyOf": [
               {
-                "format": "date",
+                "format": "date-time",
                 "type": "string"
               },
               {
-                "format": "date-time",
+                "format": "date",
                 "type": "string"
               },
               {
@@ -1448,10 +1448,10 @@
               {
                 "discriminator": {
                   "mapping": {
-                    "fx": "#/$defs/FxTransformation",
-                    "normalization": "#/$defs/NormalizationTransformation",
-                    "scale": "#/$defs/ScaleTransformation",
-                    "split": "#/$defs/SplitTransformation"
+                    "fx": "#/components/schemas/fact-model/$defs/FxTransformation",
+                    "normalization": "#/components/schemas/fact-model/$defs/NormalizationTransformation",
+                    "scale": "#/components/schemas/fact-model/$defs/ScaleTransformation",
+                    "split": "#/components/schemas/fact-model/$defs/SplitTransformation"
                   },
                   "propertyName": "kind"
                 },

@@ -49,6 +49,19 @@ def test_date_precision_publication_does_not_invent_a_time() -> None:
     assert fact.published_at.__class__.__name__ == "date"
 
 
+@pytest.mark.parametrize(
+    "published_at",
+    ["2026-02-20T00:00:00Z", "2026-02-20T03:00:00+03:00"],
+)
+def test_second_precision_publication_preserves_midnight_and_offsets(published_at: str) -> None:
+    payload = fact_example()
+    payload["publishedAt"] = published_at
+    payload["timestampPrecision"] = "second"
+    fact = Fact.model_validate(payload)
+    assert fact.published_at.__class__.__name__ == "datetime"
+    assert fact.published_at.isoformat() == "2026-02-20T00:00:00+00:00"
+
+
 def test_locator_without_identifiable_source_is_not_evidence() -> None:
     payload = fact_example()
     payload["evidence"] = [
