@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Inversor Inteligente API v2",
-    "description": "Contract-only M0 skeleton. No financial engine is active.",
+    "description": "Verifiable local data core. No financial engine is active.",
     "version": "0.1.0"
   },
   "paths": {
@@ -23,10 +23,1029 @@
           }
         }
       }
+    },
+    "/api/v2/facts/{fact_id}": {
+      "get": {
+        "summary": "Get Fact",
+        "operationId": "get_fact_api_v2_facts__fact_id__get",
+        "parameters": [
+          {
+            "name": "fact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Fact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fact"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/documents/{document_id}": {
+      "get": {
+        "summary": "Get Document",
+        "operationId": "get_document_api_v2_documents__document_id__get",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/snapshots/{snapshot_id}": {
+      "get": {
+        "summary": "Get Snapshot",
+        "operationId": "get_snapshot_api_v2_snapshots__snapshot_id__get",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "Availability": {
+        "type": "string",
+        "enum": [
+          "available",
+          "missing",
+          "not_applicable",
+          "unsupported",
+          "blocked"
+        ],
+        "title": "Availability"
+      },
+      "CandidateDifference": {
+        "properties": {
+          "leftFactId": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Leftfactid"
+          },
+          "rightFactId": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Rightfactid"
+          },
+          "absolute": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Absolute"
+          },
+          "relative": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Relative"
+          },
+          "material": {
+            "type": "boolean",
+            "title": "Material"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "leftFactId",
+          "rightFactId",
+          "absolute",
+          "relative",
+          "material"
+        ],
+        "title": "CandidateDifference"
+      },
+      "DatasetSnapshot": {
+        "properties": {
+          "datasetSnapshotId": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Datasetsnapshotid"
+          },
+          "instrumentId": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Instrumentid"
+          },
+          "listingId": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Listingid"
+          },
+          "quoteCurrency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "title": "Quotecurrency"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Asof"
+          },
+          "factIds": {
+            "items": {
+              "type": "string",
+              "maxLength": 160,
+              "minLength": 1
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Factids"
+          },
+          "priceFactId": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Pricefactid"
+          },
+          "fxFactId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fxfactid"
+          },
+          "shareBasisId": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Sharebasisid"
+          },
+          "selectionPolicyVersion": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Selectionpolicyversion"
+          },
+          "periodPolicyVersion": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Periodpolicyversion"
+          },
+          "contentHash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Contenthash"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "datasetSnapshotId",
+          "instrumentId",
+          "listingId",
+          "quoteCurrency",
+          "asOf",
+          "factIds",
+          "priceFactId",
+          "fxFactId",
+          "shareBasisId",
+          "selectionPolicyVersion",
+          "periodPolicyVersion",
+          "contentHash"
+        ],
+        "title": "DatasetSnapshot"
+      },
+      "Document": {
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Documentid"
+          },
+          "provider": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Provider"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Sha256"
+          },
+          "relativePath": {
+            "type": "string",
+            "pattern": "^raw/[a-f0-9]{2}/[a-f0-9]{64}$",
+            "title": "Relativepath"
+          },
+          "sourceUrl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceurl"
+          },
+          "mediaType": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Mediatype"
+          },
+          "fetchedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Fetchedat"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Sizebytes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "documentId",
+          "provider",
+          "sha256",
+          "relativePath",
+          "sourceUrl",
+          "mediaType",
+          "fetchedAt",
+          "sizeBytes"
+        ],
+        "title": "Document"
+      },
+      "Evidence": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Provider"
+          },
+          "documentId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Documentid"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "locator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locator"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "provider",
+          "documentId",
+          "url",
+          "locator",
+          "sha256"
+        ],
+        "title": "Evidence"
+      },
+      "Fact": {
+        "properties": {
+          "factId": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Factid"
+          },
+          "issuerId": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Issuerid"
+          },
+          "instrumentId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instrumentid"
+          },
+          "listingId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listingid"
+          },
+          "concept": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Concept"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "unit": {
+            "$ref": "#/components/schemas/Unit"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Z]{3}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "scale": {
+            "type": "integer",
+            "maximum": 1.0,
+            "minimum": 1.0,
+            "title": "Scale",
+            "default": 1
+          },
+          "originalValue": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Originalvalue"
+          },
+          "originalUnit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Originalunit"
+          },
+          "originalScale": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Originalscale"
+          },
+          "period": {
+            "$ref": "#/components/schemas/FactPeriod"
+          },
+          "context": {
+            "$ref": "#/components/schemas/FactContext"
+          },
+          "publishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedat"
+          },
+          "firstSeenAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Firstseenat"
+          },
+          "retrievedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Retrievedat"
+          },
+          "timestampPrecision": {
+            "$ref": "#/components/schemas/TimestampPrecision"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/FactOrigin"
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          },
+          "missingReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Missingreason"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/FactQuality"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "inputFactIds": {
+            "items": {
+              "type": "string",
+              "maxLength": 160,
+              "minLength": 1
+            },
+            "type": "array",
+            "title": "Inputfactids"
+          },
+          "transformation": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ScaleTransformation"
+                  },
+                  {
+                    "$ref": "#/components/schemas/FxTransformation"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SplitTransformation"
+                  },
+                  {
+                    "$ref": "#/components/schemas/NormalizationTransformation"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "fx": "#/components/schemas/FxTransformation",
+                    "normalization": "#/components/schemas/NormalizationTransformation",
+                    "scale": "#/components/schemas/ScaleTransformation",
+                    "split": "#/components/schemas/SplitTransformation"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transformation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "factId",
+          "issuerId",
+          "instrumentId",
+          "listingId",
+          "concept",
+          "value",
+          "unit",
+          "currency",
+          "originalValue",
+          "originalUnit",
+          "period",
+          "context",
+          "publishedAt",
+          "firstSeenAt",
+          "retrievedAt",
+          "timestampPrecision",
+          "origin",
+          "availability",
+          "missingReason",
+          "quality",
+          "evidence",
+          "transformation"
+        ],
+        "title": "Fact"
+      },
+      "FactContext": {
+        "properties": {
+          "consolidated": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consolidated"
+          },
+          "dimensions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Dimensions"
+          },
+          "taxonomy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taxonomy"
+          },
+          "tag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tag"
+          },
+          "shareBasis": {
+            "$ref": "#/components/schemas/FactShareBasis"
+          },
+          "shareBasisId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sharebasisid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "consolidated",
+          "dimensions",
+          "taxonomy",
+          "tag",
+          "shareBasis"
+        ],
+        "title": "FactContext"
+      },
+      "FactOrigin": {
+        "type": "string",
+        "enum": [
+          "reported",
+          "derived",
+          "estimate",
+          "assumption",
+          "manual_judgment"
+        ],
+        "title": "FactOrigin"
+      },
+      "FactPeriod": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/PeriodKind"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End"
+          },
+          "label": {
+            "$ref": "#/components/schemas/PeriodLabel"
+          },
+          "fiscalYear": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscalyear"
+          },
+          "fiscalQuarter": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 4.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscalquarter"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "start",
+          "end",
+          "label",
+          "fiscalYear"
+        ],
+        "title": "FactPeriod"
+      },
+      "FactQuality": {
+        "properties": {
+          "freshness": {
+            "$ref": "#/components/schemas/Freshness"
+          },
+          "reconciliation": {
+            "$ref": "#/components/schemas/Reconciliation"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/ValidationState"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "freshness",
+          "reconciliation",
+          "validation"
+        ],
+        "title": "FactQuality"
+      },
+      "FactSelectionQuery": {
+        "properties": {
+          "issuerId": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Issuerid"
+          },
+          "instrumentId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instrumentid"
+          },
+          "listingId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listingid"
+          },
+          "concept": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Concept"
+          },
+          "unit": {
+            "$ref": "#/components/schemas/Unit"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Z]{3}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "period": {
+            "$ref": "#/components/schemas/FactPeriod"
+          },
+          "context": {
+            "$ref": "#/components/schemas/FactContext"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Asof"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/SelectionMode"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "issuerId",
+          "instrumentId",
+          "listingId",
+          "concept",
+          "unit",
+          "currency",
+          "period",
+          "context",
+          "asOf",
+          "mode"
+        ],
+        "title": "FactSelectionQuery"
+      },
+      "FactShareBasis": {
+        "type": "string",
+        "enum": [
+          "not_applicable",
+          "as_reported",
+          "split_adjusted",
+          "unknown"
+        ],
+        "title": "FactShareBasis"
+      },
+      "Freshness": {
+        "type": "string",
+        "enum": [
+          "current",
+          "stale",
+          "unknown"
+        ],
+        "title": "Freshness"
+      },
+      "FxParameters": {
+        "properties": {
+          "sourceCurrency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "title": "Sourcecurrency"
+          },
+          "targetCurrency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "title": "Targetcurrency"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "multiply",
+              "divide"
+            ],
+            "title": "Operation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sourceCurrency",
+          "targetCurrency",
+          "operation"
+        ],
+        "title": "FxParameters"
+      },
+      "FxTransformation": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "fx",
+            "title": "Kind"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Version"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/FxParameters"
+          },
+          "fxFactId": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Fxfactid"
+          },
+          "shareBasisId": {
+            "type": "null",
+            "title": "Sharebasisid"
+          },
+          "adjustmentIds": {
+            "items": {
+              "type": "string",
+              "maxLength": 160,
+              "minLength": 1
+            },
+            "type": "array",
+            "title": "Adjustmentids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "name",
+          "version",
+          "parameters",
+          "fxFactId"
+        ],
+        "title": "FxTransformation"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -65,6 +1084,453 @@
           "data_directory_configured"
         ],
         "title": "HealthResponse"
+      },
+      "NormalizationParameters": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Method"
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Rationale"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "method",
+          "rationale"
+        ],
+        "title": "NormalizationParameters"
+      },
+      "NormalizationTransformation": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "normalization",
+            "title": "Kind"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Version"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/NormalizationParameters"
+          },
+          "fxFactId": {
+            "type": "null",
+            "title": "Fxfactid"
+          },
+          "shareBasisId": {
+            "type": "null",
+            "title": "Sharebasisid"
+          },
+          "adjustmentIds": {
+            "items": {
+              "type": "string",
+              "maxLength": 160,
+              "minLength": 1
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Adjustmentids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "name",
+          "version",
+          "parameters",
+          "adjustmentIds"
+        ],
+        "title": "NormalizationTransformation"
+      },
+      "PeriodKind": {
+        "type": "string",
+        "enum": [
+          "instant",
+          "duration"
+        ],
+        "title": "PeriodKind"
+      },
+      "PeriodLabel": {
+        "type": "string",
+        "enum": [
+          "FY",
+          "FQ",
+          "YTD",
+          "TTM",
+          "instant"
+        ],
+        "title": "PeriodLabel"
+      },
+      "Reconciliation": {
+        "type": "string",
+        "enum": [
+          "single_source",
+          "matched",
+          "conflict",
+          "not_checked"
+        ],
+        "title": "Reconciliation"
+      },
+      "ScaleParameters": {
+        "properties": {
+          "originalScale": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Originalscale"
+          },
+          "targetScale": {
+            "type": "integer",
+            "maximum": 1.0,
+            "minimum": 1.0,
+            "title": "Targetscale"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "originalScale",
+          "targetScale"
+        ],
+        "title": "ScaleParameters"
+      },
+      "ScaleTransformation": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "scale",
+            "title": "Kind"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Version"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/ScaleParameters"
+          },
+          "fxFactId": {
+            "type": "null",
+            "title": "Fxfactid"
+          },
+          "shareBasisId": {
+            "type": "null",
+            "title": "Sharebasisid"
+          },
+          "adjustmentIds": {
+            "items": {
+              "type": "string",
+              "maxLength": 160,
+              "minLength": 1
+            },
+            "type": "array",
+            "title": "Adjustmentids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "name",
+          "version",
+          "parameters"
+        ],
+        "title": "ScaleTransformation"
+      },
+      "SelectionDecision": {
+        "properties": {
+          "selectionDecisionId": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Selectiondecisionid"
+          },
+          "query": {
+            "$ref": "#/components/schemas/FactSelectionQuery"
+          },
+          "policyVersion": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Policyversion"
+          },
+          "candidateFactIds": {
+            "items": {
+              "type": "string",
+              "maxLength": 160,
+              "minLength": 1
+            },
+            "type": "array",
+            "title": "Candidatefactids"
+          },
+          "selectedFactId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selectedfactid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SelectionStatus"
+          },
+          "rule": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Rule"
+          },
+          "differences": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateDifference"
+            },
+            "type": "array",
+            "title": "Differences"
+          },
+          "contentHash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Contenthash"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "selectionDecisionId",
+          "query",
+          "policyVersion",
+          "candidateFactIds",
+          "selectedFactId",
+          "status",
+          "rule",
+          "contentHash"
+        ],
+        "title": "SelectionDecision"
+      },
+      "SelectionMode": {
+        "type": "string",
+        "enum": [
+          "as_reported",
+          "latest_restated"
+        ],
+        "title": "SelectionMode"
+      },
+      "SelectionStatus": {
+        "type": "string",
+        "enum": [
+          "selected",
+          "conflict",
+          "missing"
+        ],
+        "title": "SelectionStatus"
+      },
+      "SnapshotDetail": {
+        "properties": {
+          "snapshot": {
+            "$ref": "#/components/schemas/DatasetSnapshot"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/Fact"
+            },
+            "type": "array",
+            "title": "Facts"
+          },
+          "selectionDecisions": {
+            "items": {
+              "$ref": "#/components/schemas/SelectionDecision"
+            },
+            "type": "array",
+            "title": "Selectiondecisions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "snapshot",
+          "facts",
+          "selectionDecisions"
+        ],
+        "title": "SnapshotDetail"
+      },
+      "SplitParameters": {
+        "properties": {
+          "factor": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Factor"
+          },
+          "targetDate": {
+            "type": "string",
+            "format": "date",
+            "title": "Targetdate"
+          },
+          "corporateActionId": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Corporateactionid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "factor",
+          "targetDate",
+          "corporateActionId"
+        ],
+        "title": "SplitParameters"
+      },
+      "SplitTransformation": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "split",
+            "title": "Kind"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Version"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/SplitParameters"
+          },
+          "fxFactId": {
+            "type": "null",
+            "title": "Fxfactid"
+          },
+          "shareBasisId": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Sharebasisid"
+          },
+          "adjustmentIds": {
+            "items": {
+              "type": "string",
+              "maxLength": 160,
+              "minLength": 1
+            },
+            "type": "array",
+            "title": "Adjustmentids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "name",
+          "version",
+          "parameters",
+          "shareBasisId"
+        ],
+        "title": "SplitTransformation"
+      },
+      "TimestampPrecision": {
+        "type": "string",
+        "enum": [
+          "second",
+          "date",
+          "unknown"
+        ],
+        "title": "TimestampPrecision"
+      },
+      "Unit": {
+        "type": "string",
+        "enum": [
+          "money",
+          "money_per_share",
+          "shares",
+          "ratio",
+          "percent",
+          "count"
+        ],
+        "title": "Unit"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ValidationState": {
+        "type": "string",
+        "enum": [
+          "valid",
+          "invalid",
+          "pending"
+        ],
+        "title": "ValidationState"
       },
       "assessment": {
         "$defs": {
