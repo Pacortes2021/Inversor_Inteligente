@@ -1,0 +1,52 @@
+{
+  "factId": "synthetic-revenue-fy2025",
+  "issuerId": "synthetic-issuer",
+  "instrumentId": null,
+  "concept": "revenue",
+  "value": "1000000",
+  "unit": "money",
+  "currency": "USD",
+  "scale": 1,
+  "originalValue": "1000",
+  "originalUnit": "USD_thousands",
+  "originalScale": 1000,
+  "period": {
+    "kind": "duration",
+    "start": "2025-01-01",
+    "end": "2025-12-31",
+    "label": "FY",
+    "fiscalYear": 2025,
+    "fiscalQuarter": null
+  },
+  "context": {
+    "consolidated": true,
+    "dimensions": {},
+    "taxonomy": "synthetic",
+    "tag": "Revenue",
+    "shareBasis": "not_applicable"
+  },
+  "publishedAt": "2026-02-20T12:00:00Z",
+  "firstSeenAt": "2026-02-20T12:05:00Z",
+  "retrievedAt": "2026-09-13T10:00:00Z",
+  "timestampPrecision": "second",
+  "origin": "reported",
+  "availability": "available",
+  "missingReason": null,
+  "quality": {
+    "freshness": "current",
+    "reconciliation": "single_source",
+    "validation": "valid"
+  },
+  "evidence": [
+    {
+      "provider": "synthetic_fixture",
+      "documentId": "synthetic-filing-2025",
+      "url": "https://example.org/synthetic-fixtures/annual-2025",
+      "locator": "Revenue FY2025",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "inputFactIds": [],
+  "transformation": null,
+  "listingId": null
+}
