@@ -1,0 +1,646 @@
+{
+  "$defs": {
+    "Availability": {
+      "enum": [
+        "available",
+        "missing",
+        "not_applicable",
+        "unsupported",
+        "blocked"
+      ],
+      "title": "Availability",
+      "type": "string"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        },
+        "documentId": {
+          "anyOf": [
+            {
+              "maxLength": 160,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Documentid"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Url"
+        },
+        "locator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Locator"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Sha256"
+        }
+      },
+      "required": [
+        "provider",
+        "documentId",
+        "url",
+        "locator",
+        "sha256"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "FactContext": {
+      "additionalProperties": false,
+      "properties": {
+        "consolidated": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Consolidated"
+        },
+        "dimensions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Dimensions",
+          "type": "object"
+        },
+        "taxonomy": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Taxonomy"
+        },
+        "tag": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tag"
+        },
+        "shareBasis": {
+          "$ref": "#/$defs/FactShareBasis"
+        },
+        "shareBasisId": {
+          "anyOf": [
+            {
+              "maxLength": 160,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sharebasisid"
+        }
+      },
+      "required": [
+        "consolidated",
+        "dimensions",
+        "taxonomy",
+        "tag",
+        "shareBasis"
+      ],
+      "title": "FactContext",
+      "type": "object"
+    },
+    "FactOrigin": {
+      "enum": [
+        "reported",
+        "derived",
+        "estimate",
+        "assumption",
+        "manual_judgment"
+      ],
+      "title": "FactOrigin",
+      "type": "string"
+    },
+    "FactPeriod": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/PeriodKind"
+        },
+        "start": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Start"
+        },
+        "end": {
+          "format": "date",
+          "title": "End",
+          "type": "string"
+        },
+        "label": {
+          "$ref": "#/$defs/PeriodLabel"
+        },
+        "fiscalYear": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Fiscalyear"
+        },
+        "fiscalQuarter": {
+          "anyOf": [
+            {
+              "maximum": 4,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fiscalquarter"
+        }
+      },
+      "required": [
+        "kind",
+        "start",
+        "end",
+        "label",
+        "fiscalYear"
+      ],
+      "title": "FactPeriod",
+      "type": "object"
+    },
+    "FactQuality": {
+      "additionalProperties": false,
+      "properties": {
+        "freshness": {
+          "$ref": "#/$defs/Freshness"
+        },
+        "reconciliation": {
+          "$ref": "#/$defs/Reconciliation"
+        },
+        "validation": {
+          "$ref": "#/$defs/ValidationState"
+        }
+      },
+      "required": [
+        "freshness",
+        "reconciliation",
+        "validation"
+      ],
+      "title": "FactQuality",
+      "type": "object"
+    },
+    "FactShareBasis": {
+      "enum": [
+        "not_applicable",
+        "as_reported",
+        "split_adjusted",
+        "unknown"
+      ],
+      "title": "FactShareBasis",
+      "type": "string"
+    },
+    "Freshness": {
+      "enum": [
+        "current",
+        "stale",
+        "unknown"
+      ],
+      "title": "Freshness",
+      "type": "string"
+    },
+    "PeriodKind": {
+      "enum": [
+        "instant",
+        "duration"
+      ],
+      "title": "PeriodKind",
+      "type": "string"
+    },
+    "PeriodLabel": {
+      "enum": [
+        "FY",
+        "FQ",
+        "YTD",
+        "TTM",
+        "instant"
+      ],
+      "title": "PeriodLabel",
+      "type": "string"
+    },
+    "Reconciliation": {
+      "enum": [
+        "single_source",
+        "matched",
+        "conflict",
+        "not_checked"
+      ],
+      "title": "Reconciliation",
+      "type": "string"
+    },
+    "TimestampPrecision": {
+      "enum": [
+        "second",
+        "date",
+        "unknown"
+      ],
+      "title": "TimestampPrecision",
+      "type": "string"
+    },
+    "Transformation": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/TransformationKind"
+        },
+        "name": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "parameters": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "title": "Parameters",
+          "type": "object"
+        },
+        "fxFactId": {
+          "anyOf": [
+            {
+              "maxLength": 160,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fxfactid"
+        },
+        "shareBasisId": {
+          "anyOf": [
+            {
+              "maxLength": 160,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sharebasisid"
+        },
+        "adjustmentIds": {
+          "items": {
+            "maxLength": 160,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Adjustmentids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "version"
+      ],
+      "title": "Transformation",
+      "type": "object"
+    },
+    "TransformationKind": {
+      "enum": [
+        "scale",
+        "fx",
+        "split",
+        "normalization"
+      ],
+      "title": "TransformationKind",
+      "type": "string"
+    },
+    "Unit": {
+      "enum": [
+        "money",
+        "money_per_share",
+        "shares",
+        "ratio",
+        "percent",
+        "count"
+      ],
+      "title": "Unit",
+      "type": "string"
+    },
+    "ValidationState": {
+      "enum": [
+        "valid",
+        "invalid",
+        "pending"
+      ],
+      "title": "ValidationState",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "factId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Factid",
+      "type": "string"
+    },
+    "issuerId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Issuerid",
+      "type": "string"
+    },
+    "instrumentId": {
+      "anyOf": [
+        {
+          "maxLength": 160,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Instrumentid"
+    },
+    "listingId": {
+      "anyOf": [
+        {
+          "maxLength": 160,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Listingid"
+    },
+    "concept": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Concept",
+      "type": "string"
+    },
+    "value": {
+      "anyOf": [
+        {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Value"
+    },
+    "unit": {
+      "$ref": "#/$defs/Unit"
+    },
+    "currency": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Z]{3}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Currency"
+    },
+    "scale": {
+      "default": 1,
+      "title": "Scale",
+      "type": "integer"
+    },
+    "originalValue": {
+      "anyOf": [
+        {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Originalvalue"
+    },
+    "originalUnit": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Originalunit"
+    },
+    "originalScale": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Originalscale"
+    },
+    "period": {
+      "$ref": "#/$defs/FactPeriod"
+    },
+    "context": {
+      "$ref": "#/$defs/FactContext"
+    },
+    "publishedAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Publishedat"
+    },
+    "firstSeenAt": {
+      "format": "date-time",
+      "title": "Firstseenat",
+      "type": "string"
+    },
+    "retrievedAt": {
+      "format": "date-time",
+      "title": "Retrievedat",
+      "type": "string"
+    },
+    "timestampPrecision": {
+      "$ref": "#/$defs/TimestampPrecision"
+    },
+    "origin": {
+      "$ref": "#/$defs/FactOrigin"
+    },
+    "availability": {
+      "$ref": "#/$defs/Availability"
+    },
+    "missingReason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Missingreason"
+    },
+    "quality": {
+      "$ref": "#/$defs/FactQuality"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/Evidence"
+      },
+      "title": "Evidence",
+      "type": "array"
+    },
+    "inputFactIds": {
+      "items": {
+        "maxLength": 160,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Inputfactids",
+      "type": "array"
+    },
+    "transformation": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Transformation"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "factId",
+    "issuerId",
+    "instrumentId",
+    "listingId",
+    "concept",
+    "value",
+    "unit",
+    "currency",
+    "originalValue",
+    "originalUnit",
+    "period",
+    "context",
+    "publishedAt",
+    "firstSeenAt",
+    "retrievedAt",
+    "timestampPrecision",
+    "origin",
+    "availability",
+    "missingReason",
+    "quality",
+    "evidence",
+    "transformation"
+  ],
+  "title": "Fact",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inversor:fact-model:v2"
+}

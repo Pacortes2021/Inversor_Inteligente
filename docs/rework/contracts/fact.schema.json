@@ -201,15 +201,22 @@
             "split_adjusted",
             "unknown"
           ]
+        },
+        "shareBasisId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
         }
       }
     },
     "publishedAt": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "format": "date-time"
+      "anyOf": [
+        {"type": "string", "format": "date-time"},
+        {"type": "string", "format": "date"},
+        {"type": "null"}
+      ]
     },
     "firstSeenAt": {
       "type": "string",
@@ -344,10 +351,23 @@
       ],
       "additionalProperties": false,
       "required": [
+        "kind",
         "name",
-        "version"
+        "version",
+        "parameters",
+        "fxFactId",
+        "shareBasisId",
+        "adjustmentIds"
       ],
       "properties": {
+        "kind": {
+          "enum": [
+            "scale",
+            "fx",
+            "split",
+            "normalization"
+          ]
+        },
         "name": {
           "type": "string",
           "minLength": 1
@@ -355,6 +375,25 @@
         "version": {
           "type": "string",
           "minLength": 1
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "integer", "number", "boolean"]
+          }
+        },
+        "fxFactId": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "shareBasisId": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "adjustmentIds": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
         }
       }
     },

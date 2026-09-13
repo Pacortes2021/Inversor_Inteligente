@@ -1,0 +1,166 @@
+{
+  "$defs": {
+    "Assumption": {
+      "additionalProperties": false,
+      "properties": {
+        "assumptionId": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Assumptionid",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "value": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Value",
+          "type": "string"
+        },
+        "unit": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "origin": {
+          "$ref": "#/$defs/AssumptionOrigin"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "evidenceIds": {
+          "items": {
+            "maxLength": 160,
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidenceids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "assumptionId",
+        "name",
+        "value",
+        "unit",
+        "origin",
+        "rationale",
+        "evidenceIds"
+      ],
+      "title": "Assumption",
+      "type": "object"
+    },
+    "AssumptionOrigin": {
+      "enum": [
+        "user",
+        "policy_template",
+        "derived"
+      ],
+      "title": "AssumptionOrigin",
+      "type": "string"
+    },
+    "Scenario": {
+      "additionalProperties": false,
+      "properties": {
+        "scenarioId": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Scenarioid",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "assumptions": {
+          "items": {
+            "$ref": "#/$defs/Assumption"
+          },
+          "minItems": 1,
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "probability": {
+          "anyOf": [
+            {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Probability"
+        }
+      },
+      "required": [
+        "scenarioId",
+        "name",
+        "assumptions"
+      ],
+      "title": "Scenario",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "scenarioSetRevision": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Scenariosetrevision",
+      "type": "string"
+    },
+    "instrumentId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Instrumentid",
+      "type": "string"
+    },
+    "revision": {
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "title": "Createdat",
+      "type": "string"
+    },
+    "author": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Author",
+      "type": "string"
+    },
+    "scenarios": {
+      "items": {
+        "$ref": "#/$defs/Scenario"
+      },
+      "minItems": 1,
+      "title": "Scenarios",
+      "type": "array"
+    }
+  },
+  "required": [
+    "scenarioSetRevision",
+    "instrumentId",
+    "revision",
+    "createdAt",
+    "author",
+    "scenarios"
+  ],
+  "title": "ScenarioSetRevision",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inversor:scenario-set-revision:v2"
+}

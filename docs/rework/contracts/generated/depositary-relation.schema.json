@@ -1,0 +1,70 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "relationId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Relationid",
+      "type": "string"
+    },
+    "adrInstrumentId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Adrinstrumentid",
+      "type": "string"
+    },
+    "underlyingInstrumentId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Underlyinginstrumentid",
+      "type": "string"
+    },
+    "adrShares": {
+      "exclusiveMinimum": 0,
+      "title": "Adrshares",
+      "type": "integer"
+    },
+    "underlyingShares": {
+      "exclusiveMinimum": 0,
+      "title": "Underlyingshares",
+      "type": "integer"
+    },
+    "validFrom": {
+      "format": "date",
+      "title": "Validfrom",
+      "type": "string"
+    },
+    "validTo": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Validto"
+    },
+    "evidenceId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Evidenceid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "relationId",
+    "adrInstrumentId",
+    "underlyingInstrumentId",
+    "adrShares",
+    "underlyingShares",
+    "validFrom",
+    "evidenceId"
+  ],
+  "title": "DepositaryRelation",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inversor:depositary-relation:v2"
+}

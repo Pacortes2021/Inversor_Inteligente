@@ -1,0 +1,95 @@
+{
+  "$defs": {
+    "ProviderError": {
+      "enum": [
+        "not_covered",
+        "not_reported",
+        "rate_limited",
+        "auth_required",
+        "provider_unavailable",
+        "invalid_payload",
+        "schema_changed"
+      ],
+      "title": "ProviderError",
+      "type": "string"
+    },
+    "ProviderStatus": {
+      "enum": [
+        "success",
+        "partial",
+        "failure"
+      ],
+      "title": "ProviderStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "provider": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Provider",
+      "type": "string"
+    },
+    "capability": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Capability",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/ProviderStatus"
+    },
+    "data": {
+      "items": {},
+      "title": "Data",
+      "type": "array"
+    },
+    "source": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Source",
+      "type": "string"
+    },
+    "fetchedAt": {
+      "format": "date-time",
+      "title": "Fetchedat",
+      "type": "string"
+    },
+    "retryAfterSeconds": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Retryafterseconds"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ProviderError"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "provider",
+    "capability",
+    "status",
+    "source",
+    "fetchedAt"
+  ],
+  "title": "ProviderResult",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inversor:provider-result:v2"
+}

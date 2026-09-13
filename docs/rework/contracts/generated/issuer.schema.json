@@ -1,0 +1,84 @@
+{
+  "$defs": {
+    "IdentifierType": {
+      "enum": [
+        "cik",
+        "rut",
+        "lei"
+      ],
+      "title": "IdentifierType",
+      "type": "string"
+    },
+    "TypedIdentifier": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/IdentifierType"
+        },
+        "value": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        },
+        "sourceUrl": {
+          "anyOf": [
+            {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourceurl"
+        }
+      },
+      "required": [
+        "type",
+        "value"
+      ],
+      "title": "TypedIdentifier",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "issuerId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Issuerid",
+      "type": "string"
+    },
+    "legalName": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Legalname",
+      "type": "string"
+    },
+    "domicileCountry": {
+      "pattern": "^[A-Z]{2}$",
+      "title": "Domicilecountry",
+      "type": "string"
+    },
+    "identifiers": {
+      "items": {
+        "$ref": "#/$defs/TypedIdentifier"
+      },
+      "title": "Identifiers",
+      "type": "array"
+    }
+  },
+  "required": [
+    "issuerId",
+    "legalName",
+    "domicileCountry"
+  ],
+  "title": "Issuer",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inversor:issuer:v2"
+}

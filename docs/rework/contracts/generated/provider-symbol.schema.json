@@ -1,0 +1,78 @@
+{
+  "$defs": {
+    "ProviderCapability": {
+      "enum": [
+        "instruments",
+        "prices",
+        "filings",
+        "facts",
+        "actions",
+        "fx",
+        "estimates",
+        "benchmark"
+      ],
+      "title": "ProviderCapability",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "provider": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Provider",
+      "type": "string"
+    },
+    "capability": {
+      "$ref": "#/$defs/ProviderCapability"
+    },
+    "providerSymbol": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Providersymbol",
+      "type": "string"
+    },
+    "listingId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Listingid",
+      "type": "string"
+    },
+    "validFrom": {
+      "format": "date",
+      "title": "Validfrom",
+      "type": "string"
+    },
+    "validTo": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Validto"
+    },
+    "resolutionEvidenceId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Resolutionevidenceid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "provider",
+    "capability",
+    "providerSymbol",
+    "listingId",
+    "validFrom",
+    "resolutionEvidenceId"
+  ],
+  "title": "ProviderSymbol",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inversor:provider-symbol:v2"
+}

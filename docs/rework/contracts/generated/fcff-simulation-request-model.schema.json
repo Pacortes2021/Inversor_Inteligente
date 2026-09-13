@@ -1,0 +1,332 @@
+{
+  "$defs": {
+    "ClaimBridge": {
+      "additionalProperties": false,
+      "properties": {
+        "excessCash": {
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Excesscash",
+          "type": "string"
+        },
+        "nonOperatingAssets": {
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Nonoperatingassets",
+          "type": "string"
+        },
+        "debt": {
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Debt",
+          "type": "string"
+        },
+        "preferred": {
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Preferred",
+          "type": "string"
+        },
+        "minorities": {
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Minorities",
+          "type": "string"
+        },
+        "otherClaims": {
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Otherclaims",
+          "type": "string"
+        }
+      },
+      "required": [
+        "excessCash",
+        "nonOperatingAssets",
+        "debt",
+        "preferred",
+        "minorities",
+        "otherClaims"
+      ],
+      "title": "ClaimBridge",
+      "type": "object"
+    },
+    "ForecastYear": {
+      "additionalProperties": false,
+      "properties": {
+        "revenueGrowth": {
+          "exclusiveMinimum": -1,
+          "maximum": 1,
+          "title": "Revenuegrowth",
+          "type": "number"
+        },
+        "operatingMargin": {
+          "maximum": 1,
+          "minimum": -1,
+          "title": "Operatingmargin",
+          "type": "number"
+        },
+        "taxRate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Taxrate",
+          "type": "number"
+        },
+        "depreciation": {
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Depreciation",
+          "type": "string"
+        },
+        "capex": {
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Capex",
+          "type": "string"
+        },
+        "deltaOperatingNwc": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Deltaoperatingnwc",
+          "type": "string"
+        },
+        "forecastStart": {
+          "format": "date",
+          "title": "Forecaststart",
+          "type": "string"
+        },
+        "forecastEnd": {
+          "format": "date",
+          "title": "Forecastend",
+          "type": "string"
+        },
+        "cashFlowAt": {
+          "format": "date",
+          "title": "Cashflowat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "revenueGrowth",
+        "operatingMargin",
+        "taxRate",
+        "depreciation",
+        "capex",
+        "deltaOperatingNwc",
+        "forecastStart",
+        "forecastEnd",
+        "cashFlowAt"
+      ],
+      "title": "ForecastYear",
+      "type": "object"
+    },
+    "TerminalAssumptions": {
+      "additionalProperties": false,
+      "properties": {
+        "growth": {
+          "maximum": 0.1,
+          "minimum": 0,
+          "title": "Growth",
+          "type": "number"
+        },
+        "roic": {
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Roic",
+          "type": "number"
+        },
+        "operatingMargin": {
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Operatingmargin",
+          "type": "number"
+        },
+        "taxRate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Taxrate",
+          "type": "number"
+        }
+      },
+      "required": [
+        "growth",
+        "roic",
+        "operatingMargin",
+        "taxRate"
+      ],
+      "title": "TerminalAssumptions",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "requestId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Requestid",
+      "type": "string"
+    },
+    "datasetSnapshotId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Datasetsnapshotid",
+      "type": "string"
+    },
+    "instrumentId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Instrumentid",
+      "type": "string"
+    },
+    "listingId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Listingid",
+      "type": "string"
+    },
+    "scenarioSetRevision": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Scenariosetrevision",
+      "type": "string"
+    },
+    "normalizationRevision": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Normalizationrevision",
+      "type": "string"
+    },
+    "model": {
+      "const": "fcff_driver_v1",
+      "title": "Model",
+      "type": "string"
+    },
+    "asOf": {
+      "format": "date-time",
+      "title": "Asof",
+      "type": "string"
+    },
+    "valuationDate": {
+      "format": "date",
+      "title": "Valuationdate",
+      "type": "string"
+    },
+    "currency": {
+      "pattern": "^[A-Z]{3}$",
+      "title": "Currency",
+      "type": "string"
+    },
+    "quoteCurrency": {
+      "pattern": "^[A-Z]{3}$",
+      "title": "Quotecurrency",
+      "type": "string"
+    },
+    "baseRevenue": {
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+      "title": "Baserevenue",
+      "type": "string"
+    },
+    "shares": {
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+      "title": "Shares",
+      "type": "string"
+    },
+    "claimBridge": {
+      "$ref": "#/$defs/ClaimBridge"
+    },
+    "wacc": {
+      "exclusiveMinimum": 0,
+      "maximum": 1,
+      "title": "Wacc",
+      "type": "number"
+    },
+    "terminal": {
+      "$ref": "#/$defs/TerminalAssumptions"
+    },
+    "years": {
+      "items": {
+        "$ref": "#/$defs/ForecastYear"
+      },
+      "maxItems": 20,
+      "minItems": 1,
+      "title": "Years",
+      "type": "array"
+    },
+    "sbcPolicy": {
+      "const": "expense_in_ebit",
+      "title": "Sbcpolicy",
+      "type": "string"
+    },
+    "forecastConvention": {
+      "const": "consecutive_12_month_periods",
+      "title": "Forecastconvention",
+      "type": "string"
+    },
+    "taxPolicy": {
+      "const": "no_loss_tax_credit",
+      "title": "Taxpolicy",
+      "type": "string"
+    },
+    "sharesBasis": {
+      "const": "valuation_common_equivalent",
+      "title": "Sharesbasis",
+      "type": "string"
+    },
+    "evidenceIds": {
+      "items": {
+        "maxLength": 160,
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Evidenceids",
+      "type": "array"
+    },
+    "inputBindings": {
+      "additionalProperties": {
+        "items": {
+          "maxLength": 160,
+          "minLength": 1,
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Inputbindings",
+      "type": "object"
+    },
+    "fxFactId": {
+      "anyOf": [
+        {
+          "maxLength": 160,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Fxfactid"
+    }
+  },
+  "required": [
+    "requestId",
+    "datasetSnapshotId",
+    "instrumentId",
+    "listingId",
+    "scenarioSetRevision",
+    "normalizationRevision",
+    "model",
+    "asOf",
+    "valuationDate",
+    "currency",
+    "quoteCurrency",
+    "baseRevenue",
+    "shares",
+    "claimBridge",
+    "wacc",
+    "terminal",
+    "years",
+    "sbcPolicy",
+    "forecastConvention",
+    "taxPolicy",
+    "sharesBasis",
+    "evidenceIds",
+    "inputBindings",
+    "fxFactId"
+  ],
+  "title": "FcffSimulationRequest",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inversor:fcff-simulation-request-model:v2"
+}

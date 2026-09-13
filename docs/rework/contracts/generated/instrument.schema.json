@@ -1,0 +1,78 @@
+{
+  "$defs": {
+    "InstrumentType": {
+      "enum": [
+        "common_stock",
+        "preferred_stock",
+        "adr",
+        "etf"
+      ],
+      "title": "InstrumentType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "instrumentId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Instrumentid",
+      "type": "string"
+    },
+    "issuerId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Issuerid",
+      "type": "string"
+    },
+    "type": {
+      "$ref": "#/$defs/InstrumentType"
+    },
+    "shareClass": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Shareclass"
+    },
+    "rightsSummary": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Rightssummary"
+    },
+    "isin": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Z]{2}[A-Z0-9]{9}[0-9]$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Isin"
+    }
+  },
+  "required": [
+    "instrumentId",
+    "issuerId",
+    "type"
+  ],
+  "title": "Instrument",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inversor:instrument:v2"
+}
