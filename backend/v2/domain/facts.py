@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import Enum
-from typing import Any
+from typing import Annotated, Literal
 
 from pydantic import Field, HttpUrl, field_validator, model_validator
 
@@ -157,40 +157,111 @@ class Evidence(CanonicalModel):
 
     @model_validator(mode="after")
     def is_verifiable(self) -> "Evidence":
-        if not any((self.document_id, self.url, self.locator, self.sha256)):
+        if not any((self.document_id, self.url, self.sha256)):
             raise ContractViolation(
                 ErrorCode.EVIDENCE_REQUIRED,
-                "evidence requires a document, URL, locator or hash",
+                "evidence requires an identifiable document, URL or hash; locator alone is insufficient",
                 "/evidence",
             )
         return self
 
 
-class TransformationKind(str, Enum):
-    SCALE = "scale"
-    FX = "fx"
-    SPLIT = "split"
-    NORMALIZATION = "normalization"
+class ScaleParameters(CanonicalModel):
+    original_scale: int = Field(strict=True, ge=1)
+    target_scale: Annotated[int, Field(strict=True, ge=1, le=1)]
 
 
-class Transformation(CanonicalModel):
-    kind: TransformationKind
+class FxParameters(CanonicalModel):
+    source_currency: CurrencyCode
+    target_currency: CurrencyCode
+    operation: Literal["multiply", "divide"]
+
+    @model_validator(mode="after")
+    def changes_currency(self) -> "FxParameters":
+        if self.source_currency == self.target_currency:
+            raise ValueError("FX transformation must change currency")
+        return self
+
+
+class SplitParameters(CanonicalModel):
+    factor: DecimalString
+    target_date: date
+    corporate_action_id: Identifier
+
+    @model_validator(mode="after")
+    def positive_factor(self) -> "SplitParameters":
+        if decimal_value(self.factor) <= 0:
+            raise ValueError("split factor must be positive")
+        return self
+
+
+class NormalizationParameters(CanonicalModel):
+    method: Identifier
+    rationale: str = Field(min_length=1)
+
+
+class ScaleTransformation(CanonicalModel):
+    kind: Literal["scale"]
     name: Identifier
     version: Identifier
-    parameters: dict[str, str | int | float | bool] = Field(default_factory=dict)
-    fx_fact_id: Identifier | None = None
-    share_basis_id: Identifier | None = None
+    parameters: ScaleParameters
+    fx_fact_id: None = None
+    share_basis_id: None = None
     adjustment_ids: list[Identifier] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def required_references(self) -> "Transformation":
-        if self.kind == TransformationKind.FX and self.fx_fact_id is None:
-            raise ValueError("FX transformation requires fxFactId")
-        if self.kind == TransformationKind.SPLIT and self.share_basis_id is None:
-            raise ValueError("split transformation requires shareBasisId")
-        if self.kind == TransformationKind.NORMALIZATION and not self.adjustment_ids:
-            raise ValueError("normalization requires adjustmentIds")
+    def scale_has_no_unrelated_references(self) -> "ScaleTransformation":
+        if self.adjustment_ids:
+            raise ValueError("scale transformation cannot contain adjustmentIds")
         return self
+
+
+class FxTransformation(CanonicalModel):
+    kind: Literal["fx"]
+    name: Identifier
+    version: Identifier
+    parameters: FxParameters
+    fx_fact_id: Identifier
+    share_basis_id: None = None
+    adjustment_ids: list[Identifier] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def fx_has_no_unrelated_references(self) -> "FxTransformation":
+        if self.adjustment_ids:
+            raise ValueError("FX transformation cannot contain adjustmentIds")
+        return self
+
+
+class SplitTransformation(CanonicalModel):
+    kind: Literal["split"]
+    name: Identifier
+    version: Identifier
+    parameters: SplitParameters
+    fx_fact_id: None = None
+    share_basis_id: Identifier
+    adjustment_ids: list[Identifier] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def split_has_no_unrelated_references(self) -> "SplitTransformation":
+        if self.adjustment_ids:
+            raise ValueError("split transformation cannot contain adjustmentIds")
+        return self
+
+
+class NormalizationTransformation(CanonicalModel):
+    kind: Literal["normalization"]
+    name: Identifier
+    version: Identifier
+    parameters: NormalizationParameters
+    fx_fact_id: None = None
+    share_basis_id: None = None
+    adjustment_ids: list[Identifier] = Field(min_length=1)
+
+
+Transformation = Annotated[
+    ScaleTransformation | FxTransformation | SplitTransformation | NormalizationTransformation,
+    Field(discriminator="kind"),
+]
 
 
 PRICE_CONCEPTS = {"price.close", "price.open", "price.high", "price.low"}
@@ -205,13 +276,13 @@ class Fact(CanonicalModel):
     value: DecimalString | None
     unit: Unit
     currency: CurrencyCode | None
-    scale: int = Field(default=1, frozen=True)
+    scale: Annotated[int, Field(strict=True, ge=1, le=1)] = 1
     original_value: DecimalString | None
     original_unit: str | None
     original_scale: int | None = Field(default=None, ge=1)
     period: FactPeriod
     context: FactContext
-    published_at: datetime | date | None
+    published_at: date | datetime | None
     first_seen_at: datetime
     retrieved_at: datetime
     timestamp_precision: TimestampPrecision
@@ -230,7 +301,7 @@ class Fact(CanonicalModel):
 
     @field_validator("published_at")
     @classmethod
-    def publication_timestamp_is_aware(cls, value: datetime | date | None) -> datetime | date | None:
+    def publication_timestamp_is_aware(cls, value: date | datetime | None) -> date | datetime | None:
         if isinstance(value, datetime):
             return utc_datetime(value)
         return value
@@ -279,8 +350,13 @@ class Fact(CanonicalModel):
                 "date-only publication requires timestampPrecision=date",
                 "/timestampPrecision",
             )
-        published_date = self.published_at.date() if isinstance(self.published_at, datetime) else self.published_at
-        if published_date is not None and published_date > self.retrieved_at.date():
+        if isinstance(self.published_at, datetime):
+            publication_after_retrieval = self.published_at > self.retrieved_at
+        else:
+            publication_after_retrieval = (
+                self.published_at is not None and self.published_at > self.retrieved_at.date()
+            )
+        if publication_after_retrieval:
             raise ContractViolation(
                 ErrorCode.INVALID_TIMESTAMP_ORDER,
                 "publishedAt must not be after retrievedAt",
@@ -312,14 +388,27 @@ class Fact(CanonicalModel):
                     "derived facts require inputs and a typed transformation",
                     "/inputFactIds",
                 )
-        if self.fact_id in self.input_fact_ids or len(self.input_fact_ids) != len(set(self.input_fact_ids)):
+        dependencies = self.fact_dependency_ids()
+        if self.fact_id in dependencies or len(dependencies) != len(set(dependencies)):
             raise ContractViolation(
                 ErrorCode.INVALID_LINEAGE,
                 "lineage cannot be self-referential or duplicated",
                 "/inputFactIds",
             )
+        if isinstance(self.transformation, FxTransformation) and self.transformation.fx_fact_id not in self.input_fact_ids:
+            raise ContractViolation(
+                ErrorCode.INVALID_LINEAGE,
+                "FX fact must also be declared as an inputFactId",
+                "/transformation/fxFactId",
+            )
         if available and self.original_value is not None and self.original_scale is not None:
-            simple_scale = self.transformation is None or self.transformation.kind == TransformationKind.SCALE
+            simple_scale = self.transformation is None or isinstance(self.transformation, ScaleTransformation)
+            if isinstance(self.transformation, ScaleTransformation) and self.transformation.parameters.original_scale != self.original_scale:
+                raise ContractViolation(
+                    ErrorCode.ORIGINAL_SCALE_DOES_NOT_RECONCILE,
+                    "scale parameters must match originalScale",
+                    "/transformation/parameters/originalScale",
+                )
             if simple_scale and decimal_value(self.value) != decimal_value(self.original_value) * self.original_scale:
                 raise ContractViolation(
                     ErrorCode.ORIGINAL_SCALE_DOES_NOT_RECONCILE,
@@ -327,6 +416,15 @@ class Fact(CanonicalModel):
                     "/value",
                 )
         return self
+
+    def fact_dependency_ids(self) -> list[str]:
+        dependencies = list(self.input_fact_ids)
+        if isinstance(self.transformation, FxTransformation):
+            # Keep the edge explicit even though semantic validation also
+            # requires it in inputFactIds; de-duplicate for graph traversal.
+            if self.transformation.fx_fact_id not in dependencies:
+                dependencies.append(self.transformation.fx_fact_id)
+        return dependencies
 
 
 def validate_lineage(facts: list[Fact]) -> None:
@@ -336,7 +434,7 @@ def validate_lineage(facts: list[Fact]) -> None:
     if len(by_id) != len(facts):
         raise ContractViolation(ErrorCode.INVALID_LINEAGE, "fact IDs must be unique")
     for fact in facts:
-        for input_id in fact.input_fact_ids:
+        for input_id in fact.fact_dependency_ids():
             if input_id not in by_id:
                 raise ContractViolation(
                     ErrorCode.UNKNOWN_REFERENCE,
@@ -353,7 +451,7 @@ def validate_lineage(facts: list[Fact]) -> None:
         if fact_id in visited:
             return
         visiting.add(fact_id)
-        for input_id in by_id[fact_id].input_fact_ids:
+        for input_id in by_id[fact_id].fact_dependency_ids():
             visit(input_id)
         visiting.remove(fact_id)
         visited.add(fact_id)

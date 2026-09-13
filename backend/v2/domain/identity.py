@@ -141,6 +141,8 @@ class ShareBasis(CanonicalModel):
     total_shares: NonnegativeDecimalString
     components: list[ShareComponent] = Field(min_length=1)
     split_factor: NonnegativeDecimalString | None = None
+    pre_action_shares: NonnegativeDecimalString | None = None
+    post_action_shares: NonnegativeDecimalString | None = None
     target_date: date | None = None
     corporate_action_id: Identifier | None = None
     version: Identifier
@@ -156,8 +158,22 @@ class ShareBasis(CanonicalModel):
         )
         if included != decimal_value(self.total_shares):
             raise ValueError("totalShares must equal denominator components")
+        if decimal_value(self.total_shares) <= 0:
+            raise ValueError("totalShares must be positive")
         if self.kind == ShareBasisKind.SPLIT_ADJUSTED and (
-            self.split_factor is None or self.target_date is None or self.corporate_action_id is None
+            self.split_factor is None
+            or self.pre_action_shares is None
+            or self.post_action_shares is None
+            or self.target_date is None
+            or self.corporate_action_id is None
         ):
-            raise ValueError("split-adjusted basis requires factor, target date and action")
+            raise ValueError(
+                "split-adjusted basis requires factor, pre/post shares, target date and action"
+            )
+        if self.kind == ShareBasisKind.SPLIT_ADJUSTED:
+            factor = decimal_value(self.split_factor)
+            if factor <= 0:
+                raise ValueError("splitFactor must be positive")
+            if decimal_value(self.pre_action_shares) * factor != decimal_value(self.post_action_shares):
+                raise ValueError("preActionShares × splitFactor must equal postActionShares")
         return self

@@ -23,7 +23,7 @@ El checkout principal estaba 13 commits por delante y 63 por detrás de `origin/
 
 ## Runtime observado y runtime fijado
 
-El runtime del sistema observado fue Python 3.9.6, Node 26.0.0 y el ejecutable SQLite 3.51.0. El sistema no es el entorno reproducible del proyecto. M0 fija Python 3.12.13 mediante `uv.lock`, Node 22 mediante CI y dependencias frontend exactas en `package-lock.json`. El Python bloqueado enlaza SQLite 3.50.4, que no debe confundirse con el ejecutable del sistema. Como es anterior a la corrección WAL-reset de 3.53.0, M0 informa el límite y no activa WAL ni persistencia.
+El runtime del sistema observado fue Python 3.9.6, Node 26.0.0 y el ejecutable SQLite 3.51.0. El sistema no es el entorno reproducible del proyecto. M0 fija Python 3.12.13, Node 22.23.2, npm 10.9.8 y dependencias exactas en los lockfiles. El Python bloqueado enlaza SQLite 3.50.4, que no debe confundirse con el ejecutable del sistema. Como es anterior al backport corregido 3.50.7 del defecto WAL-reset, M0 informa el límite y no activa WAL ni persistencia.
 
 ## Inventario y resguardo privado
 

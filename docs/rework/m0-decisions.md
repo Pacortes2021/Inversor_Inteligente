@@ -5,11 +5,11 @@ Este registro distingue decisiones cerradas de preguntas que deben revisar Astra
 ## Decisiones cerradas en R02
 
 1. **Decimal y faltante.** Magnitudes financieras cruzan la frontera JSON como strings decimales finitos. `available` exige valor; `missing`, `blocked`, `unsupported` y `not_applicable` exigen `null` y un motivo. No existe coerción de `null` a cero.
-2. **Escala.** En una conversión sólo de escala, el canónico debe ser `originalValue × originalScale`. FX, split y normalización son transformaciones distintas con parámetros y referencias tipadas; no se aplica esa igualdad a una transformación compuesta.
+2. **Escala y transformaciones.** `scale` canónico es literalmente 1. En una conversión sólo de escala, el canónico debe ser `originalValue × originalScale`, y los parámetros repiten la escala original y destino 1 para hacerla auditable. FX exige monedas y operación multiplicar/dividir; split exige factor positivo, fecha y acción; normalización exige método, razón y ajustes. Son variantes discriminadas, no fórmulas opacas ni diccionarios libres.
 3. **Tiempo.** Captura y primera observación son timestamps con zona. Publicación admite timestamp o fecha sin inventar hora y debe declarar precisión compatible. Un hecho reportado disponible no puede cerrar después de su recuperación.
 4. **Período.** Instantes no tienen inicio; duraciones tienen inicio y fin ordenados. FQ exige trimestre. No se impone una duración de 365 días a FY históricos.
-5. **Evidencia y linaje.** Un objeto de evidencia vacío no es evidencia. Hechos derivados requieren entradas y transformación; el validador de conjunto rechaza referencias ausentes, duplicados, autorreferencia y ciclos.
-6. **Identidad.** Emisor, instrumento, listing, símbolo de proveedor y relación ADR son entidades distintas. País, plaza y moneda no se infieren entre sí. Una base accionaria suma componentes incluidos en el denominador y separa reclamaciones para impedir doble conteo.
+5. **Evidencia y linaje.** Un objeto de evidencia vacío no es evidencia, y un locator aislado tampoco: debe existir documento, URL o hash identificable. Hechos derivados requieren entradas y transformación; el hecho FX se declara también como input y entra al grafo. El validador de conjunto rechaza referencias ausentes, duplicados, autorreferencia y ciclos.
+6. **Identidad.** Emisor, instrumento, listing, símbolo de proveedor y relación ADR son entidades distintas. País, plaza y moneda no se infieren entre sí. Una base accionaria suma componentes incluidos en el denominador y separa reclamaciones para impedir doble conteo. Una base ajustada por split exige factor positivo, acciones anteriores/posteriores reconciliadas, fecha y acción corporativa.
 7. **Snapshot.** Precio y FX referenciados pertenecen a los hechos seleccionados; listing, moneda, políticas, base accionaria y hash forman parte del contrato inmutable.
 8. **Assessment.** La modalidad financiera y personal permanece explícita; la personal exige revisión de tesis. Cobertura conserva 100 puntos posibles, puntos pendientes y rango. Dos puntos resueltos no se normalizan a 100/100.
 9. **Scenario.** Las probabilidades son opcionales. Si se entregan, deben existir para todos los escenarios y sumar exactamente uno; sin ellas el valor ponderado permanece pendiente.
@@ -24,10 +24,10 @@ Las reproducciones del legado viven bajo `tests/v2/characterization/`. Que un te
 
 ## Puntos para revisión de Astra
 
-- Confirmar que la fecha de publicación como `date` más `timestampPrecision=date` es suficiente para aplicar la regla conservadora de siguiente sesión en M1, sin forzar una hora falsa.
+- Confirmar que la fecha de publicación como `date` más `timestampPrecision=date` es suficiente para aplicar la regla conservadora de siguiente sesión en M1, sin forzar una hora falsa. Cuando existe timestamp, M0 ya exige el orden horario completo respecto de la recuperación.
 - Confirmar el límite inicial de períodos FCFF consecutivos anclados a `valuationDate`, incluido el aniversario de 29 de febrero. Un stub fiscal sigue fuera del contrato.
-- Revisar que componentes de acciones incluidos en denominador frente a reclamaciones expresan la exclusión mutua necesaria; el catálogo cerrado de tipos de opciones/RSU puede definirse con la conciliación de M1.
+- Revisar que componentes de acciones incluidos en denominador frente a reclamaciones expresan la exclusión mutua necesaria y que el puente pre/post split es suficiente; el catálogo cerrado de tipos de opciones/RSU puede definirse con la conciliación de M1.
 - Revisar la decisión de exigir que todos los bindings apunten a `evidenceIds` del request. M1 debe resolver además pertenencia a snapshot o revisión y coincidencia de unidad/valor.
 - La lista de conceptos de precio estructural inicial sigue limitada a open/high/low/close. Ampliarla requiere igual identidad de listing, sesión, moneda y política de ajuste.
 - Los valores de `engineVersions` y `policyVersions` son identificadores en M0. La inmutabilidad y existencia referencial dependen del almacenamiento de M1.
-- El runtime Python bloqueado enlaza SQLite 3.50.4 y queda por debajo de la corrección WAL-reset de 3.53.0. No hay persistencia ni WAL activos en M0. Astra debe tratar la actualización de SQLite como puerta previa del adaptador M1, no aceptar un booleano de health como mitigación.
+- El runtime Python bloqueado enlaza SQLite 3.50.4 y queda por debajo del backport WAL-reset 3.50.7 (la línea principal lo corrigió en 3.51.3; también existe backport 3.44.6). No hay persistencia ni WAL activos en M0. Astra debe tratar la actualización de SQLite como puerta previa del adaptador M1, no aceptar un booleano de health como mitigación.

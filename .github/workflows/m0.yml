@@ -20,7 +20,7 @@ jobs:
           enable-cache: true
       - run: uv sync --frozen --dev
       - run: uv run python scripts/export_v2_schemas.py
-      - run: git diff --exit-code -- docs/rework/contracts/generated
+      - run: git diff --exit-code -- docs/rework/contracts/generated docs/rework/contracts/openapi.json
       - run: uv run pytest -q
 
   web:
@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.23.2
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci

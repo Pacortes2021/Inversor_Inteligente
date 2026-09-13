@@ -332,9 +332,7 @@
           "inputHash"
         ],
         "title": "Assessment",
-        "type": "object",
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "urn:inversor:assessment:v2"
+        "type": "object"
       },
       "dataset-snapshot": {
         "additionalProperties": false,
@@ -435,9 +433,7 @@
           "contentHash"
         ],
         "title": "DatasetSnapshot",
-        "type": "object",
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "urn:inversor:dataset-snapshot:v2"
+        "type": "object"
       },
       "depositary-relation": {
         "additionalProperties": false,
@@ -505,9 +501,7 @@
           "evidenceId"
         ],
         "title": "DepositaryRelation",
-        "type": "object",
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "urn:inversor:depositary-relation:v2"
+        "type": "object"
       },
       "error-envelope": {
         "$defs": {
@@ -617,9 +611,7 @@
           "error"
         ],
         "title": "ErrorEnvelope",
-        "type": "object",
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "urn:inversor:error-envelope:v2"
+        "type": "object"
       },
       "fact-model": {
         "$defs": {
@@ -888,6 +880,166 @@
             "title": "Freshness",
             "type": "string"
           },
+          "FxParameters": {
+            "additionalProperties": false,
+            "properties": {
+              "sourceCurrency": {
+                "pattern": "^[A-Z]{3}$",
+                "title": "Sourcecurrency",
+                "type": "string"
+              },
+              "targetCurrency": {
+                "pattern": "^[A-Z]{3}$",
+                "title": "Targetcurrency",
+                "type": "string"
+              },
+              "operation": {
+                "enum": [
+                  "multiply",
+                  "divide"
+                ],
+                "title": "Operation",
+                "type": "string"
+              }
+            },
+            "required": [
+              "sourceCurrency",
+              "targetCurrency",
+              "operation"
+            ],
+            "title": "FxParameters",
+            "type": "object"
+          },
+          "FxTransformation": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "const": "fx",
+                "title": "Kind",
+                "type": "string"
+              },
+              "name": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Name",
+                "type": "string"
+              },
+              "version": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Version",
+                "type": "string"
+              },
+              "parameters": {
+                "$ref": "#/components/schemas/fact-model/$defs/FxParameters"
+              },
+              "fxFactId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Fxfactid",
+                "type": "string"
+              },
+              "shareBasisId": {
+                "default": null,
+                "title": "Sharebasisid",
+                "type": "null"
+              },
+              "adjustmentIds": {
+                "items": {
+                  "maxLength": 160,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "title": "Adjustmentids",
+                "type": "array"
+              }
+            },
+            "required": [
+              "kind",
+              "name",
+              "version",
+              "parameters",
+              "fxFactId"
+            ],
+            "title": "FxTransformation",
+            "type": "object"
+          },
+          "NormalizationParameters": {
+            "additionalProperties": false,
+            "properties": {
+              "method": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Method",
+                "type": "string"
+              },
+              "rationale": {
+                "minLength": 1,
+                "title": "Rationale",
+                "type": "string"
+              }
+            },
+            "required": [
+              "method",
+              "rationale"
+            ],
+            "title": "NormalizationParameters",
+            "type": "object"
+          },
+          "NormalizationTransformation": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "const": "normalization",
+                "title": "Kind",
+                "type": "string"
+              },
+              "name": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Name",
+                "type": "string"
+              },
+              "version": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Version",
+                "type": "string"
+              },
+              "parameters": {
+                "$ref": "#/components/schemas/fact-model/$defs/NormalizationParameters"
+              },
+              "fxFactId": {
+                "default": null,
+                "title": "Fxfactid",
+                "type": "null"
+              },
+              "shareBasisId": {
+                "default": null,
+                "title": "Sharebasisid",
+                "type": "null"
+              },
+              "adjustmentIds": {
+                "items": {
+                  "maxLength": 160,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "title": "Adjustmentids",
+                "type": "array"
+              }
+            },
+            "required": [
+              "kind",
+              "name",
+              "version",
+              "parameters",
+              "adjustmentIds"
+            ],
+            "title": "NormalizationTransformation",
+            "type": "object"
+          },
           "PeriodKind": {
             "enum": [
               "instant",
@@ -917,20 +1069,35 @@
             "title": "Reconciliation",
             "type": "string"
           },
-          "TimestampPrecision": {
-            "enum": [
-              "second",
-              "date",
-              "unknown"
+          "ScaleParameters": {
+            "additionalProperties": false,
+            "properties": {
+              "originalScale": {
+                "minimum": 1,
+                "title": "Originalscale",
+                "type": "integer"
+              },
+              "targetScale": {
+                "maximum": 1,
+                "minimum": 1,
+                "title": "Targetscale",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "originalScale",
+              "targetScale"
             ],
-            "title": "TimestampPrecision",
-            "type": "string"
+            "title": "ScaleParameters",
+            "type": "object"
           },
-          "Transformation": {
+          "ScaleTransformation": {
             "additionalProperties": false,
             "properties": {
               "kind": {
-                "$ref": "#/components/schemas/fact-model/$defs/TransformationKind"
+                "const": "scale",
+                "title": "Kind",
+                "type": "string"
               },
               "name": {
                 "maxLength": 160,
@@ -945,52 +1112,17 @@
                 "type": "string"
               },
               "parameters": {
-                "additionalProperties": {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "integer"
-                    },
-                    {
-                      "type": "number"
-                    },
-                    {
-                      "type": "boolean"
-                    }
-                  ]
-                },
-                "title": "Parameters",
-                "type": "object"
+                "$ref": "#/components/schemas/fact-model/$defs/ScaleParameters"
               },
               "fxFactId": {
-                "anyOf": [
-                  {
-                    "maxLength": 160,
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
                 "default": null,
-                "title": "Fxfactid"
+                "title": "Fxfactid",
+                "type": "null"
               },
               "shareBasisId": {
-                "anyOf": [
-                  {
-                    "maxLength": 160,
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
                 "default": null,
-                "title": "Sharebasisid"
+                "title": "Sharebasisid",
+                "type": "null"
               },
               "adjustmentIds": {
                 "items": {
@@ -1005,19 +1137,101 @@
             "required": [
               "kind",
               "name",
-              "version"
+              "version",
+              "parameters"
             ],
-            "title": "Transformation",
+            "title": "ScaleTransformation",
             "type": "object"
           },
-          "TransformationKind": {
-            "enum": [
-              "scale",
-              "fx",
-              "split",
-              "normalization"
+          "SplitParameters": {
+            "additionalProperties": false,
+            "properties": {
+              "factor": {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "title": "Factor",
+                "type": "string"
+              },
+              "targetDate": {
+                "format": "date",
+                "title": "Targetdate",
+                "type": "string"
+              },
+              "corporateActionId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Corporateactionid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "factor",
+              "targetDate",
+              "corporateActionId"
             ],
-            "title": "TransformationKind",
+            "title": "SplitParameters",
+            "type": "object"
+          },
+          "SplitTransformation": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "const": "split",
+                "title": "Kind",
+                "type": "string"
+              },
+              "name": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Name",
+                "type": "string"
+              },
+              "version": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Version",
+                "type": "string"
+              },
+              "parameters": {
+                "$ref": "#/components/schemas/fact-model/$defs/SplitParameters"
+              },
+              "fxFactId": {
+                "default": null,
+                "title": "Fxfactid",
+                "type": "null"
+              },
+              "shareBasisId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Sharebasisid",
+                "type": "string"
+              },
+              "adjustmentIds": {
+                "items": {
+                  "maxLength": 160,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "title": "Adjustmentids",
+                "type": "array"
+              }
+            },
+            "required": [
+              "kind",
+              "name",
+              "version",
+              "parameters",
+              "shareBasisId"
+            ],
+            "title": "SplitTransformation",
+            "type": "object"
+          },
+          "TimestampPrecision": {
+            "enum": [
+              "second",
+              "date",
+              "unknown"
+            ],
+            "title": "TimestampPrecision",
             "type": "string"
           },
           "Unit": {
@@ -1117,6 +1331,8 @@
           },
           "scale": {
             "default": 1,
+            "maximum": 1,
+            "minimum": 1,
             "title": "Scale",
             "type": "integer"
           },
@@ -1165,11 +1381,11 @@
           "publishedAt": {
             "anyOf": [
               {
-                "format": "date-time",
+                "format": "date",
                 "type": "string"
               },
               {
-                "format": "date",
+                "format": "date-time",
                 "type": "string"
               },
               {
@@ -1230,12 +1446,35 @@
           "transformation": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/fact-model/$defs/Transformation"
+                "discriminator": {
+                  "mapping": {
+                    "fx": "#/$defs/FxTransformation",
+                    "normalization": "#/$defs/NormalizationTransformation",
+                    "scale": "#/$defs/ScaleTransformation",
+                    "split": "#/$defs/SplitTransformation"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/fact-model/$defs/ScaleTransformation"
+                  },
+                  {
+                    "$ref": "#/components/schemas/fact-model/$defs/FxTransformation"
+                  },
+                  {
+                    "$ref": "#/components/schemas/fact-model/$defs/SplitTransformation"
+                  },
+                  {
+                    "$ref": "#/components/schemas/fact-model/$defs/NormalizationTransformation"
+                  }
+                ]
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Transformation"
           }
         },
         "required": [
@@ -1263,9 +1502,7 @@
           "transformation"
         ],
         "title": "Fact",
-        "type": "object",
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "urn:inversor:fact-model:v2"
+        "type": "object"
       },
       "fcff-simulation-request-model": {
         "$defs": {
@@ -1595,9 +1832,7 @@
           "fxFactId"
         ],
         "title": "FcffSimulationRequest",
-        "type": "object",
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "urn:inversor:fcff-simulation-request-model:v2"
+        "type": "object"
       },
       "instrument": {
         "$defs": {
@@ -1673,9 +1908,7 @@
           "type"
         ],
         "title": "Instrument",
-        "type": "object",
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "urn:inversor:instrument:v2"
+        "type": "object"
       },
       "issuer": {
         "$defs": {
@@ -1757,9 +1990,7 @@
           "domicileCountry"
         ],
         "title": "Issuer",
-        "type": "object",
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "urn:inversor:issuer:v2"
+        "type": "object"
       },
       "listing": {
         "$defs": {
@@ -1841,9 +2072,7 @@
           "validFrom"
         ],
         "title": "Listing",
-        "type": "object",
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "urn:inversor:listing:v2"
+        "type": "object"
       },
       "provider-result": {
         "$defs": {
@@ -1936,9 +2165,7 @@
           "fetchedAt"
         ],
         "title": "ProviderResult",
-        "type": "object",
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "urn:inversor:provider-result:v2"
+        "type": "object"
       },
       "provider-symbol": {
         "$defs": {
@@ -2014,9 +2241,7 @@
           "resolutionEvidenceId"
         ],
         "title": "ProviderSymbol",
-        "type": "object",
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "urn:inversor:provider-symbol:v2"
+        "type": "object"
       },
       "scenario-set-revision": {
         "$defs": {
@@ -2180,9 +2405,7 @@
           "scenarios"
         ],
         "title": "ScenarioSetRevision",
-        "type": "object",
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "urn:inversor:scenario-set-revision:v2"
+        "type": "object"
       },
       "share-basis": {
         "$defs": {
@@ -2286,6 +2509,32 @@
             "default": null,
             "title": "Splitfactor"
           },
+          "preActionShares": {
+            "anyOf": [
+              {
+                "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Preactionshares"
+          },
+          "postActionShares": {
+            "anyOf": [
+              {
+                "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Postactionshares"
+          },
           "targetDate": {
             "anyOf": [
               {
@@ -2330,9 +2579,7 @@
           "version"
         ],
         "title": "ShareBasis",
-        "type": "object",
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "urn:inversor:share-basis:v2"
+        "type": "object"
       }
     }
   }

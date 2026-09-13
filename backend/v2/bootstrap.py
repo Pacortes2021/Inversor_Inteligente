@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel, ConfigDict
 
 from . import __version__
+from .api.openapi import install_canonical_openapi
 from .sqlite_runtime import has_wal_reset_fix
 
 
@@ -42,6 +43,7 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
             data_directory_configured=data_dir is not None,
         )
 
+    install_canonical_openapi(app)
     return app
 
 

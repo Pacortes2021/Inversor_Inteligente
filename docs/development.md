@@ -4,7 +4,7 @@
 
 - `uv` 0.10.10.
 - Python 3.12 administrado por `uv`.
-- Node 22 LTS y npm compatible con el lockfile.
+- Node 22.23.2 LTS y npm 10.9.8 (también fijados en `.nvmrc` y `package.json`).
 - Un `INVERSOR_DATA_DIR` vacío y exclusivo de v2 cuando se pruebe persistencia en M1.
 
 No se requieren credenciales ni red de proveedores para construir o probar M0.
@@ -37,4 +37,4 @@ La única ruta funcional de M0 es `GET /api/v2/health`. No hay un motor de valor
 uv run python -c "import sqlite3; print(sqlite3.sqlite_version)"
 ```
 
-El Python 3.12.13 administrado quedó enlazado localmente con SQLite 3.50.4. La comprobación se expone en health y no se confunde con la versión del ejecutable `sqlite3` del sistema. SQLite 3.53.0 corrigió el [defecto de corrupción al reiniciar WAL](https://sqlite.org/wal.html#walresetbug); por ello M0 no activa WAL y el gate `sqlite_wal_reset_fix` permanece falso en este runtime. M1 deberá usar SQLite ≥3.53.0 antes de habilitar concurrencia WAL, o documentar y revisar una mitigación equivalente. `foreign_keys=ON` y `busy_timeout` se prueban junto al adaptador real; M0 no simula persistencia para dar por cumplida esa fase.
+El Python 3.12.13 administrado quedó enlazado localmente con SQLite 3.50.4. La comprobación se expone en health y no se confunde con la versión del ejecutable `sqlite3` del sistema. La documentación oficial ubica la corrección del [defecto de corrupción al reiniciar WAL](https://sqlite.org/wal.html#walresetbug) en SQLite 3.51.3, con backports 3.50.7 y 3.44.6. Por ello M0 no activa WAL y el gate `sqlite_wal_reset_fix` permanece falso en este runtime. M1 deberá usar una de esas revisiones corregidas o posterior antes de habilitar concurrencia WAL. `foreign_keys=ON` y `busy_timeout` se prueban junto al adaptador real; M0 no simula persistencia para dar por cumplida esa fase.

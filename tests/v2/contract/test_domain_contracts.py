@@ -134,7 +134,7 @@ def test_lineage_rejects_unknown_inputs() -> None:
         "quality": {"freshness": "current", "reconciliation": "not_checked", "validation": "valid"},
         "evidence": [],
         "inputFactIds": ["missing-input"],
-        "transformation": {"kind": "normalization", "name": "normalize", "version": "v1", "parameters": {}, "fxFactId": None, "shareBasisId": None, "adjustmentIds": ["adjustment-1"]}
+        "transformation": {"kind": "normalization", "name": "normalize", "version": "v1", "parameters": {"method": "manual-bridge", "rationale": "Synthetic adjustment"}, "fxFactId": None, "shareBasisId": None, "adjustmentIds": ["adjustment-1"]}
     }
     fact = Fact.model_validate(base)
     with pytest.raises(ValueError, match="unknown input fact"):
