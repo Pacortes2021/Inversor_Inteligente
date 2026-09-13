@@ -1,0 +1,76 @@
+[
+  {
+    "id": "missing_has_number",
+    "schema": "fact",
+    "replace": {
+      "/availability": "missing",
+      "/missingReason": "not_reported"
+    },
+    "expectedLayer": "json_schema",
+    "expectedCode": "missing_must_have_null_value"
+  },
+  {
+    "id": "price_without_listing",
+    "schema": "fact",
+    "replace": {
+      "/concept": "price.close",
+      "/unit": "money_per_share"
+    },
+    "expectedLayer": "json_schema",
+    "expectedCode": "listing_required"
+  },
+  {
+    "id": "shares_zero",
+    "schema": "fcff-request",
+    "replace": {
+      "/shares": "0"
+    },
+    "expectedLayer": "semantic",
+    "expectedCode": "nonpositive_shares"
+  },
+  {
+    "id": "terminal_not_discountable",
+    "schema": "fcff-request",
+    "replace": {
+      "/wacc": 0.02
+    },
+    "expectedLayer": "semantic",
+    "expectedCode": "wacc_must_exceed_terminal_growth"
+  },
+  {
+    "id": "reinvestment_above_100_percent",
+    "schema": "fcff-request",
+    "replace": {
+      "/terminal/roic": 0.01
+    },
+    "expectedLayer": "semantic",
+    "expectedCode": "terminal_reinvestment_out_of_domain"
+  },
+  {
+    "id": "overlap",
+    "schema": "fcff-request",
+    "replace": {
+      "/years/1/forecastStart": "2026-12-01"
+    },
+    "expectedLayer": "semantic",
+    "expectedCode": "overlapping_forecast_periods"
+  },
+  {
+    "id": "unconverted_listing",
+    "schema": "fcff-request",
+    "replace": {
+      "/quoteCurrency": "CLP"
+    },
+    "expectedLayer": "semantic",
+    "expectedCode": "fx_required"
+  },
+  {
+    "id": "unit_scale_mismatch",
+    "schema": "fact",
+    "replace": {
+      "/value": "1000"
+    },
+    "expectedLayer": "semantic",
+    "expectedCode": "original_scale_does_not_reconcile"
+  }
+]

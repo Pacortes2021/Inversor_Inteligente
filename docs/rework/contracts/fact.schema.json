@@ -1,0 +1,518 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inversor:fact:v2",
+  "title": "Canonical Fact v2 — initial design",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "factId",
+    "issuerId",
+    "instrumentId",
+    "listingId",
+    "concept",
+    "value",
+    "unit",
+    "currency",
+    "scale",
+    "originalValue",
+    "originalUnit",
+    "originalScale",
+    "period",
+    "context",
+    "publishedAt",
+    "firstSeenAt",
+    "retrievedAt",
+    "timestampPrecision",
+    "origin",
+    "availability",
+    "missingReason",
+    "quality",
+    "evidence",
+    "inputFactIds",
+    "transformation"
+  ],
+  "properties": {
+    "factId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "issuerId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "instrumentId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "concept": {
+      "type": "string",
+      "minLength": 1
+    },
+    "value": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "unit": {
+      "enum": [
+        "money",
+        "money_per_share",
+        "shares",
+        "ratio",
+        "percent",
+        "count"
+      ]
+    },
+    "currency": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Z]{3}$"
+    },
+    "scale": {
+      "const": 1
+    },
+    "originalValue": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "originalUnit": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "originalScale": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "period": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "start",
+        "end",
+        "label",
+        "fiscalYear",
+        "fiscalQuarter"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "instant",
+            "duration"
+          ]
+        },
+        "start": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "end": {
+          "type": "string",
+          "format": "date"
+        },
+        "label": {
+          "enum": [
+            "FY",
+            "FQ",
+            "YTD",
+            "TTM",
+            "instant"
+          ]
+        },
+        "fiscalYear": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "fiscalQuarter": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 4
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "consolidated",
+        "dimensions",
+        "taxonomy",
+        "tag",
+        "shareBasis"
+      ],
+      "properties": {
+        "consolidated": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "dimensions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "taxonomy": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "shareBasis": {
+          "enum": [
+            "not_applicable",
+            "as_reported",
+            "split_adjusted",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "publishedAt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "firstSeenAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "retrievedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "timestampPrecision": {
+      "enum": [
+        "second",
+        "date",
+        "unknown"
+      ]
+    },
+    "origin": {
+      "enum": [
+        "reported",
+        "derived",
+        "estimate",
+        "assumption",
+        "manual_judgment"
+      ]
+    },
+    "availability": {
+      "enum": [
+        "available",
+        "missing",
+        "not_applicable",
+        "unsupported",
+        "blocked"
+      ]
+    },
+    "missingReason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "freshness",
+        "reconciliation",
+        "validation"
+      ],
+      "properties": {
+        "freshness": {
+          "enum": [
+            "current",
+            "stale",
+            "unknown"
+          ]
+        },
+        "reconciliation": {
+          "enum": [
+            "single_source",
+            "matched",
+            "conflict",
+            "not_checked"
+          ]
+        },
+        "validation": {
+          "enum": [
+            "valid",
+            "invalid",
+            "pending"
+          ]
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "provider",
+          "documentId",
+          "url",
+          "locator",
+          "sha256"
+        ],
+        "properties": {
+          "provider": {
+            "type": "string",
+            "minLength": 1
+          },
+          "documentId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri"
+          },
+          "locator": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sha256": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
+    "inputFactIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "transformation": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "listingId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "availability": {
+            "const": "available"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+          },
+          "missingReason": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "value": {
+            "type": "null"
+          },
+          "missingReason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "unit": {
+            "enum": [
+              "money",
+              "money_per_share"
+            ]
+          },
+          "availability": {
+            "const": "available"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          }
+        }
+      },
+      "else": {
+        "if": {
+          "properties": {
+            "unit": {
+              "enum": [
+                "shares",
+                "ratio",
+                "percent",
+                "count"
+              ]
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "currency": {
+              "type": "null"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "origin": {
+            "const": "reported"
+          },
+          "availability": {
+            "const": "available"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "evidence": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "origin": {
+            "const": "derived"
+          },
+          "availability": {
+            "const": "available"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "inputFactIds": {
+            "minItems": 1
+          },
+          "transformation": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "concept": {
+            "enum": [
+              "price.close",
+              "price.open",
+              "price.high",
+              "price.low"
+            ]
+          },
+          "availability": {
+            "const": "available"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "instrumentId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "listingId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "unit": {
+            "const": "money_per_share"
+          }
+        }
+      }
+    }
+  ]
+}
