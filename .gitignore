@@ -11,3 +11,12 @@ data/*.log
 
 # Secrets locales (no versionar)
 .env
+
+# Salidas locales de inventario/respaldo; pueden contener datos personales.
+var/private-baseline/
+
+# Entorno y builds del rework.
+web/node_modules/
+web/dist/
+.pytest_cache/
+.ruff_cache/
