@@ -1,6 +1,6 @@
 # Contratos iniciales y ejemplos
 
-Estos archivos especifican el diseño, no endpoints operativos. JSON Schema Draft2020-12 describe estructura; las reglas entre campos, la pertenencia de IDs y las fórmulas necesitan validadores del dominio. M0 convierte ambos niveles a contratos ejecutables antes de construir integraciones.
+Los esquemas curados describen la frontera documental original y los modelos de `backend/v2/domain/` ejecutan las reglas cruzadas. JSON Schema Draft 2020-12 valida estructura; los validadores del dominio comprueban períodos, referencias, linaje, escalas y estados. M0 no activa por ello ningún motor financiero.
 
 | Archivo | Uso |
 |---|---|
@@ -10,6 +10,10 @@ Estos archivos especifican el diseño, no endpoints operativos. JSON Schema Draf
 | `fcff-request.example.json` | Empresa sintética, sin vínculo con cotizaciones reales |
 | `fcff-expected.example.json` | Cálculo independiente para comprobar el futuro motor |
 | `invalid-cases.json` | Parches sobre los ejemplos y capa que debe rechazarlos |
+| `generated/*.schema.json` | Esquemas regenerables de Fact, identidad, Snapshot, Assessment, Scenario, ProviderResult, ShareBasis y errores |
+| `openapi.json` | OpenAPI 3.1 del esqueleto, con todos los contratos canónicos en componentes |
+
+Regeneración: `uv run python scripts/export_v2_schemas.py`. La CI exige que el resultado no cambie y ejecuta validación Draft 2020-12 con comprobación de formatos.
 
 Los identificadores `synthetic-*`, documentos de ejemplo y hashes artificiales no verifican ninguna empresa real. Una validación estructural no convierte un ejemplo en dato financiero confiable.
 
@@ -63,6 +67,6 @@ El oráculo fue calculado separadamente con aritmética decimal a partir de las 
 
 `invalid-cases.json` indica reemplazos por JSON Pointer sobre el ejemplo correspondiente. Casos `json_schema` deben fallar antes de dominio; casos `semantic` pueden ser estructuralmente válidos y deben fallar al resolver/validar contexto. R02 implementa los códigos definidos o documenta un cambio de contrato.
 
-En esta entrega se revisó sintaxis JSON y se calcularon las cifras del oráculo. La validación completa con un motor Draft2020-12 queda como aceptación de R02: no había una librería JSON Schema disponible en los runtimes inspeccionados. No se instaló una dependencia en la app para validar documentos de planificación.
+M0 ejecuta ambos niveles. Los ejemplos válidos se aceptan; cada parche negativo falla en la capa y con el código declarado. `jsonschema` usa `FormatChecker`, por lo que fechas y URLs no quedan como anotaciones sin comprobar. Los modelos generados incluyen Assessment, ProviderResult, errores, base accionaria y transformaciones tipadas. `validate_lineage` comprueba IDs desconocidos y ciclos sobre el conjunto cargado.
 
-Antes de cerrar R02, completar también esquemas Assessment/ProviderResult/errores, entidad de base accionaria, modelo de transformación con parámetros y comprobación de ID/linaje. Los contratos iniciales reducen ambigüedad, pero no se presentan como especificación exhaustiva de toda la API.
+Los modelos de M0 fijan contratos, no pertenencia persistida: comprobar que issuer, listing, snapshot, revisión y evidencias existen en repositorios corresponde a M1. Asimismo, el request FCFF sólo comprueba que sus bindings son completos y referencian `evidenceIds`; la resolución contra hechos/supuestos reales del snapshot llega antes de activar el motor en M4.

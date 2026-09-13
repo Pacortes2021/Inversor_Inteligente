@@ -1,0 +1,2586 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Inversor Inteligente API v2",
+    "description": "Contract-only M0 skeleton. No financial engine is active.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v2/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_api_v2_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "build": {
+            "type": "string",
+            "title": "Build"
+          },
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version"
+          },
+          "sqlite_version": {
+            "type": "string",
+            "title": "Sqlite Version"
+          },
+          "sqlite_wal_reset_fix": {
+            "type": "boolean",
+            "title": "Sqlite Wal Reset Fix"
+          },
+          "data_directory_configured": {
+            "type": "boolean",
+            "title": "Data Directory Configured"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "build",
+          "schema_version",
+          "sqlite_version",
+          "sqlite_wal_reset_fix",
+          "data_directory_configured"
+        ],
+        "title": "HealthResponse"
+      },
+      "assessment": {
+        "$defs": {
+          "AssessmentMode": {
+            "enum": [
+              "financial",
+              "personal"
+            ],
+            "title": "AssessmentMode",
+            "type": "string"
+          },
+          "AssessmentResult": {
+            "additionalProperties": false,
+            "properties": {
+              "key": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Key",
+                "type": "string"
+              },
+              "state": {
+                "$ref": "#/components/schemas/assessment/$defs/ResultState"
+              },
+              "value": {
+                "anyOf": [
+                  {},
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Value"
+              },
+              "unit": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Unit"
+              },
+              "evidenceIds": {
+                "items": {
+                  "maxLength": 160,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "title": "Evidenceids",
+                "type": "array"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Reason"
+              }
+            },
+            "required": [
+              "key",
+              "state"
+            ],
+            "title": "AssessmentResult",
+            "type": "object"
+          },
+          "Coverage": {
+            "additionalProperties": false,
+            "properties": {
+              "possiblePoints": {
+                "default": 100,
+                "exclusiveMinimum": 0,
+                "title": "Possiblepoints",
+                "type": "integer"
+              },
+              "resolvedPoints": {
+                "minimum": 0,
+                "title": "Resolvedpoints",
+                "type": "integer"
+              },
+              "creditedPoints": {
+                "minimum": 0,
+                "title": "Creditedpoints",
+                "type": "integer"
+              },
+              "pendingPoints": {
+                "minimum": 0,
+                "title": "Pendingpoints",
+                "type": "integer"
+              },
+              "minimumScore": {
+                "minimum": 0,
+                "title": "Minimumscore",
+                "type": "integer"
+              },
+              "maximumScore": {
+                "minimum": 0,
+                "title": "Maximumscore",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "resolvedPoints",
+              "creditedPoints",
+              "pendingPoints",
+              "minimumScore",
+              "maximumScore"
+            ],
+            "title": "Coverage",
+            "type": "object"
+          },
+          "ResultState": {
+            "enum": [
+              "available",
+              "pending",
+              "blocked",
+              "not_applicable"
+            ],
+            "title": "ResultState",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "assessmentId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Assessmentid",
+            "type": "string"
+          },
+          "datasetSnapshotId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Datasetsnapshotid",
+            "type": "string"
+          },
+          "instrumentId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Instrumentid",
+            "type": "string"
+          },
+          "listingId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Listingid",
+            "type": "string"
+          },
+          "quoteCurrency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Quotecurrency",
+            "type": "string"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/assessment/$defs/AssessmentMode"
+          },
+          "scenarioSetRevision": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Scenariosetrevision",
+            "type": "string"
+          },
+          "normalizationRevision": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Normalizationrevision",
+            "type": "string"
+          },
+          "thesisRevision": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thesisrevision"
+          },
+          "portfolioSnapshotId": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfoliosnapshotid"
+          },
+          "engineVersions": {
+            "additionalProperties": {
+              "maxLength": 160,
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Engineversions",
+            "type": "object"
+          },
+          "policyVersions": {
+            "additionalProperties": {
+              "maxLength": 160,
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Policyversions",
+            "type": "object"
+          },
+          "asOf": {
+            "format": "date-time",
+            "title": "Asof",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/assessment/$defs/AssessmentResult"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/assessment/$defs/Coverage"
+          },
+          "blockers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blockers",
+            "type": "array"
+          },
+          "inputHash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Inputhash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assessmentId",
+          "datasetSnapshotId",
+          "instrumentId",
+          "listingId",
+          "quoteCurrency",
+          "mode",
+          "scenarioSetRevision",
+          "normalizationRevision",
+          "thesisRevision",
+          "portfolioSnapshotId",
+          "engineVersions",
+          "policyVersions",
+          "asOf",
+          "results",
+          "coverage",
+          "inputHash"
+        ],
+        "title": "Assessment",
+        "type": "object"
+      },
+      "dataset-snapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "datasetSnapshotId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Datasetsnapshotid",
+            "type": "string"
+          },
+          "instrumentId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Instrumentid",
+            "type": "string"
+          },
+          "listingId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Listingid",
+            "type": "string"
+          },
+          "quoteCurrency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Quotecurrency",
+            "type": "string"
+          },
+          "asOf": {
+            "format": "date-time",
+            "title": "Asof",
+            "type": "string"
+          },
+          "factIds": {
+            "items": {
+              "maxLength": 160,
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Factids",
+            "type": "array"
+          },
+          "priceFactId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Pricefactid",
+            "type": "string"
+          },
+          "fxFactId": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fxfactid"
+          },
+          "shareBasisId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Sharebasisid",
+            "type": "string"
+          },
+          "selectionPolicyVersion": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Selectionpolicyversion",
+            "type": "string"
+          },
+          "periodPolicyVersion": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Periodpolicyversion",
+            "type": "string"
+          },
+          "contentHash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Contenthash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "datasetSnapshotId",
+          "instrumentId",
+          "listingId",
+          "quoteCurrency",
+          "asOf",
+          "factIds",
+          "priceFactId",
+          "fxFactId",
+          "shareBasisId",
+          "selectionPolicyVersion",
+          "periodPolicyVersion",
+          "contentHash"
+        ],
+        "title": "DatasetSnapshot",
+        "type": "object"
+      },
+      "depositary-relation": {
+        "additionalProperties": false,
+        "properties": {
+          "relationId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Relationid",
+            "type": "string"
+          },
+          "adrInstrumentId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Adrinstrumentid",
+            "type": "string"
+          },
+          "underlyingInstrumentId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Underlyinginstrumentid",
+            "type": "string"
+          },
+          "adrShares": {
+            "exclusiveMinimum": 0,
+            "title": "Adrshares",
+            "type": "integer"
+          },
+          "underlyingShares": {
+            "exclusiveMinimum": 0,
+            "title": "Underlyingshares",
+            "type": "integer"
+          },
+          "validFrom": {
+            "format": "date",
+            "title": "Validfrom",
+            "type": "string"
+          },
+          "validTo": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Validto"
+          },
+          "evidenceId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Evidenceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "relationId",
+          "adrInstrumentId",
+          "underlyingInstrumentId",
+          "adrShares",
+          "underlyingShares",
+          "validFrom",
+          "evidenceId"
+        ],
+        "title": "DepositaryRelation",
+        "type": "object"
+      },
+      "error-envelope": {
+        "$defs": {
+          "ApiError": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "$ref": "#/components/schemas/error-envelope/$defs/ErrorCode"
+              },
+              "message": {
+                "title": "Message",
+                "type": "string"
+              },
+              "details": {
+                "items": {
+                  "$ref": "#/components/schemas/error-envelope/$defs/ErrorDetail"
+                },
+                "title": "Details",
+                "type": "array"
+              },
+              "requestId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Requestid",
+                "type": "string"
+              },
+              "retryable": {
+                "default": false,
+                "title": "Retryable",
+                "type": "boolean"
+              },
+              "retryAfterSeconds": {
+                "anyOf": [
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Retryafterseconds"
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "requestId"
+            ],
+            "title": "ApiError",
+            "type": "object"
+          },
+          "ErrorCode": {
+            "enum": [
+              "missing_must_have_null_value",
+              "listing_required",
+              "original_scale_does_not_reconcile",
+              "invalid_period",
+              "invalid_timestamp_order",
+              "evidence_required",
+              "invalid_lineage",
+              "nonpositive_shares",
+              "nonpositive_base_revenue",
+              "wacc_must_exceed_terminal_growth",
+              "terminal_reinvestment_out_of_domain",
+              "overlapping_forecast_periods",
+              "nonconsecutive_forecast_periods",
+              "invalid_cash_flow_date",
+              "fx_required",
+              "input_binding_required",
+              "unknown_reference",
+              "probabilities_must_sum_to_one",
+              "revision_conflict",
+              "not_found",
+              "validation_error",
+              "provider_unavailable"
+            ],
+            "title": "ErrorCode",
+            "type": "string"
+          },
+          "ErrorDetail": {
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "default": "",
+                "title": "Path",
+                "type": "string"
+              },
+              "context": {
+                "additionalProperties": true,
+                "title": "Context",
+                "type": "object"
+              }
+            },
+            "title": "ErrorDetail",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/error-envelope/$defs/ApiError"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ErrorEnvelope",
+        "type": "object"
+      },
+      "fact-model": {
+        "$defs": {
+          "Availability": {
+            "enum": [
+              "available",
+              "missing",
+              "not_applicable",
+              "unsupported",
+              "blocked"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "Evidence": {
+            "additionalProperties": false,
+            "properties": {
+              "provider": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Provider",
+                "type": "string"
+              },
+              "documentId": {
+                "anyOf": [
+                  {
+                    "maxLength": 160,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Documentid"
+              },
+              "url": {
+                "anyOf": [
+                  {
+                    "format": "uri",
+                    "maxLength": 2083,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Url"
+              },
+              "locator": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Locator"
+              },
+              "sha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[a-f0-9]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Sha256"
+              }
+            },
+            "required": [
+              "provider",
+              "documentId",
+              "url",
+              "locator",
+              "sha256"
+            ],
+            "title": "Evidence",
+            "type": "object"
+          },
+          "FactContext": {
+            "additionalProperties": false,
+            "properties": {
+              "consolidated": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Consolidated"
+              },
+              "dimensions": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "title": "Dimensions",
+                "type": "object"
+              },
+              "taxonomy": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Taxonomy"
+              },
+              "tag": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Tag"
+              },
+              "shareBasis": {
+                "$ref": "#/components/schemas/fact-model/$defs/FactShareBasis"
+              },
+              "shareBasisId": {
+                "anyOf": [
+                  {
+                    "maxLength": 160,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Sharebasisid"
+              }
+            },
+            "required": [
+              "consolidated",
+              "dimensions",
+              "taxonomy",
+              "tag",
+              "shareBasis"
+            ],
+            "title": "FactContext",
+            "type": "object"
+          },
+          "FactOrigin": {
+            "enum": [
+              "reported",
+              "derived",
+              "estimate",
+              "assumption",
+              "manual_judgment"
+            ],
+            "title": "FactOrigin",
+            "type": "string"
+          },
+          "FactPeriod": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "$ref": "#/components/schemas/fact-model/$defs/PeriodKind"
+              },
+              "start": {
+                "anyOf": [
+                  {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Start"
+              },
+              "end": {
+                "format": "date",
+                "title": "End",
+                "type": "string"
+              },
+              "label": {
+                "$ref": "#/components/schemas/fact-model/$defs/PeriodLabel"
+              },
+              "fiscalYear": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Fiscalyear"
+              },
+              "fiscalQuarter": {
+                "anyOf": [
+                  {
+                    "maximum": 4,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Fiscalquarter"
+              }
+            },
+            "required": [
+              "kind",
+              "start",
+              "end",
+              "label",
+              "fiscalYear"
+            ],
+            "title": "FactPeriod",
+            "type": "object"
+          },
+          "FactQuality": {
+            "additionalProperties": false,
+            "properties": {
+              "freshness": {
+                "$ref": "#/components/schemas/fact-model/$defs/Freshness"
+              },
+              "reconciliation": {
+                "$ref": "#/components/schemas/fact-model/$defs/Reconciliation"
+              },
+              "validation": {
+                "$ref": "#/components/schemas/fact-model/$defs/ValidationState"
+              }
+            },
+            "required": [
+              "freshness",
+              "reconciliation",
+              "validation"
+            ],
+            "title": "FactQuality",
+            "type": "object"
+          },
+          "FactShareBasis": {
+            "enum": [
+              "not_applicable",
+              "as_reported",
+              "split_adjusted",
+              "unknown"
+            ],
+            "title": "FactShareBasis",
+            "type": "string"
+          },
+          "Freshness": {
+            "enum": [
+              "current",
+              "stale",
+              "unknown"
+            ],
+            "title": "Freshness",
+            "type": "string"
+          },
+          "FxParameters": {
+            "additionalProperties": false,
+            "properties": {
+              "sourceCurrency": {
+                "pattern": "^[A-Z]{3}$",
+                "title": "Sourcecurrency",
+                "type": "string"
+              },
+              "targetCurrency": {
+                "pattern": "^[A-Z]{3}$",
+                "title": "Targetcurrency",
+                "type": "string"
+              },
+              "operation": {
+                "enum": [
+                  "multiply",
+                  "divide"
+                ],
+                "title": "Operation",
+                "type": "string"
+              }
+            },
+            "required": [
+              "sourceCurrency",
+              "targetCurrency",
+              "operation"
+            ],
+            "title": "FxParameters",
+            "type": "object"
+          },
+          "FxTransformation": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "const": "fx",
+                "title": "Kind",
+                "type": "string"
+              },
+              "name": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Name",
+                "type": "string"
+              },
+              "version": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Version",
+                "type": "string"
+              },
+              "parameters": {
+                "$ref": "#/components/schemas/fact-model/$defs/FxParameters"
+              },
+              "fxFactId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Fxfactid",
+                "type": "string"
+              },
+              "shareBasisId": {
+                "default": null,
+                "title": "Sharebasisid",
+                "type": "null"
+              },
+              "adjustmentIds": {
+                "items": {
+                  "maxLength": 160,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "title": "Adjustmentids",
+                "type": "array"
+              }
+            },
+            "required": [
+              "kind",
+              "name",
+              "version",
+              "parameters",
+              "fxFactId"
+            ],
+            "title": "FxTransformation",
+            "type": "object"
+          },
+          "NormalizationParameters": {
+            "additionalProperties": false,
+            "properties": {
+              "method": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Method",
+                "type": "string"
+              },
+              "rationale": {
+                "minLength": 1,
+                "title": "Rationale",
+                "type": "string"
+              }
+            },
+            "required": [
+              "method",
+              "rationale"
+            ],
+            "title": "NormalizationParameters",
+            "type": "object"
+          },
+          "NormalizationTransformation": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "const": "normalization",
+                "title": "Kind",
+                "type": "string"
+              },
+              "name": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Name",
+                "type": "string"
+              },
+              "version": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Version",
+                "type": "string"
+              },
+              "parameters": {
+                "$ref": "#/components/schemas/fact-model/$defs/NormalizationParameters"
+              },
+              "fxFactId": {
+                "default": null,
+                "title": "Fxfactid",
+                "type": "null"
+              },
+              "shareBasisId": {
+                "default": null,
+                "title": "Sharebasisid",
+                "type": "null"
+              },
+              "adjustmentIds": {
+                "items": {
+                  "maxLength": 160,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "title": "Adjustmentids",
+                "type": "array"
+              }
+            },
+            "required": [
+              "kind",
+              "name",
+              "version",
+              "parameters",
+              "adjustmentIds"
+            ],
+            "title": "NormalizationTransformation",
+            "type": "object"
+          },
+          "PeriodKind": {
+            "enum": [
+              "instant",
+              "duration"
+            ],
+            "title": "PeriodKind",
+            "type": "string"
+          },
+          "PeriodLabel": {
+            "enum": [
+              "FY",
+              "FQ",
+              "YTD",
+              "TTM",
+              "instant"
+            ],
+            "title": "PeriodLabel",
+            "type": "string"
+          },
+          "Reconciliation": {
+            "enum": [
+              "single_source",
+              "matched",
+              "conflict",
+              "not_checked"
+            ],
+            "title": "Reconciliation",
+            "type": "string"
+          },
+          "ScaleParameters": {
+            "additionalProperties": false,
+            "properties": {
+              "originalScale": {
+                "minimum": 1,
+                "title": "Originalscale",
+                "type": "integer"
+              },
+              "targetScale": {
+                "maximum": 1,
+                "minimum": 1,
+                "title": "Targetscale",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "originalScale",
+              "targetScale"
+            ],
+            "title": "ScaleParameters",
+            "type": "object"
+          },
+          "ScaleTransformation": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "const": "scale",
+                "title": "Kind",
+                "type": "string"
+              },
+              "name": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Name",
+                "type": "string"
+              },
+              "version": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Version",
+                "type": "string"
+              },
+              "parameters": {
+                "$ref": "#/components/schemas/fact-model/$defs/ScaleParameters"
+              },
+              "fxFactId": {
+                "default": null,
+                "title": "Fxfactid",
+                "type": "null"
+              },
+              "shareBasisId": {
+                "default": null,
+                "title": "Sharebasisid",
+                "type": "null"
+              },
+              "adjustmentIds": {
+                "items": {
+                  "maxLength": 160,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "title": "Adjustmentids",
+                "type": "array"
+              }
+            },
+            "required": [
+              "kind",
+              "name",
+              "version",
+              "parameters"
+            ],
+            "title": "ScaleTransformation",
+            "type": "object"
+          },
+          "SplitParameters": {
+            "additionalProperties": false,
+            "properties": {
+              "factor": {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "title": "Factor",
+                "type": "string"
+              },
+              "targetDate": {
+                "format": "date",
+                "title": "Targetdate",
+                "type": "string"
+              },
+              "corporateActionId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Corporateactionid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "factor",
+              "targetDate",
+              "corporateActionId"
+            ],
+            "title": "SplitParameters",
+            "type": "object"
+          },
+          "SplitTransformation": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "const": "split",
+                "title": "Kind",
+                "type": "string"
+              },
+              "name": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Name",
+                "type": "string"
+              },
+              "version": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Version",
+                "type": "string"
+              },
+              "parameters": {
+                "$ref": "#/components/schemas/fact-model/$defs/SplitParameters"
+              },
+              "fxFactId": {
+                "default": null,
+                "title": "Fxfactid",
+                "type": "null"
+              },
+              "shareBasisId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Sharebasisid",
+                "type": "string"
+              },
+              "adjustmentIds": {
+                "items": {
+                  "maxLength": 160,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "title": "Adjustmentids",
+                "type": "array"
+              }
+            },
+            "required": [
+              "kind",
+              "name",
+              "version",
+              "parameters",
+              "shareBasisId"
+            ],
+            "title": "SplitTransformation",
+            "type": "object"
+          },
+          "TimestampPrecision": {
+            "enum": [
+              "second",
+              "date",
+              "unknown"
+            ],
+            "title": "TimestampPrecision",
+            "type": "string"
+          },
+          "Unit": {
+            "enum": [
+              "money",
+              "money_per_share",
+              "shares",
+              "ratio",
+              "percent",
+              "count"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "ValidationState": {
+            "enum": [
+              "valid",
+              "invalid",
+              "pending"
+            ],
+            "title": "ValidationState",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "factId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Factid",
+            "type": "string"
+          },
+          "issuerId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Issuerid",
+            "type": "string"
+          },
+          "instrumentId": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instrumentid"
+          },
+          "listingId": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listingid"
+          },
+          "concept": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Concept",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "unit": {
+            "$ref": "#/components/schemas/fact-model/$defs/Unit"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "scale": {
+            "default": 1,
+            "maximum": 1,
+            "minimum": 1,
+            "title": "Scale",
+            "type": "integer"
+          },
+          "originalValue": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Originalvalue"
+          },
+          "originalUnit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Originalunit"
+          },
+          "originalScale": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Originalscale"
+          },
+          "period": {
+            "$ref": "#/components/schemas/fact-model/$defs/FactPeriod"
+          },
+          "context": {
+            "$ref": "#/components/schemas/fact-model/$defs/FactContext"
+          },
+          "publishedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedat"
+          },
+          "firstSeenAt": {
+            "format": "date-time",
+            "title": "Firstseenat",
+            "type": "string"
+          },
+          "retrievedAt": {
+            "format": "date-time",
+            "title": "Retrievedat",
+            "type": "string"
+          },
+          "timestampPrecision": {
+            "$ref": "#/components/schemas/fact-model/$defs/TimestampPrecision"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/fact-model/$defs/FactOrigin"
+          },
+          "availability": {
+            "$ref": "#/components/schemas/fact-model/$defs/Availability"
+          },
+          "missingReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Missingreason"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/fact-model/$defs/FactQuality"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/fact-model/$defs/Evidence"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "inputFactIds": {
+            "items": {
+              "maxLength": 160,
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Inputfactids",
+            "type": "array"
+          },
+          "transformation": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "fx": "#/components/schemas/fact-model/$defs/FxTransformation",
+                    "normalization": "#/components/schemas/fact-model/$defs/NormalizationTransformation",
+                    "scale": "#/components/schemas/fact-model/$defs/ScaleTransformation",
+                    "split": "#/components/schemas/fact-model/$defs/SplitTransformation"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/fact-model/$defs/ScaleTransformation"
+                  },
+                  {
+                    "$ref": "#/components/schemas/fact-model/$defs/FxTransformation"
+                  },
+                  {
+                    "$ref": "#/components/schemas/fact-model/$defs/SplitTransformation"
+                  },
+                  {
+                    "$ref": "#/components/schemas/fact-model/$defs/NormalizationTransformation"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transformation"
+          }
+        },
+        "required": [
+          "factId",
+          "issuerId",
+          "instrumentId",
+          "listingId",
+          "concept",
+          "value",
+          "unit",
+          "currency",
+          "originalValue",
+          "originalUnit",
+          "period",
+          "context",
+          "publishedAt",
+          "firstSeenAt",
+          "retrievedAt",
+          "timestampPrecision",
+          "origin",
+          "availability",
+          "missingReason",
+          "quality",
+          "evidence",
+          "transformation"
+        ],
+        "title": "Fact",
+        "type": "object"
+      },
+      "fcff-simulation-request-model": {
+        "$defs": {
+          "ClaimBridge": {
+            "additionalProperties": false,
+            "properties": {
+              "excessCash": {
+                "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "title": "Excesscash",
+                "type": "string"
+              },
+              "nonOperatingAssets": {
+                "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "title": "Nonoperatingassets",
+                "type": "string"
+              },
+              "debt": {
+                "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "title": "Debt",
+                "type": "string"
+              },
+              "preferred": {
+                "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "title": "Preferred",
+                "type": "string"
+              },
+              "minorities": {
+                "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "title": "Minorities",
+                "type": "string"
+              },
+              "otherClaims": {
+                "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "title": "Otherclaims",
+                "type": "string"
+              }
+            },
+            "required": [
+              "excessCash",
+              "nonOperatingAssets",
+              "debt",
+              "preferred",
+              "minorities",
+              "otherClaims"
+            ],
+            "title": "ClaimBridge",
+            "type": "object"
+          },
+          "ForecastYear": {
+            "additionalProperties": false,
+            "properties": {
+              "revenueGrowth": {
+                "exclusiveMinimum": -1,
+                "maximum": 1,
+                "title": "Revenuegrowth",
+                "type": "number"
+              },
+              "operatingMargin": {
+                "maximum": 1,
+                "minimum": -1,
+                "title": "Operatingmargin",
+                "type": "number"
+              },
+              "taxRate": {
+                "maximum": 1,
+                "minimum": 0,
+                "title": "Taxrate",
+                "type": "number"
+              },
+              "depreciation": {
+                "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "title": "Depreciation",
+                "type": "string"
+              },
+              "capex": {
+                "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "title": "Capex",
+                "type": "string"
+              },
+              "deltaOperatingNwc": {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "title": "Deltaoperatingnwc",
+                "type": "string"
+              },
+              "forecastStart": {
+                "format": "date",
+                "title": "Forecaststart",
+                "type": "string"
+              },
+              "forecastEnd": {
+                "format": "date",
+                "title": "Forecastend",
+                "type": "string"
+              },
+              "cashFlowAt": {
+                "format": "date",
+                "title": "Cashflowat",
+                "type": "string"
+              }
+            },
+            "required": [
+              "revenueGrowth",
+              "operatingMargin",
+              "taxRate",
+              "depreciation",
+              "capex",
+              "deltaOperatingNwc",
+              "forecastStart",
+              "forecastEnd",
+              "cashFlowAt"
+            ],
+            "title": "ForecastYear",
+            "type": "object"
+          },
+          "TerminalAssumptions": {
+            "additionalProperties": false,
+            "properties": {
+              "growth": {
+                "maximum": 0.1,
+                "minimum": 0,
+                "title": "Growth",
+                "type": "number"
+              },
+              "roic": {
+                "exclusiveMinimum": 0,
+                "maximum": 1,
+                "title": "Roic",
+                "type": "number"
+              },
+              "operatingMargin": {
+                "exclusiveMinimum": 0,
+                "maximum": 1,
+                "title": "Operatingmargin",
+                "type": "number"
+              },
+              "taxRate": {
+                "maximum": 1,
+                "minimum": 0,
+                "title": "Taxrate",
+                "type": "number"
+              }
+            },
+            "required": [
+              "growth",
+              "roic",
+              "operatingMargin",
+              "taxRate"
+            ],
+            "title": "TerminalAssumptions",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "requestId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Requestid",
+            "type": "string"
+          },
+          "datasetSnapshotId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Datasetsnapshotid",
+            "type": "string"
+          },
+          "instrumentId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Instrumentid",
+            "type": "string"
+          },
+          "listingId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Listingid",
+            "type": "string"
+          },
+          "scenarioSetRevision": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Scenariosetrevision",
+            "type": "string"
+          },
+          "normalizationRevision": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Normalizationrevision",
+            "type": "string"
+          },
+          "model": {
+            "const": "fcff_driver_v1",
+            "title": "Model",
+            "type": "string"
+          },
+          "asOf": {
+            "format": "date-time",
+            "title": "Asof",
+            "type": "string"
+          },
+          "valuationDate": {
+            "format": "date",
+            "title": "Valuationdate",
+            "type": "string"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "quoteCurrency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Quotecurrency",
+            "type": "string"
+          },
+          "baseRevenue": {
+            "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Baserevenue",
+            "type": "string"
+          },
+          "shares": {
+            "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Shares",
+            "type": "string"
+          },
+          "claimBridge": {
+            "$ref": "#/components/schemas/fcff-simulation-request-model/$defs/ClaimBridge"
+          },
+          "wacc": {
+            "exclusiveMinimum": 0,
+            "maximum": 1,
+            "title": "Wacc",
+            "type": "number"
+          },
+          "terminal": {
+            "$ref": "#/components/schemas/fcff-simulation-request-model/$defs/TerminalAssumptions"
+          },
+          "years": {
+            "items": {
+              "$ref": "#/components/schemas/fcff-simulation-request-model/$defs/ForecastYear"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Years",
+            "type": "array"
+          },
+          "sbcPolicy": {
+            "const": "expense_in_ebit",
+            "title": "Sbcpolicy",
+            "type": "string"
+          },
+          "forecastConvention": {
+            "const": "consecutive_12_month_periods",
+            "title": "Forecastconvention",
+            "type": "string"
+          },
+          "taxPolicy": {
+            "const": "no_loss_tax_credit",
+            "title": "Taxpolicy",
+            "type": "string"
+          },
+          "sharesBasis": {
+            "const": "valuation_common_equivalent",
+            "title": "Sharesbasis",
+            "type": "string"
+          },
+          "evidenceIds": {
+            "items": {
+              "maxLength": 160,
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Evidenceids",
+            "type": "array"
+          },
+          "inputBindings": {
+            "additionalProperties": {
+              "items": {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Inputbindings",
+            "type": "object"
+          },
+          "fxFactId": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fxfactid"
+          }
+        },
+        "required": [
+          "requestId",
+          "datasetSnapshotId",
+          "instrumentId",
+          "listingId",
+          "scenarioSetRevision",
+          "normalizationRevision",
+          "model",
+          "asOf",
+          "valuationDate",
+          "currency",
+          "quoteCurrency",
+          "baseRevenue",
+          "shares",
+          "claimBridge",
+          "wacc",
+          "terminal",
+          "years",
+          "sbcPolicy",
+          "forecastConvention",
+          "taxPolicy",
+          "sharesBasis",
+          "evidenceIds",
+          "inputBindings",
+          "fxFactId"
+        ],
+        "title": "FcffSimulationRequest",
+        "type": "object"
+      },
+      "instrument": {
+        "$defs": {
+          "InstrumentType": {
+            "enum": [
+              "common_stock",
+              "preferred_stock",
+              "adr",
+              "etf"
+            ],
+            "title": "InstrumentType",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "instrumentId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Instrumentid",
+            "type": "string"
+          },
+          "issuerId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Issuerid",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/instrument/$defs/InstrumentType"
+          },
+          "shareClass": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Shareclass"
+          },
+          "rightsSummary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Rightssummary"
+          },
+          "isin": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2}[A-Z0-9]{9}[0-9]$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Isin"
+          }
+        },
+        "required": [
+          "instrumentId",
+          "issuerId",
+          "type"
+        ],
+        "title": "Instrument",
+        "type": "object"
+      },
+      "issuer": {
+        "$defs": {
+          "IdentifierType": {
+            "enum": [
+              "cik",
+              "rut",
+              "lei"
+            ],
+            "title": "IdentifierType",
+            "type": "string"
+          },
+          "TypedIdentifier": {
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "$ref": "#/components/schemas/issuer/$defs/IdentifierType"
+              },
+              "value": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Value",
+                "type": "string"
+              },
+              "sourceUrl": {
+                "anyOf": [
+                  {
+                    "format": "uri",
+                    "maxLength": 2083,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Sourceurl"
+              }
+            },
+            "required": [
+              "type",
+              "value"
+            ],
+            "title": "TypedIdentifier",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "issuerId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Issuerid",
+            "type": "string"
+          },
+          "legalName": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Legalname",
+            "type": "string"
+          },
+          "domicileCountry": {
+            "pattern": "^[A-Z]{2}$",
+            "title": "Domicilecountry",
+            "type": "string"
+          },
+          "identifiers": {
+            "items": {
+              "$ref": "#/components/schemas/issuer/$defs/TypedIdentifier"
+            },
+            "title": "Identifiers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "issuerId",
+          "legalName",
+          "domicileCountry"
+        ],
+        "title": "Issuer",
+        "type": "object"
+      },
+      "listing": {
+        "$defs": {
+          "ListingStatus": {
+            "enum": [
+              "active",
+              "inactive"
+            ],
+            "title": "ListingStatus",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "listingId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Listingid",
+            "type": "string"
+          },
+          "instrumentId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Instrumentid",
+            "type": "string"
+          },
+          "mic": {
+            "pattern": "^[A-Z0-9]{4}$",
+            "title": "Mic",
+            "type": "string"
+          },
+          "symbol": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "timezone": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Timezone",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/listing/$defs/ListingStatus"
+          },
+          "validFrom": {
+            "format": "date",
+            "title": "Validfrom",
+            "type": "string"
+          },
+          "validTo": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Validto"
+          }
+        },
+        "required": [
+          "listingId",
+          "instrumentId",
+          "mic",
+          "symbol",
+          "currency",
+          "timezone",
+          "status",
+          "validFrom"
+        ],
+        "title": "Listing",
+        "type": "object"
+      },
+      "provider-result": {
+        "$defs": {
+          "ProviderError": {
+            "enum": [
+              "not_covered",
+              "not_reported",
+              "rate_limited",
+              "auth_required",
+              "provider_unavailable",
+              "invalid_payload",
+              "schema_changed"
+            ],
+            "title": "ProviderError",
+            "type": "string"
+          },
+          "ProviderStatus": {
+            "enum": [
+              "success",
+              "partial",
+              "failure"
+            ],
+            "title": "ProviderStatus",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "provider": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Provider",
+            "type": "string"
+          },
+          "capability": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Capability",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/provider-result/$defs/ProviderStatus"
+          },
+          "data": {
+            "items": {},
+            "title": "Data",
+            "type": "array"
+          },
+          "source": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "fetchedAt": {
+            "format": "date-time",
+            "title": "Fetchedat",
+            "type": "string"
+          },
+          "retryAfterSeconds": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Retryafterseconds"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/provider-result/$defs/ProviderError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "provider",
+          "capability",
+          "status",
+          "source",
+          "fetchedAt"
+        ],
+        "title": "ProviderResult",
+        "type": "object"
+      },
+      "provider-symbol": {
+        "$defs": {
+          "ProviderCapability": {
+            "enum": [
+              "instruments",
+              "prices",
+              "filings",
+              "facts",
+              "actions",
+              "fx",
+              "estimates",
+              "benchmark"
+            ],
+            "title": "ProviderCapability",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "provider": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Provider",
+            "type": "string"
+          },
+          "capability": {
+            "$ref": "#/components/schemas/provider-symbol/$defs/ProviderCapability"
+          },
+          "providerSymbol": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Providersymbol",
+            "type": "string"
+          },
+          "listingId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Listingid",
+            "type": "string"
+          },
+          "validFrom": {
+            "format": "date",
+            "title": "Validfrom",
+            "type": "string"
+          },
+          "validTo": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Validto"
+          },
+          "resolutionEvidenceId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Resolutionevidenceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "capability",
+          "providerSymbol",
+          "listingId",
+          "validFrom",
+          "resolutionEvidenceId"
+        ],
+        "title": "ProviderSymbol",
+        "type": "object"
+      },
+      "scenario-set-revision": {
+        "$defs": {
+          "Assumption": {
+            "additionalProperties": false,
+            "properties": {
+              "assumptionId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Assumptionid",
+                "type": "string"
+              },
+              "name": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Name",
+                "type": "string"
+              },
+              "value": {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "title": "Value",
+                "type": "string"
+              },
+              "unit": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Unit",
+                "type": "string"
+              },
+              "origin": {
+                "$ref": "#/components/schemas/scenario-set-revision/$defs/AssumptionOrigin"
+              },
+              "rationale": {
+                "minLength": 1,
+                "title": "Rationale",
+                "type": "string"
+              },
+              "evidenceIds": {
+                "items": {
+                  "maxLength": 160,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "title": "Evidenceids",
+                "type": "array"
+              }
+            },
+            "required": [
+              "assumptionId",
+              "name",
+              "value",
+              "unit",
+              "origin",
+              "rationale",
+              "evidenceIds"
+            ],
+            "title": "Assumption",
+            "type": "object"
+          },
+          "AssumptionOrigin": {
+            "enum": [
+              "user",
+              "policy_template",
+              "derived"
+            ],
+            "title": "AssumptionOrigin",
+            "type": "string"
+          },
+          "Scenario": {
+            "additionalProperties": false,
+            "properties": {
+              "scenarioId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Scenarioid",
+                "type": "string"
+              },
+              "name": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Name",
+                "type": "string"
+              },
+              "assumptions": {
+                "items": {
+                  "$ref": "#/components/schemas/scenario-set-revision/$defs/Assumption"
+                },
+                "minItems": 1,
+                "title": "Assumptions",
+                "type": "array"
+              },
+              "probability": {
+                "anyOf": [
+                  {
+                    "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Probability"
+              }
+            },
+            "required": [
+              "scenarioId",
+              "name",
+              "assumptions"
+            ],
+            "title": "Scenario",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "scenarioSetRevision": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Scenariosetrevision",
+            "type": "string"
+          },
+          "instrumentId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Instrumentid",
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "author": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Author",
+            "type": "string"
+          },
+          "scenarios": {
+            "items": {
+              "$ref": "#/components/schemas/scenario-set-revision/$defs/Scenario"
+            },
+            "minItems": 1,
+            "title": "Scenarios",
+            "type": "array"
+          }
+        },
+        "required": [
+          "scenarioSetRevision",
+          "instrumentId",
+          "revision",
+          "createdAt",
+          "author",
+          "scenarios"
+        ],
+        "title": "ScenarioSetRevision",
+        "type": "object"
+      },
+      "share-basis": {
+        "$defs": {
+          "ShareBasisKind": {
+            "enum": [
+              "as_reported",
+              "split_adjusted",
+              "valuation_common_equivalent"
+            ],
+            "title": "ShareBasisKind",
+            "type": "string"
+          },
+          "ShareComponent": {
+            "additionalProperties": false,
+            "properties": {
+              "componentId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Componentid",
+                "type": "string"
+              },
+              "kind": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Kind",
+                "type": "string"
+              },
+              "shares": {
+                "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "title": "Shares",
+                "type": "string"
+              },
+              "treatment": {
+                "pattern": "^(included_in_denominator|included_in_claims|excluded)$",
+                "title": "Treatment",
+                "type": "string"
+              },
+              "evidenceId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Evidenceid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "componentId",
+              "kind",
+              "shares",
+              "treatment",
+              "evidenceId"
+            ],
+            "title": "ShareComponent",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "shareBasisId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Sharebasisid",
+            "type": "string"
+          },
+          "instrumentId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Instrumentid",
+            "type": "string"
+          },
+          "asOf": {
+            "format": "date",
+            "title": "Asof",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/share-basis/$defs/ShareBasisKind"
+          },
+          "totalShares": {
+            "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Totalshares",
+            "type": "string"
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/share-basis/$defs/ShareComponent"
+            },
+            "minItems": 1,
+            "title": "Components",
+            "type": "array"
+          },
+          "splitFactor": {
+            "anyOf": [
+              {
+                "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Splitfactor"
+          },
+          "preActionShares": {
+            "anyOf": [
+              {
+                "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Preactionshares"
+          },
+          "postActionShares": {
+            "anyOf": [
+              {
+                "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Postactionshares"
+          },
+          "targetDate": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Targetdate"
+          },
+          "corporateActionId": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Corporateactionid"
+          },
+          "version": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shareBasisId",
+          "instrumentId",
+          "asOf",
+          "kind",
+          "totalShares",
+          "components",
+          "version"
+        ],
+        "title": "ShareBasis",
+        "type": "object"
+      }
+    }
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "$defs": {
+    "ApiError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "details": {
+          "items": {
+            "$ref": "#/$defs/ErrorDetail"
+          },
+          "title": "Details",
+          "type": "array"
+        },
+        "requestId": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Requestid",
+          "type": "string"
+        },
+        "retryable": {
+          "default": false,
+          "title": "Retryable",
+          "type": "boolean"
+        },
+        "retryAfterSeconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retryafterseconds"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "requestId"
+      ],
+      "title": "ApiError",
+      "type": "object"
+    },
+    "ErrorCode": {
+      "enum": [
+        "missing_must_have_null_value",
+        "listing_required",
+        "original_scale_does_not_reconcile",
+        "invalid_period",
+        "invalid_timestamp_order",
+        "evidence_required",
+        "invalid_lineage",
+        "nonpositive_shares",
+        "nonpositive_base_revenue",
+        "wacc_must_exceed_terminal_growth",
+        "terminal_reinvestment_out_of_domain",
+        "overlapping_forecast_periods",
+        "nonconsecutive_forecast_periods",
+        "invalid_cash_flow_date",
+        "fx_required",
+        "input_binding_required",
+        "unknown_reference",
+        "probabilities_must_sum_to_one",
+        "revision_conflict",
+        "not_found",
+        "validation_error",
+        "provider_unavailable"
+      ],
+      "title": "ErrorCode",
+      "type": "string"
+    },
+    "ErrorDetail": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "default": "",
+          "title": "Path",
+          "type": "string"
+        },
+        "context": {
+          "additionalProperties": true,
+          "title": "Context",
+          "type": "object"
+        }
+      },
+      "title": "ErrorDetail",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "error": {
+      "$ref": "#/$defs/ApiError"
+    }
+  },
+  "required": [
+    "error"
+  ],
+  "title": "ErrorEnvelope",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inversor:error-envelope:v2"
+}

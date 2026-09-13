@@ -1,0 +1,270 @@
+{
+  "$defs": {
+    "AssessmentMode": {
+      "enum": [
+        "financial",
+        "personal"
+      ],
+      "title": "AssessmentMode",
+      "type": "string"
+    },
+    "AssessmentResult": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Key",
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/ResultState"
+        },
+        "value": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "evidenceIds": {
+          "items": {
+            "maxLength": 160,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidenceids",
+          "type": "array"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "key",
+        "state"
+      ],
+      "title": "AssessmentResult",
+      "type": "object"
+    },
+    "Coverage": {
+      "additionalProperties": false,
+      "properties": {
+        "possiblePoints": {
+          "default": 100,
+          "exclusiveMinimum": 0,
+          "title": "Possiblepoints",
+          "type": "integer"
+        },
+        "resolvedPoints": {
+          "minimum": 0,
+          "title": "Resolvedpoints",
+          "type": "integer"
+        },
+        "creditedPoints": {
+          "minimum": 0,
+          "title": "Creditedpoints",
+          "type": "integer"
+        },
+        "pendingPoints": {
+          "minimum": 0,
+          "title": "Pendingpoints",
+          "type": "integer"
+        },
+        "minimumScore": {
+          "minimum": 0,
+          "title": "Minimumscore",
+          "type": "integer"
+        },
+        "maximumScore": {
+          "minimum": 0,
+          "title": "Maximumscore",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "resolvedPoints",
+        "creditedPoints",
+        "pendingPoints",
+        "minimumScore",
+        "maximumScore"
+      ],
+      "title": "Coverage",
+      "type": "object"
+    },
+    "ResultState": {
+      "enum": [
+        "available",
+        "pending",
+        "blocked",
+        "not_applicable"
+      ],
+      "title": "ResultState",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "assessmentId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Assessmentid",
+      "type": "string"
+    },
+    "datasetSnapshotId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Datasetsnapshotid",
+      "type": "string"
+    },
+    "instrumentId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Instrumentid",
+      "type": "string"
+    },
+    "listingId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Listingid",
+      "type": "string"
+    },
+    "quoteCurrency": {
+      "pattern": "^[A-Z]{3}$",
+      "title": "Quotecurrency",
+      "type": "string"
+    },
+    "mode": {
+      "$ref": "#/$defs/AssessmentMode"
+    },
+    "scenarioSetRevision": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Scenariosetrevision",
+      "type": "string"
+    },
+    "normalizationRevision": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Normalizationrevision",
+      "type": "string"
+    },
+    "thesisRevision": {
+      "anyOf": [
+        {
+          "maxLength": 160,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Thesisrevision"
+    },
+    "portfolioSnapshotId": {
+      "anyOf": [
+        {
+          "maxLength": 160,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Portfoliosnapshotid"
+    },
+    "engineVersions": {
+      "additionalProperties": {
+        "maxLength": 160,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Engineversions",
+      "type": "object"
+    },
+    "policyVersions": {
+      "additionalProperties": {
+        "maxLength": 160,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Policyversions",
+      "type": "object"
+    },
+    "asOf": {
+      "format": "date-time",
+      "title": "Asof",
+      "type": "string"
+    },
+    "results": {
+      "items": {
+        "$ref": "#/$defs/AssessmentResult"
+      },
+      "title": "Results",
+      "type": "array"
+    },
+    "coverage": {
+      "$ref": "#/$defs/Coverage"
+    },
+    "blockers": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Blockers",
+      "type": "array"
+    },
+    "inputHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Inputhash",
+      "type": "string"
+    }
+  },
+  "required": [
+    "assessmentId",
+    "datasetSnapshotId",
+    "instrumentId",
+    "listingId",
+    "quoteCurrency",
+    "mode",
+    "scenarioSetRevision",
+    "normalizationRevision",
+    "thesisRevision",
+    "portfolioSnapshotId",
+    "engineVersions",
+    "policyVersions",
+    "asOf",
+    "results",
+    "coverage",
+    "inputHash"
+  ],
+  "title": "Assessment",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inversor:assessment:v2"
+}

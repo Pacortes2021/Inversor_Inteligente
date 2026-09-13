@@ -1,0 +1,84 @@
+{
+  "$defs": {
+    "ListingStatus": {
+      "enum": [
+        "active",
+        "inactive"
+      ],
+      "title": "ListingStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "listingId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Listingid",
+      "type": "string"
+    },
+    "instrumentId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Instrumentid",
+      "type": "string"
+    },
+    "mic": {
+      "pattern": "^[A-Z0-9]{4}$",
+      "title": "Mic",
+      "type": "string"
+    },
+    "symbol": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Symbol",
+      "type": "string"
+    },
+    "currency": {
+      "pattern": "^[A-Z]{3}$",
+      "title": "Currency",
+      "type": "string"
+    },
+    "timezone": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Timezone",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/ListingStatus"
+    },
+    "validFrom": {
+      "format": "date",
+      "title": "Validfrom",
+      "type": "string"
+    },
+    "validTo": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Validto"
+    }
+  },
+  "required": [
+    "listingId",
+    "instrumentId",
+    "mic",
+    "symbol",
+    "currency",
+    "timezone",
+    "status",
+    "validFrom"
+  ],
+  "title": "Listing",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inversor:listing:v2"
+}

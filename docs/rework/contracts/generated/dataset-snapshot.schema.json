@@ -1,0 +1,103 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "datasetSnapshotId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Datasetsnapshotid",
+      "type": "string"
+    },
+    "instrumentId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Instrumentid",
+      "type": "string"
+    },
+    "listingId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Listingid",
+      "type": "string"
+    },
+    "quoteCurrency": {
+      "pattern": "^[A-Z]{3}$",
+      "title": "Quotecurrency",
+      "type": "string"
+    },
+    "asOf": {
+      "format": "date-time",
+      "title": "Asof",
+      "type": "string"
+    },
+    "factIds": {
+      "items": {
+        "maxLength": 160,
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Factids",
+      "type": "array"
+    },
+    "priceFactId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Pricefactid",
+      "type": "string"
+    },
+    "fxFactId": {
+      "anyOf": [
+        {
+          "maxLength": 160,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Fxfactid"
+    },
+    "shareBasisId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Sharebasisid",
+      "type": "string"
+    },
+    "selectionPolicyVersion": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Selectionpolicyversion",
+      "type": "string"
+    },
+    "periodPolicyVersion": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Periodpolicyversion",
+      "type": "string"
+    },
+    "contentHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Contenthash",
+      "type": "string"
+    }
+  },
+  "required": [
+    "datasetSnapshotId",
+    "instrumentId",
+    "listingId",
+    "quoteCurrency",
+    "asOf",
+    "factIds",
+    "priceFactId",
+    "fxFactId",
+    "shareBasisId",
+    "selectionPolicyVersion",
+    "periodPolicyVersion",
+    "contentHash"
+  ],
+  "title": "DatasetSnapshot",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inversor:dataset-snapshot:v2"
+}

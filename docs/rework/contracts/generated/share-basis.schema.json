@@ -1,0 +1,176 @@
+{
+  "$defs": {
+    "ShareBasisKind": {
+      "enum": [
+        "as_reported",
+        "split_adjusted",
+        "valuation_common_equivalent"
+      ],
+      "title": "ShareBasisKind",
+      "type": "string"
+    },
+    "ShareComponent": {
+      "additionalProperties": false,
+      "properties": {
+        "componentId": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Componentid",
+          "type": "string"
+        },
+        "kind": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "shares": {
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Shares",
+          "type": "string"
+        },
+        "treatment": {
+          "pattern": "^(included_in_denominator|included_in_claims|excluded)$",
+          "title": "Treatment",
+          "type": "string"
+        },
+        "evidenceId": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Evidenceid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "componentId",
+        "kind",
+        "shares",
+        "treatment",
+        "evidenceId"
+      ],
+      "title": "ShareComponent",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "shareBasisId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Sharebasisid",
+      "type": "string"
+    },
+    "instrumentId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Instrumentid",
+      "type": "string"
+    },
+    "asOf": {
+      "format": "date",
+      "title": "Asof",
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/ShareBasisKind"
+    },
+    "totalShares": {
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+      "title": "Totalshares",
+      "type": "string"
+    },
+    "components": {
+      "items": {
+        "$ref": "#/$defs/ShareComponent"
+      },
+      "minItems": 1,
+      "title": "Components",
+      "type": "array"
+    },
+    "splitFactor": {
+      "anyOf": [
+        {
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Splitfactor"
+    },
+    "preActionShares": {
+      "anyOf": [
+        {
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Preactionshares"
+    },
+    "postActionShares": {
+      "anyOf": [
+        {
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Postactionshares"
+    },
+    "targetDate": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Targetdate"
+    },
+    "corporateActionId": {
+      "anyOf": [
+        {
+          "maxLength": 160,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Corporateactionid"
+    },
+    "version": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "shareBasisId",
+    "instrumentId",
+    "asOf",
+    "kind",
+    "totalShares",
+    "components",
+    "version"
+  ],
+  "title": "ShareBasis",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inversor:share-basis:v2"
+}

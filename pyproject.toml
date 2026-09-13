@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "inversor-inteligente"
+version = "0.1.0"
+description = "Local, contract-first fundamental investment research application"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "fastapi>=0.116,<1",
+  "jsonschema[format]>=4.25,<5",
+  "lxml>=5.4,<7",
+  "numpy>=2.2,<3",
+  "pandas>=2.2,<4",
+  "pydantic>=2.11,<3",
+  "requests>=2.32,<3",
+  "uvicorn[standard]>=0.35,<1",
+  "yfinance>=0.2.65,<2",
+]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28,<1",
+  "pytest>=8.4,<9",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["backend"]
+
+[tool.pytest.ini_options]
+addopts = "-p no:rerunfailures"
+testpaths = ["tests"]
+markers = [
+  "characterization: records deterministic legacy behaviour and is not v2 acceptance",
+]
