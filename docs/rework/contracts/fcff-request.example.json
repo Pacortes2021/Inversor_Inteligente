@@ -1,0 +1,169 @@
+{
+  "requestId": "synthetic-request-001",
+  "datasetSnapshotId": "synthetic-snapshot-001",
+  "instrumentId": "synthetic-common-usd",
+  "scenarioSetRevision": "synthetic-scenarios-r1",
+  "normalizationRevision": "synthetic-normalization-r1",
+  "model": "fcff_driver_v1",
+  "asOf": "2025-12-31T23:59:59Z",
+  "currency": "USD",
+  "baseRevenue": "1000",
+  "shares": "100",
+  "claimBridge": {
+    "excessCash": "50",
+    "nonOperatingAssets": "0",
+    "debt": "200",
+    "preferred": "0",
+    "minorities": "0",
+    "otherClaims": "0"
+  },
+  "wacc": 0.1,
+  "terminal": {
+    "growth": 0.025,
+    "roic": 0.125,
+    "operatingMargin": 0.2,
+    "taxRate": 0.25
+  },
+  "years": [
+    {
+      "revenueGrowth": 0.05,
+      "operatingMargin": 0.2,
+      "taxRate": 0.25,
+      "depreciation": "30",
+      "capex": "50",
+      "deltaOperatingNwc": "10",
+      "forecastStart": "2026-01-01",
+      "forecastEnd": "2026-12-31",
+      "cashFlowAt": "2026-12-31"
+    },
+    {
+      "revenueGrowth": 0.05,
+      "operatingMargin": 0.2,
+      "taxRate": 0.25,
+      "depreciation": "30",
+      "capex": "50",
+      "deltaOperatingNwc": "10",
+      "forecastStart": "2027-01-01",
+      "forecastEnd": "2027-12-31",
+      "cashFlowAt": "2027-12-31"
+    },
+    {
+      "revenueGrowth": 0.05,
+      "operatingMargin": 0.2,
+      "taxRate": 0.25,
+      "depreciation": "30",
+      "capex": "50",
+      "deltaOperatingNwc": "10",
+      "forecastStart": "2028-01-01",
+      "forecastEnd": "2028-12-31",
+      "cashFlowAt": "2028-12-31"
+    }
+  ],
+  "sbcPolicy": "expense_in_ebit",
+  "evidenceIds": [
+    "synthetic-normalized-base",
+    "synthetic-assumptions-r1"
+  ],
+  "listingId": "synthetic-listing-usd",
+  "quoteCurrency": "USD",
+  "valuationDate": "2025-12-31",
+  "forecastConvention": "consecutive_12_month_periods",
+  "taxPolicy": "no_loss_tax_credit",
+  "sharesBasis": "valuation_common_equivalent",
+  "fxFactId": null,
+  "inputBindings": {
+    "/baseRevenue": [
+      "synthetic-normalized-base"
+    ],
+    "/shares": [
+      "synthetic-normalized-base"
+    ],
+    "/claimBridge/excessCash": [
+      "synthetic-normalized-base"
+    ],
+    "/claimBridge/nonOperatingAssets": [
+      "synthetic-normalized-base"
+    ],
+    "/claimBridge/debt": [
+      "synthetic-normalized-base"
+    ],
+    "/claimBridge/preferred": [
+      "synthetic-normalized-base"
+    ],
+    "/claimBridge/minorities": [
+      "synthetic-normalized-base"
+    ],
+    "/claimBridge/otherClaims": [
+      "synthetic-normalized-base"
+    ],
+    "/wacc": [
+      "synthetic-assumptions-r1"
+    ],
+    "/terminal/growth": [
+      "synthetic-assumptions-r1"
+    ],
+    "/terminal/roic": [
+      "synthetic-assumptions-r1"
+    ],
+    "/terminal/operatingMargin": [
+      "synthetic-assumptions-r1"
+    ],
+    "/terminal/taxRate": [
+      "synthetic-assumptions-r1"
+    ],
+    "/years/0/revenueGrowth": [
+      "synthetic-assumptions-r1"
+    ],
+    "/years/0/operatingMargin": [
+      "synthetic-assumptions-r1"
+    ],
+    "/years/0/taxRate": [
+      "synthetic-assumptions-r1"
+    ],
+    "/years/0/depreciation": [
+      "synthetic-assumptions-r1"
+    ],
+    "/years/0/capex": [
+      "synthetic-assumptions-r1"
+    ],
+    "/years/0/deltaOperatingNwc": [
+      "synthetic-assumptions-r1"
+    ],
+    "/years/1/revenueGrowth": [
+      "synthetic-assumptions-r1"
+    ],
+    "/years/1/operatingMargin": [
+      "synthetic-assumptions-r1"
+    ],
+    "/years/1/taxRate": [
+      "synthetic-assumptions-r1"
+    ],
+    "/years/1/depreciation": [
+      "synthetic-assumptions-r1"
+    ],
+    "/years/1/capex": [
+      "synthetic-assumptions-r1"
+    ],
+    "/years/1/deltaOperatingNwc": [
+      "synthetic-assumptions-r1"
+    ],
+    "/years/2/revenueGrowth": [
+      "synthetic-assumptions-r1"
+    ],
+    "/years/2/operatingMargin": [
+      "synthetic-assumptions-r1"
+    ],
+    "/years/2/taxRate": [
+      "synthetic-assumptions-r1"
+    ],
+    "/years/2/depreciation": [
+      "synthetic-assumptions-r1"
+    ],
+    "/years/2/capex": [
+      "synthetic-assumptions-r1"
+    ],
+    "/years/2/deltaOperatingNwc": [
+      "synthetic-assumptions-r1"
+    ]
+  }
+}

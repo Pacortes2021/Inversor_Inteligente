@@ -1,0 +1,34 @@
+{
+  "fixture": "synthetic-only",
+  "discountConvention": "ACT/365.25, end of period",
+  "cashFlows": [
+    {
+      "revenue": "1050.00",
+      "fcff": "127.50000",
+      "timeExponent": "0.9993155373032169746748802190280629705681",
+      "presentValue": "115.9166526316413206000049364712005834918"
+    },
+    {
+      "revenue": "1102.5000",
+      "fcff": "135.3750000",
+      "timeExponent": "1.998631074606433949349760438056125941136",
+      "presentValue": "111.8947635292775116371426174559764175687"
+    },
+    {
+      "revenue": "1157.625000",
+      "fcff": "143.643750000",
+      "timeExponent": "3.000684462696783025325119780971937029432",
+      "presentValue": "107.9146352548764508688309055794364527033"
+    }
+  ],
+  "terminalReinvestmentRate": "0.2",
+  "terminalNopat": "177.984843750000",
+  "terminalFcff": "142.3878750000000",
+  "terminalValue": "1898.5050000000",
+  "presentValueTerminal": "1426.281857752663908849008873668976218175",
+  "enterpriseValue": "1762.007909168459191954987333175589671939",
+  "equityValue": "1612.007909168459191954987333175589671939",
+  "valuePerShare": "16.12007909168459191954987333175589671939",
+  "currency": "USD",
+  "assertionAbsoluteTolerance": "0.00000001"
+}
