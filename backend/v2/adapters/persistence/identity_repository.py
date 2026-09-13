@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import sqlite3
 
 from ...domain.identity import (
@@ -14,12 +13,8 @@ from ...domain.identity import (
     ProviderSymbol,
     ShareBasis,
 )
-from ...domain.common import jsonable
+from ...domain.common import canonical_json, jsonable
 from .connection import Database
-
-
-def canonical_json(value: object) -> str:
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
 class IdentityRepository:

@@ -13,6 +13,7 @@ from .identity import (
     ShareBasis,
 )
 from .providers import ProviderResult
+from .policies import FactSelectionQuery, SelectionDecision, SelectionMode, SelectionPolicy, SelectionStatus
 from .scenarios import ScenarioSetRevision
 from .snapshots import DatasetSnapshot
 from .valuation_requests import FcffSimulationRequest
@@ -29,12 +30,17 @@ __all__ = [
     "ErrorCode",
     "ErrorEnvelope",
     "Fact",
+    "FactSelectionQuery",
     "FcffSimulationRequest",
     "Instrument",
     "Issuer",
     "Listing",
     "ProviderResult",
     "ProviderSymbol",
+    "SelectionDecision",
+    "SelectionMode",
+    "SelectionPolicy",
+    "SelectionStatus",
     "ScenarioSetRevision",
     "ShareBasis",
     "validate_lineage",

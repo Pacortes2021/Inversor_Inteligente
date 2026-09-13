@@ -7,9 +7,8 @@ import json
 import sqlite3
 
 from ...domain import Document, Fact
-from ...domain.common import jsonable
+from ...domain.common import canonical_json, jsonable
 from .connection import Database
-from .identity_repository import canonical_json
 
 
 class FactRepository:
