@@ -1,0 +1,119 @@
+{
+  "version": "m0-v1",
+  "syntheticOnly": true,
+  "purpose": "Independent acceptance oracles; not market data and not predictions.",
+  "cases": [
+    {
+      "id": "A01",
+      "activationMilestone": "M4",
+      "status": "oracle_frozen_pending_engine",
+      "input": {"debt": null, "cash": "100"},
+      "expected": {"debtState": "missing", "netDebtState": "pending", "debtScoreState": "pending"},
+      "rationale": "Known cash does not establish zero debt. Missing is not a number."
+    },
+    {
+      "id": "A02",
+      "activationMilestone": "M4",
+      "status": "oracle_frozen_pending_engine",
+      "input": {"quarters": ["2024-Q1", "2024-Q2", "2024-Q4", "2024-Q4"]},
+      "expected": {"ttmState": "pending", "gaps": ["2024-Q3"], "duplicates": ["2024-Q4"]},
+      "rationale": "Four records are not four independent consecutive quarters."
+    },
+    {
+      "id": "A03",
+      "activationMilestone": "M4",
+      "status": "oracle_frozen_pending_engine",
+      "input": {"priorFy": "120", "currentYtd": "100", "comparablePriorYtd": "80"},
+      "expected": {"ttm": "140"},
+      "rationale": "TTM bridge is prior FY plus current YTD minus comparable prior YTD."
+    },
+    {
+      "id": "A04",
+      "activationMilestone": "M0",
+      "status": "accepted_by_contract",
+      "input": {"originalValue": "1234", "originalScale": 1000, "currency": "CLP"},
+      "expected": {"canonicalValue": "1234000", "currency": "CLP"},
+      "rationale": "Scale is explicit metadata, never inferred from magnitude."
+    },
+    {
+      "id": "A05",
+      "activationMilestone": "M3",
+      "status": "oracle_frozen_pending_engine",
+      "input": {"priceClp": "1800", "epsUsd": "0.10", "fxClpPerUsd": "900"},
+      "expected": {"epsClp": "90", "pe": "20", "originalEpsPreserved": true, "fxDateRequired": true},
+      "rationale": "Comparable numerator and denominator share currency and share basis."
+    },
+    {
+      "id": "A06",
+      "activationMilestone": "M4",
+      "status": "oracle_frozen_pending_engine",
+      "input": {"reportedComparableEps": "2", "shareBasis": "split_adjusted", "splitRatio": "2"},
+      "expected": {"comparableEps": "2", "additionalAdjustmentApplied": false},
+      "rationale": "An already restated comparative amount must not be split-adjusted twice."
+    },
+    {
+      "id": "A07",
+      "activationMilestone": "M4",
+      "status": "oracle_frozen_pending_engine",
+      "input": {"value": "100", "price": "80", "requiredDiscount": "0.20"},
+      "expected": {"discountToValue": "0.20", "upsideToValue": "0.25", "entryPrice": "80"},
+      "rationale": "Discount and upside use different, named denominators."
+    },
+    {
+      "id": "A08",
+      "activationMilestone": "M4",
+      "status": "oracle_frozen_pending_engine",
+      "input": {"cashFlows": ["1100", "1210"], "variable": "growth", "variableConnected": false},
+      "expected": {"reverseState": "unidentifiable", "solution": null},
+      "rationale": "A flat objective cannot identify a parameter or justify returning a bound."
+    },
+    {
+      "id": "A09",
+      "activationMilestone": "M4",
+      "status": "oracle_frozen_pending_engine",
+      "input": {"baseRevenue": "1000", "growthLow": "0.04", "growthHigh": "0.08", "syntheticPriceGrowth": "0.06"},
+      "expected": {"higherGrowthChangesValue": true, "recoveredGrowth": "0.06", "absoluteTolerance": "0.00000001"},
+      "rationale": "Sensitivity and reverse must use the exact same active driver path."
+    },
+    {
+      "id": "A10",
+      "activationMilestone": "M4",
+      "status": "oracle_frozen_pending_engine",
+      "input": {"annualValues": ["100", "100", "100", "-200", "-300"]},
+      "expected": {"normalizedSeries": ["100", "100", "100", "-200", "-300"], "lossesDiscarded": false},
+      "rationale": "Losses are observations; filtering positive years would change the economic history."
+    },
+    {
+      "id": "A11",
+      "activationMilestone": "M4",
+      "status": "oracle_frozen_pending_engine",
+      "input": {"epsChange": "-0.20", "revenueChange": "-0.20", "consensusEvidence": null},
+      "expected": {"scenarioChange": "-0.20", "origin": "assumption", "consensusLabel": null},
+      "rationale": "A user scenario may preserve contraction but cannot impersonate consensus."
+    },
+    {
+      "id": "A12",
+      "activationMilestone": "M4",
+      "status": "oracle_frozen_pending_engine",
+      "input": {"operatingMargins": ["0.20"]},
+      "expected": {"levelState": "available", "stabilityState": "pending", "stabilityScore": null},
+      "rationale": "One observation measures a level, not persistence or dispersion."
+    },
+    {
+      "id": "A13",
+      "activationMilestone": "M4",
+      "status": "oracle_frozen_pending_engine",
+      "input": {"scenarioValues": ["100", "150", "200"], "probabilities": null},
+      "expected": {"scenarioCount": 3, "weightedValue": null, "weightedState": "pending"},
+      "rationale": "No implicit 25/50/25 weighting is evidence."
+    },
+    {
+      "id": "A14",
+      "activationMilestone": "M5",
+      "status": "oracle_frozen_pending_engine",
+      "input": {"creditedPoints": 2, "resolvedPoints": 2, "possiblePoints": 100},
+      "expected": {"coverage": "0.02", "scoreRange": [2, 100], "displayScore": "2/100", "eligible": false},
+      "rationale": "Unresolved points remain pending and cannot be normalized into a perfect score."
+    }
+  ]
+}
