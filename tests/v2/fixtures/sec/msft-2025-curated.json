@@ -1,0 +1,35 @@
+{
+  "fixtureKind": "curated_sec_excerpt",
+  "redistributionNote": "Selected observations and reconciliation targets only; not an original SEC payload.",
+  "issuerId": "msft",
+  "cik": "0000789019",
+  "accessionNumber": "0000950170-25-100235",
+  "companyfactsUrl": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000789019.json",
+  "filingUrl": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
+  "fetchedAt": "2026-09-14T12:00:00Z",
+  "observations": [
+    {"tag":"RevenueFromContractWithCustomerExcludingAssessedTax","unit":"USD","value":"281724000000","start":"2024-07-01","end":"2025-06-30","filed":"2025-07-30","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2024"},
+    {"tag":"OperatingIncomeLoss","unit":"USD","value":"128528000000","start":"2024-07-01","end":"2025-06-30","filed":"2025-07-30","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2024"},
+    {"tag":"NetIncomeLoss","unit":"USD","value":"101832000000","start":"2024-07-01","end":"2025-06-30","filed":"2025-07-30","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2024"},
+    {"tag":"NetCashProvidedByUsedInOperatingActivities","unit":"USD","value":"136162000000","start":"2024-07-01","end":"2025-06-30","filed":"2025-07-30","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2024"},
+    {"tag":"PaymentsToAcquirePropertyPlantAndEquipment","unit":"USD","value":"64551000000","start":"2024-07-01","end":"2025-06-30","filed":"2025-07-30","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2024"},
+    {"tag":"CashAndCashEquivalentsAtCarryingValue","unit":"USD","value":"30242000000","start":null,"end":"2025-06-30","filed":"2025-07-30","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2025Q2I"},
+    {"tag":"LongTermDebtCurrent","unit":"USD","value":"2999000000","start":null,"end":"2025-06-30","filed":"2025-07-30","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2025Q2I"},
+    {"tag":"LongTermDebtNoncurrent","unit":"USD","value":"40152000000","start":null,"end":"2025-06-30","filed":"2025-07-30","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2025Q2I"},
+    {"tag":"WeightedAverageNumberOfDilutedSharesOutstanding","unit":"shares","value":"7465000000","start":"2024-07-01","end":"2025-06-30","filed":"2025-07-30","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2024"},
+    {"tag":"EarningsPerShareDiluted","unit":"USD/shares","value":"13.64","start":"2024-07-01","end":"2025-06-30","filed":"2025-07-30","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2024"}
+  ],
+  "expected": {
+    "revenue":"281724000000",
+    "operating_income":"128528000000",
+    "net_income":"101832000000",
+    "cash_flow.operating":"136162000000",
+    "capex":"64551000000",
+    "cash":"30242000000",
+    "debt.current":"2999000000",
+    "debt.noncurrent":"40152000000",
+    "debtTotal":"43151000000",
+    "shares.weighted_average.diluted":"7465000000",
+    "eps.diluted":"13.64"
+  }
+}

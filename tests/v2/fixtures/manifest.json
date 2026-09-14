@@ -13,16 +13,16 @@
     },
     {
       "id": "A02",
-      "activationMilestone": "M4",
-      "status": "oracle_frozen_pending_engine",
+      "activationMilestone": "M2",
+      "status": "accepted_by_period_engine",
       "input": {"quarters": ["2024-Q1", "2024-Q2", "2024-Q4", "2024-Q4"]},
       "expected": {"ttmState": "pending", "gaps": ["2024-Q3"], "duplicates": ["2024-Q4"]},
       "rationale": "Four records are not four independent consecutive quarters."
     },
     {
       "id": "A03",
-      "activationMilestone": "M4",
-      "status": "oracle_frozen_pending_engine",
+      "activationMilestone": "M2",
+      "status": "accepted_by_period_engine",
       "input": {"priorFy": "120", "currentYtd": "100", "comparablePriorYtd": "80"},
       "expected": {"ttm": "140"},
       "rationale": "TTM bridge is prior FY plus current YTD minus comparable prior YTD."
@@ -45,8 +45,8 @@
     },
     {
       "id": "A06",
-      "activationMilestone": "M4",
-      "status": "oracle_frozen_pending_engine",
+      "activationMilestone": "M2",
+      "status": "accepted_by_period_engine",
       "input": {"reportedComparableEps": "2", "shareBasis": "split_adjusted", "splitRatio": "2"},
       "expected": {"comparableEps": "2", "additionalAdjustmentApplied": false},
       "rationale": "An already restated comparative amount must not be split-adjusted twice."
@@ -77,8 +77,8 @@
     },
     {
       "id": "A10",
-      "activationMilestone": "M4",
-      "status": "oracle_frozen_pending_engine",
+      "activationMilestone": "M2",
+      "status": "accepted_by_period_engine",
       "input": {"annualValues": ["100", "100", "100", "-200", "-300"]},
       "expected": {"normalizedSeries": ["100", "100", "100", "-200", "-300"], "lossesDiscarded": false},
       "rationale": "Losses are observations; filtering positive years would change the economic history."

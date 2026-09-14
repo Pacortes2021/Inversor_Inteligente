@@ -200,6 +200,10 @@ class NormalizationParameters(CanonicalModel):
     rationale: str = Field(min_length=1)
 
 
+class PeriodParameters(CanonicalModel):
+    method: Literal["sum_consecutive_quarters", "fy_ytd_bridge"]
+
+
 class ScaleTransformation(CanonicalModel):
     kind: Literal["scale"]
     name: Identifier
@@ -258,8 +262,28 @@ class NormalizationTransformation(CanonicalModel):
     adjustment_ids: list[Identifier] = Field(min_length=1)
 
 
+class PeriodTransformation(CanonicalModel):
+    kind: Literal["period"]
+    name: Identifier
+    version: Identifier
+    parameters: PeriodParameters
+    fx_fact_id: None = None
+    share_basis_id: None = None
+    adjustment_ids: list[Identifier] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def period_has_no_unrelated_references(self) -> "PeriodTransformation":
+        if self.adjustment_ids:
+            raise ValueError("period transformation cannot contain adjustmentIds")
+        return self
+
+
 Transformation = Annotated[
-    ScaleTransformation | FxTransformation | SplitTransformation | NormalizationTransformation,
+    ScaleTransformation
+    | FxTransformation
+    | SplitTransformation
+    | NormalizationTransformation
+    | PeriodTransformation,
     Field(discriminator="kind"),
 ]
 

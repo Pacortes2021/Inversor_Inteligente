@@ -1,0 +1,35 @@
+{
+  "fixtureKind": "curated_sec_excerpt",
+  "redistributionNote": "Selected observations and reconciliation targets only; not an original SEC payload.",
+  "issuerId": "nflx",
+  "cik": "0001065280",
+  "accessionNumber": "0001065280-26-000034",
+  "companyfactsUrl": "https://data.sec.gov/api/xbrl/companyfacts/CIK0001065280.json",
+  "filingUrl": "https://www.sec.gov/Archives/edgar/data/1065280/000106528026000034/nflx-20251231.htm",
+  "fetchedAt": "2026-09-14T12:00:00Z",
+  "observations": [
+    {"tag":"RevenueFromContractWithCustomerExcludingAssessedTax","unit":"USD","value":"45183036000","start":"2025-01-01","end":"2025-12-31","filed":"2026-01-23","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2025"},
+    {"tag":"OperatingIncomeLoss","unit":"USD","value":"13326603000","start":"2025-01-01","end":"2025-12-31","filed":"2026-01-23","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2025"},
+    {"tag":"NetIncomeLoss","unit":"USD","value":"10981201000","start":"2025-01-01","end":"2025-12-31","filed":"2026-01-23","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2025"},
+    {"tag":"NetCashProvidedByUsedInOperatingActivities","unit":"USD","value":"10149273000","start":"2025-01-01","end":"2025-12-31","filed":"2026-01-23","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2025"},
+    {"tag":"PaymentsToAcquirePropertyPlantAndEquipment","unit":"USD","value":"688220000","start":"2025-01-01","end":"2025-12-31","filed":"2026-01-23","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2025"},
+    {"tag":"CashAndCashEquivalentsAtCarryingValue","unit":"USD","value":"9033681000","start":null,"end":"2025-12-31","filed":"2026-01-23","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2025Q4I"},
+    {"tag":"LongTermDebtCurrent","unit":"USD","value":"998865000","start":null,"end":"2025-12-31","filed":"2026-01-23","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2025Q4I"},
+    {"tag":"LongTermDebtNoncurrent","unit":"USD","value":"13463971000","start":null,"end":"2025-12-31","filed":"2026-01-23","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2025Q4I"},
+    {"tag":"WeightedAverageNumberOfDilutedSharesOutstanding","unit":"shares","value":"4343863000","start":"2025-01-01","end":"2025-12-31","filed":"2026-01-23","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2025"},
+    {"tag":"EarningsPerShareDiluted","unit":"USD/shares","value":"2.53","start":"2025-01-01","end":"2025-12-31","filed":"2026-01-23","form":"10-K","fiscalYear":2025,"fiscalPeriod":"FY","frame":"CY2025"}
+  ],
+  "expected": {
+    "revenue":"45183036000",
+    "operating_income":"13326603000",
+    "net_income":"10981201000",
+    "cash_flow.operating":"10149273000",
+    "capex":"688220000",
+    "cash":"9033681000",
+    "debt.current":"998865000",
+    "debt.noncurrent":"13463971000",
+    "debtTotal":"14462836000",
+    "shares.weighted_average.diluted":"4343863000",
+    "eps.diluted":"2.53"
+  }
+}

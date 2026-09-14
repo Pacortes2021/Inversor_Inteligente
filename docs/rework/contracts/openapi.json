@@ -764,6 +764,9 @@
                   },
                   {
                     "$ref": "#/components/schemas/NormalizationTransformation"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PeriodTransformation"
                   }
                 ],
                 "discriminator": {
@@ -771,6 +774,7 @@
                   "mapping": {
                     "fx": "#/components/schemas/FxTransformation",
                     "normalization": "#/components/schemas/NormalizationTransformation",
+                    "period": "#/components/schemas/PeriodTransformation",
                     "scale": "#/components/schemas/ScaleTransformation",
                     "split": "#/components/schemas/SplitTransformation"
                   }
@@ -1433,6 +1437,74 @@
           "instant"
         ],
         "title": "PeriodLabel"
+      },
+      "PeriodParameters": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": [
+              "sum_consecutive_quarters",
+              "fy_ytd_bridge"
+            ],
+            "title": "Method"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "method"
+        ],
+        "title": "PeriodParameters"
+      },
+      "PeriodTransformation": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "period",
+            "title": "Kind"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Version"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/PeriodParameters"
+          },
+          "fxFactId": {
+            "type": "null",
+            "title": "Fxfactid"
+          },
+          "shareBasisId": {
+            "type": "null",
+            "title": "Sharebasisid"
+          },
+          "adjustmentIds": {
+            "items": {
+              "type": "string",
+              "maxLength": 160,
+              "minLength": 1
+            },
+            "type": "array",
+            "title": "Adjustmentids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "name",
+          "version",
+          "parameters"
+        ],
+        "title": "PeriodTransformation"
       },
       "Reconciliation": {
         "type": "string",
@@ -2831,6 +2903,76 @@
             "title": "PeriodLabel",
             "type": "string"
           },
+          "PeriodParameters": {
+            "additionalProperties": false,
+            "properties": {
+              "method": {
+                "enum": [
+                  "sum_consecutive_quarters",
+                  "fy_ytd_bridge"
+                ],
+                "title": "Method",
+                "type": "string"
+              }
+            },
+            "required": [
+              "method"
+            ],
+            "title": "PeriodParameters",
+            "type": "object"
+          },
+          "PeriodTransformation": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "const": "period",
+                "title": "Kind",
+                "type": "string"
+              },
+              "name": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Name",
+                "type": "string"
+              },
+              "version": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Version",
+                "type": "string"
+              },
+              "parameters": {
+                "$ref": "#/components/schemas/fact-model/$defs/PeriodParameters"
+              },
+              "fxFactId": {
+                "default": null,
+                "title": "Fxfactid",
+                "type": "null"
+              },
+              "shareBasisId": {
+                "default": null,
+                "title": "Sharebasisid",
+                "type": "null"
+              },
+              "adjustmentIds": {
+                "items": {
+                  "maxLength": 160,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "title": "Adjustmentids",
+                "type": "array"
+              }
+            },
+            "required": [
+              "kind",
+              "name",
+              "version",
+              "parameters"
+            ],
+            "title": "PeriodTransformation",
+            "type": "object"
+          },
           "Reconciliation": {
             "enum": [
               "single_source",
@@ -3222,6 +3364,7 @@
                   "mapping": {
                     "fx": "#/components/schemas/fact-model/$defs/FxTransformation",
                     "normalization": "#/components/schemas/fact-model/$defs/NormalizationTransformation",
+                    "period": "#/components/schemas/fact-model/$defs/PeriodTransformation",
                     "scale": "#/components/schemas/fact-model/$defs/ScaleTransformation",
                     "split": "#/components/schemas/fact-model/$defs/SplitTransformation"
                   },
@@ -3239,6 +3382,9 @@
                   },
                   {
                     "$ref": "#/components/schemas/fact-model/$defs/NormalizationTransformation"
+                  },
+                  {
+                    "$ref": "#/components/schemas/fact-model/$defs/PeriodTransformation"
                   }
                 ]
               },
