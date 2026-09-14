@@ -15,6 +15,7 @@ from .identity import (
 from .providers import ProviderResult
 from .policies import FactSelectionQuery, SelectionDecision, SelectionMode, SelectionPolicy, SelectionStatus
 from .scenarios import ScenarioSetRevision
+from .sec import SecCapture, SecFiling, SecIdentity, SecUnitFact
 from .snapshots import DatasetSnapshot
 from .valuation_requests import FcffSimulationRequest
 
@@ -42,6 +43,10 @@ __all__ = [
     "SelectionPolicy",
     "SelectionStatus",
     "ScenarioSetRevision",
+    "SecCapture",
+    "SecFiling",
+    "SecIdentity",
+    "SecUnitFact",
     "ShareBasis",
     "validate_lineage",
 ]

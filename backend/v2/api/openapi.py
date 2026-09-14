@@ -21,6 +21,7 @@ from ..domain import (
     ProviderResult,
     ProviderSymbol,
     ScenarioSetRevision,
+    SecCapture,
     ShareBasis,
 )
 
@@ -38,6 +39,7 @@ CANONICAL_MODELS: dict[str, type[BaseModel]] = {
     "provider-result": ProviderResult,
     "provider-symbol": ProviderSymbol,
     "scenario-set-revision": ScenarioSetRevision,
+    "sec-capture": SecCapture,
     "share-basis": ShareBasis,
 }
 

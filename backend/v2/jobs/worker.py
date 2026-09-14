@@ -80,10 +80,11 @@ class Worker:
             error=error,
             retry_after_seconds=result.retry_after_seconds,
         )
+        cache_data = result.model_dump(mode="json", by_alias=True)["data"]
         if result.status in (ProviderStatus.SUCCESS, ProviderStatus.PARTIAL) and result.data:
             self.cache.store_valid(
                 job.request,
-                result.data,
+                cache_data,
                 fetched_at=result.fetched_at,
                 expires_at=result.fetched_at + timedelta(seconds=self.cache_ttl_seconds),
                 job_id=job.job_id,

@@ -34,4 +34,5 @@ addopts = "-p no:rerunfailures"
 testpaths = ["tests"]
 markers = [
   "characterization: records deterministic legacy behaviour and is not v2 acceptance",
+  "network: opt-in live provider smoke tests excluded from deterministic acceptance",
 ]

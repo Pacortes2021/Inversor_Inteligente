@@ -4179,6 +4179,403 @@
         "title": "ScenarioSetRevision",
         "type": "object"
       },
+      "sec-capture": {
+        "$defs": {
+          "Document": {
+            "additionalProperties": false,
+            "properties": {
+              "documentId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Documentid",
+                "type": "string"
+              },
+              "provider": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Provider",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[a-f0-9]{64}$",
+                "title": "Sha256",
+                "type": "string"
+              },
+              "relativePath": {
+                "pattern": "^raw/[a-f0-9]{2}/[a-f0-9]{64}$",
+                "title": "Relativepath",
+                "type": "string"
+              },
+              "sourceUrl": {
+                "anyOf": [
+                  {
+                    "format": "uri",
+                    "maxLength": 2083,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Sourceurl"
+              },
+              "mediaType": {
+                "minLength": 1,
+                "title": "Mediatype",
+                "type": "string"
+              },
+              "fetchedAt": {
+                "format": "date-time",
+                "title": "Fetchedat",
+                "type": "string"
+              },
+              "sizeBytes": {
+                "minimum": 0,
+                "title": "Sizebytes",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "documentId",
+              "provider",
+              "sha256",
+              "relativePath",
+              "sourceUrl",
+              "mediaType",
+              "fetchedAt",
+              "sizeBytes"
+            ],
+            "title": "Document",
+            "type": "object"
+          },
+          "SecFiling": {
+            "additionalProperties": false,
+            "properties": {
+              "cik": {
+                "pattern": "^[0-9]{10}$",
+                "title": "Cik",
+                "type": "string"
+              },
+              "accessionNumber": {
+                "pattern": "^[0-9]{10}-[0-9]{2}-[0-9]{6}$",
+                "title": "Accessionnumber",
+                "type": "string"
+              },
+              "form": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Form",
+                "type": "string"
+              },
+              "filingDate": {
+                "format": "date",
+                "title": "Filingdate",
+                "type": "string"
+              },
+              "reportDate": {
+                "anyOf": [
+                  {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Reportdate"
+              },
+              "acceptanceDatetime": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Acceptancedatetime"
+              },
+              "primaryDocument": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Primarydocument"
+              },
+              "documentId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Documentid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "cik",
+              "accessionNumber",
+              "form",
+              "filingDate",
+              "reportDate",
+              "acceptanceDatetime",
+              "primaryDocument",
+              "documentId"
+            ],
+            "title": "SecFiling",
+            "type": "object"
+          },
+          "SecIdentity": {
+            "additionalProperties": false,
+            "properties": {
+              "cik": {
+                "pattern": "^[0-9]{10}$",
+                "title": "Cik",
+                "type": "string"
+              },
+              "ticker": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Ticker",
+                "type": "string"
+              },
+              "title": {
+                "title": "Title",
+                "type": "string"
+              },
+              "exchange": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Exchange"
+              },
+              "documentId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Documentid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "cik",
+              "ticker",
+              "title",
+              "exchange",
+              "documentId"
+            ],
+            "title": "SecIdentity",
+            "type": "object"
+          },
+          "SecUnitFact": {
+            "additionalProperties": false,
+            "properties": {
+              "cik": {
+                "pattern": "^[0-9]{10}$",
+                "title": "Cik",
+                "type": "string"
+              },
+              "taxonomy": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Taxonomy",
+                "type": "string"
+              },
+              "tag": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Tag",
+                "type": "string"
+              },
+              "label": {
+                "title": "Label",
+                "type": "string"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "unit": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Unit",
+                "type": "string"
+              },
+              "value": {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "title": "Value",
+                "type": "string"
+              },
+              "start": {
+                "anyOf": [
+                  {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Start"
+              },
+              "end": {
+                "format": "date",
+                "title": "End",
+                "type": "string"
+              },
+              "filed": {
+                "format": "date",
+                "title": "Filed",
+                "type": "string"
+              },
+              "accessionNumber": {
+                "pattern": "^[0-9]{10}-[0-9]{2}-[0-9]{6}$",
+                "title": "Accessionnumber",
+                "type": "string"
+              },
+              "form": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Form",
+                "type": "string"
+              },
+              "fiscalYear": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Fiscalyear"
+              },
+              "fiscalPeriod": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Fiscalperiod"
+              },
+              "frame": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Frame"
+              },
+              "documentId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Documentid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "cik",
+              "taxonomy",
+              "tag",
+              "label",
+              "description",
+              "unit",
+              "value",
+              "start",
+              "end",
+              "filed",
+              "accessionNumber",
+              "form",
+              "fiscalYear",
+              "fiscalPeriod",
+              "frame",
+              "documentId"
+            ],
+            "title": "SecUnitFact",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "capability": {
+            "enum": [
+              "identity",
+              "submissions",
+              "companyfacts"
+            ],
+            "title": "Capability",
+            "type": "string"
+          },
+          "cik": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9]{10}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cik"
+          },
+          "document": {
+            "$ref": "#/components/schemas/sec-capture/$defs/Document"
+          },
+          "identities": {
+            "items": {
+              "$ref": "#/components/schemas/sec-capture/$defs/SecIdentity"
+            },
+            "title": "Identities",
+            "type": "array"
+          },
+          "filings": {
+            "items": {
+              "$ref": "#/components/schemas/sec-capture/$defs/SecFiling"
+            },
+            "title": "Filings",
+            "type": "array"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/sec-capture/$defs/SecUnitFact"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
+          "entityName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Entityname"
+          }
+        },
+        "required": [
+          "capability",
+          "document"
+        ],
+        "title": "SecCapture",
+        "type": "object"
+      },
       "share-basis": {
         "$defs": {
           "ShareBasisKind": {
