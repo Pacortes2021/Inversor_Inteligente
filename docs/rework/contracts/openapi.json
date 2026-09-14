@@ -2178,6 +2178,108 @@
         "title": "Assessment",
         "type": "object"
       },
+      "corporate-action": {
+        "$defs": {
+          "CorporateActionKind": {
+            "enum": [
+              "dividend",
+              "split"
+            ],
+            "title": "CorporateActionKind",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "actionId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Actionid",
+            "type": "string"
+          },
+          "listingId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Listingid",
+            "type": "string"
+          },
+          "mic": {
+            "pattern": "^[A-Z0-9]{4}$",
+            "title": "Mic",
+            "type": "string"
+          },
+          "providerSymbol": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Providersymbol",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/corporate-action/$defs/CorporateActionKind"
+          },
+          "exDate": {
+            "format": "date",
+            "title": "Exdate",
+            "type": "string"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Amount"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Currency"
+          },
+          "splitFactor": {
+            "anyOf": [
+              {
+                "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Splitfactor"
+          },
+          "documentId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Documentid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actionId",
+          "listingId",
+          "mic",
+          "providerSymbol",
+          "kind",
+          "exDate",
+          "documentId"
+        ],
+        "title": "CorporateAction",
+        "type": "object"
+      },
       "dataset-snapshot": {
         "additionalProperties": false,
         "properties": {
@@ -3992,6 +4094,287 @@
         "title": "Listing",
         "type": "object"
       },
+      "market-calendar-coverage": {
+        "additionalProperties": false,
+        "properties": {
+          "listingId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Listingid",
+            "type": "string"
+          },
+          "mic": {
+            "pattern": "^[A-Z0-9]{4}$",
+            "title": "Mic",
+            "type": "string"
+          },
+          "providerSymbol": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Providersymbol",
+            "type": "string"
+          },
+          "timezone": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Timezone",
+            "type": "string"
+          },
+          "coverageStart": {
+            "format": "date",
+            "title": "Coveragestart",
+            "type": "string"
+          },
+          "coverageEnd": {
+            "format": "date",
+            "title": "Coverageend",
+            "type": "string"
+          },
+          "observedSessionDates": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Observedsessiondates",
+            "type": "array"
+          },
+          "officialSchedule": {
+            "const": false,
+            "default": false,
+            "title": "Officialschedule",
+            "type": "boolean"
+          },
+          "sourceExchangeCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceexchangecode"
+          },
+          "documentId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Documentid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "listingId",
+          "mic",
+          "providerSymbol",
+          "timezone",
+          "coverageStart",
+          "coverageEnd",
+          "observedSessionDates",
+          "sourceExchangeCode",
+          "documentId"
+        ],
+        "title": "MarketCalendarCoverage",
+        "type": "object"
+      },
+      "market-price": {
+        "$defs": {
+          "PriceBasis": {
+            "enum": [
+              "raw",
+              "split_adjusted",
+              "total_return"
+            ],
+            "title": "PriceBasis",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "issuerId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Issuerid",
+            "type": "string"
+          },
+          "instrumentId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Instrumentid",
+            "type": "string"
+          },
+          "listingId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Listingid",
+            "type": "string"
+          },
+          "mic": {
+            "pattern": "^[A-Z0-9]{4}$",
+            "title": "Mic",
+            "type": "string"
+          },
+          "providerSymbol": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Providersymbol",
+            "type": "string"
+          },
+          "sessionDate": {
+            "format": "date",
+            "title": "Sessiondate",
+            "type": "string"
+          },
+          "value": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Value",
+            "type": "string"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "basis": {
+            "$ref": "#/components/schemas/market-price/$defs/PriceBasis"
+          },
+          "sourceField": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Sourcefield",
+            "type": "string"
+          },
+          "splitAdjustmentAsOf": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Splitadjustmentasof"
+          },
+          "documentId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Documentid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "issuerId",
+          "instrumentId",
+          "listingId",
+          "mic",
+          "providerSymbol",
+          "sessionDate",
+          "value",
+          "currency",
+          "basis",
+          "sourceField",
+          "documentId"
+        ],
+        "title": "MarketPrice",
+        "type": "object"
+      },
+      "market-session": {
+        "additionalProperties": false,
+        "properties": {
+          "listingId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Listingid",
+            "type": "string"
+          },
+          "mic": {
+            "pattern": "^[A-Z0-9]{4}$",
+            "title": "Mic",
+            "type": "string"
+          },
+          "providerSymbol": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Providersymbol",
+            "type": "string"
+          },
+          "sessionDate": {
+            "format": "date",
+            "title": "Sessiondate",
+            "type": "string"
+          },
+          "timezone": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Timezone",
+            "type": "string"
+          },
+          "opensAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opensat"
+          },
+          "closesAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closesat"
+          },
+          "sourceExchangeCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceexchangecode"
+          },
+          "scheduleSource": {
+            "enum": [
+              "yahoo_current_metadata",
+              "yahoo_observed_price_date"
+            ],
+            "title": "Schedulesource",
+            "type": "string"
+          },
+          "documentId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Documentid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "listingId",
+          "mic",
+          "providerSymbol",
+          "sessionDate",
+          "timezone",
+          "opensAt",
+          "closesAt",
+          "sourceExchangeCode",
+          "scheduleSource",
+          "documentId"
+        ],
+        "title": "MarketSession",
+        "type": "object"
+      },
       "provider-result": {
         "$defs": {
           "ProviderError": {
@@ -4894,6 +5277,513 @@
           "version"
         ],
         "title": "ShareBasis",
+        "type": "object"
+      },
+      "yahoo-capture": {
+        "$defs": {
+          "CorporateAction": {
+            "additionalProperties": false,
+            "properties": {
+              "actionId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Actionid",
+                "type": "string"
+              },
+              "listingId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Listingid",
+                "type": "string"
+              },
+              "mic": {
+                "pattern": "^[A-Z0-9]{4}$",
+                "title": "Mic",
+                "type": "string"
+              },
+              "providerSymbol": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Providersymbol",
+                "type": "string"
+              },
+              "kind": {
+                "$ref": "#/components/schemas/yahoo-capture/$defs/CorporateActionKind"
+              },
+              "exDate": {
+                "format": "date",
+                "title": "Exdate",
+                "type": "string"
+              },
+              "amount": {
+                "anyOf": [
+                  {
+                    "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Amount"
+              },
+              "currency": {
+                "anyOf": [
+                  {
+                    "pattern": "^[A-Z]{3}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Currency"
+              },
+              "splitFactor": {
+                "anyOf": [
+                  {
+                    "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Splitfactor"
+              },
+              "documentId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Documentid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "actionId",
+              "listingId",
+              "mic",
+              "providerSymbol",
+              "kind",
+              "exDate",
+              "documentId"
+            ],
+            "title": "CorporateAction",
+            "type": "object"
+          },
+          "CorporateActionKind": {
+            "enum": [
+              "dividend",
+              "split"
+            ],
+            "title": "CorporateActionKind",
+            "type": "string"
+          },
+          "Document": {
+            "additionalProperties": false,
+            "properties": {
+              "documentId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Documentid",
+                "type": "string"
+              },
+              "provider": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Provider",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[a-f0-9]{64}$",
+                "title": "Sha256",
+                "type": "string"
+              },
+              "relativePath": {
+                "pattern": "^raw/[a-f0-9]{2}/[a-f0-9]{64}$",
+                "title": "Relativepath",
+                "type": "string"
+              },
+              "sourceUrl": {
+                "anyOf": [
+                  {
+                    "format": "uri",
+                    "maxLength": 2083,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Sourceurl"
+              },
+              "mediaType": {
+                "minLength": 1,
+                "title": "Mediatype",
+                "type": "string"
+              },
+              "fetchedAt": {
+                "format": "date-time",
+                "title": "Fetchedat",
+                "type": "string"
+              },
+              "sizeBytes": {
+                "minimum": 0,
+                "title": "Sizebytes",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "documentId",
+              "provider",
+              "sha256",
+              "relativePath",
+              "sourceUrl",
+              "mediaType",
+              "fetchedAt",
+              "sizeBytes"
+            ],
+            "title": "Document",
+            "type": "object"
+          },
+          "MarketCalendarCoverage": {
+            "additionalProperties": false,
+            "properties": {
+              "listingId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Listingid",
+                "type": "string"
+              },
+              "mic": {
+                "pattern": "^[A-Z0-9]{4}$",
+                "title": "Mic",
+                "type": "string"
+              },
+              "providerSymbol": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Providersymbol",
+                "type": "string"
+              },
+              "timezone": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Timezone",
+                "type": "string"
+              },
+              "coverageStart": {
+                "format": "date",
+                "title": "Coveragestart",
+                "type": "string"
+              },
+              "coverageEnd": {
+                "format": "date",
+                "title": "Coverageend",
+                "type": "string"
+              },
+              "observedSessionDates": {
+                "items": {
+                  "format": "date",
+                  "type": "string"
+                },
+                "title": "Observedsessiondates",
+                "type": "array"
+              },
+              "officialSchedule": {
+                "const": false,
+                "default": false,
+                "title": "Officialschedule",
+                "type": "boolean"
+              },
+              "sourceExchangeCode": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Sourceexchangecode"
+              },
+              "documentId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Documentid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "listingId",
+              "mic",
+              "providerSymbol",
+              "timezone",
+              "coverageStart",
+              "coverageEnd",
+              "observedSessionDates",
+              "sourceExchangeCode",
+              "documentId"
+            ],
+            "title": "MarketCalendarCoverage",
+            "type": "object"
+          },
+          "MarketPrice": {
+            "additionalProperties": false,
+            "properties": {
+              "issuerId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Issuerid",
+                "type": "string"
+              },
+              "instrumentId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Instrumentid",
+                "type": "string"
+              },
+              "listingId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Listingid",
+                "type": "string"
+              },
+              "mic": {
+                "pattern": "^[A-Z0-9]{4}$",
+                "title": "Mic",
+                "type": "string"
+              },
+              "providerSymbol": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Providersymbol",
+                "type": "string"
+              },
+              "sessionDate": {
+                "format": "date",
+                "title": "Sessiondate",
+                "type": "string"
+              },
+              "value": {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "title": "Value",
+                "type": "string"
+              },
+              "currency": {
+                "pattern": "^[A-Z]{3}$",
+                "title": "Currency",
+                "type": "string"
+              },
+              "basis": {
+                "$ref": "#/components/schemas/yahoo-capture/$defs/PriceBasis"
+              },
+              "sourceField": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Sourcefield",
+                "type": "string"
+              },
+              "splitAdjustmentAsOf": {
+                "anyOf": [
+                  {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Splitadjustmentasof"
+              },
+              "documentId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Documentid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "issuerId",
+              "instrumentId",
+              "listingId",
+              "mic",
+              "providerSymbol",
+              "sessionDate",
+              "value",
+              "currency",
+              "basis",
+              "sourceField",
+              "documentId"
+            ],
+            "title": "MarketPrice",
+            "type": "object"
+          },
+          "MarketSession": {
+            "additionalProperties": false,
+            "properties": {
+              "listingId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Listingid",
+                "type": "string"
+              },
+              "mic": {
+                "pattern": "^[A-Z0-9]{4}$",
+                "title": "Mic",
+                "type": "string"
+              },
+              "providerSymbol": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Providersymbol",
+                "type": "string"
+              },
+              "sessionDate": {
+                "format": "date",
+                "title": "Sessiondate",
+                "type": "string"
+              },
+              "timezone": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Timezone",
+                "type": "string"
+              },
+              "opensAt": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Opensat"
+              },
+              "closesAt": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Closesat"
+              },
+              "sourceExchangeCode": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Sourceexchangecode"
+              },
+              "scheduleSource": {
+                "enum": [
+                  "yahoo_current_metadata",
+                  "yahoo_observed_price_date"
+                ],
+                "title": "Schedulesource",
+                "type": "string"
+              },
+              "documentId": {
+                "maxLength": 160,
+                "minLength": 1,
+                "title": "Documentid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "listingId",
+              "mic",
+              "providerSymbol",
+              "sessionDate",
+              "timezone",
+              "opensAt",
+              "closesAt",
+              "sourceExchangeCode",
+              "scheduleSource",
+              "documentId"
+            ],
+            "title": "MarketSession",
+            "type": "object"
+          },
+          "PriceBasis": {
+            "enum": [
+              "raw",
+              "split_adjusted",
+              "total_return"
+            ],
+            "title": "PriceBasis",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "capability": {
+            "enum": [
+              "prices",
+              "session",
+              "calendar",
+              "actions"
+            ],
+            "title": "Capability",
+            "type": "string"
+          },
+          "providerLabel": {
+            "const": "Yahoo Finance via yfinance",
+            "title": "Providerlabel",
+            "type": "string"
+          },
+          "document": {
+            "$ref": "#/components/schemas/yahoo-capture/$defs/Document"
+          },
+          "prices": {
+            "items": {
+              "$ref": "#/components/schemas/yahoo-capture/$defs/MarketPrice"
+            },
+            "title": "Prices",
+            "type": "array"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/yahoo-capture/$defs/MarketSession"
+            },
+            "title": "Sessions",
+            "type": "array"
+          },
+          "calendars": {
+            "items": {
+              "$ref": "#/components/schemas/yahoo-capture/$defs/MarketCalendarCoverage"
+            },
+            "title": "Calendars",
+            "type": "array"
+          },
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/yahoo-capture/$defs/CorporateAction"
+            },
+            "title": "Actions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "capability",
+          "providerLabel",
+          "document"
+        ],
+        "title": "YahooCapture",
         "type": "object"
       }
     }

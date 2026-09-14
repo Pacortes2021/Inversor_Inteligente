@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from ..domain import (
     Assessment,
+    CorporateAction,
     DatasetSnapshot,
     DepositaryRelation,
     ErrorEnvelope,
@@ -18,16 +19,21 @@ from ..domain import (
     Instrument,
     Issuer,
     Listing,
+    MarketCalendarCoverage,
+    MarketPrice,
+    MarketSession,
     ProviderResult,
     ProviderSymbol,
     ScenarioSetRevision,
     SecCapture,
     ShareBasis,
+    YahooCapture,
 )
 
 
 CANONICAL_MODELS: dict[str, type[BaseModel]] = {
     "assessment": Assessment,
+    "corporate-action": CorporateAction,
     "dataset-snapshot": DatasetSnapshot,
     "depositary-relation": DepositaryRelation,
     "error-envelope": ErrorEnvelope,
@@ -36,11 +42,15 @@ CANONICAL_MODELS: dict[str, type[BaseModel]] = {
     "instrument": Instrument,
     "issuer": Issuer,
     "listing": Listing,
+    "market-calendar-coverage": MarketCalendarCoverage,
+    "market-price": MarketPrice,
+    "market-session": MarketSession,
     "provider-result": ProviderResult,
     "provider-symbol": ProviderSymbol,
     "scenario-set-revision": ScenarioSetRevision,
     "sec-capture": SecCapture,
     "share-basis": ShareBasis,
+    "yahoo-capture": YahooCapture,
 }
 
 
