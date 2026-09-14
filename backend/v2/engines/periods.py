@@ -132,6 +132,12 @@ def derive_ttm_bridge(
     if prior_fy.period.start != comparable_prior_ytd.period.start:
         return PeriodDerivation("blocked", None, "incompatible_fiscal_periods")
     if (
+        comparable_prior_ytd.period.end >= prior_fy.period.end
+        or not 120 < _duration_days(comparable_prior_ytd) <= 300
+        or not 120 < _duration_days(current_ytd) <= 300
+    ):
+        return PeriodDerivation("blocked", None, "invalid_ytd_window")
+    if (
         (current_ytd.period.start - prior_fy.period.end).days != 1
         or not _one_year_apart(comparable_prior_ytd.period.start, current_ytd.period.start)
         or not _one_year_apart(comparable_prior_ytd.period.end, current_ytd.period.end)
@@ -212,6 +218,12 @@ def _one_year_apart(earlier: date, later: date) -> bool:
     if (earlier.month, earlier.day) == (later.month, later.day):
         return True
     return earlier.month == later.month == 2 and {earlier.day, later.day} == {28, 29}
+
+
+def _duration_days(fact: Fact) -> int:
+    if fact.period.start is None:
+        return 0
+    return (fact.period.end - fact.period.start).days + 1
 
 
 def _signature(fact: Fact) -> tuple[object, ...]:

@@ -274,6 +274,37 @@ def test_ytd_bridge_blocks_gap_after_prior_fiscal_year() -> None:
     assert result.reason == "incompatible_fiscal_periods"
 
 
+def test_ytd_bridge_blocks_windows_extending_beyond_fiscal_year() -> None:
+    prior_fy = make_fact(
+        "fy-2023", "120", start="2023-01-01", end="2023-12-31", label="FY", fiscal_year=2023
+    )
+    current_ytd = make_fact(
+        "ytd-2024-long",
+        "100",
+        start="2024-01-01",
+        end="2025-09-30",
+        label="YTD",
+        fiscal_year=2024,
+    )
+    prior_ytd = make_fact(
+        "ytd-2023-long",
+        "80",
+        start="2023-01-01",
+        end="2024-09-30",
+        label="YTD",
+        fiscal_year=2023,
+    )
+
+    result = derive_ttm_bridge(
+        prior_fy=prior_fy,
+        current_ytd=current_ytd,
+        comparable_prior_ytd=prior_ytd,
+    )
+
+    assert result.status == "blocked"
+    assert result.reason == "invalid_ytd_window"
+
+
 def test_ytd_bridge_blocks_pending_input_quality() -> None:
     prior_fy = make_fact(
         "fy-2024", "120", start="2024-01-01", end="2024-12-31", label="FY", fiscal_year=2024
