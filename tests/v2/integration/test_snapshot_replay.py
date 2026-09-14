@@ -77,7 +77,7 @@ def selection_query(fact: Fact) -> FactSelectionQuery:
     )
 
 
-def seed_snapshot(data_dir: Path):
+def seed_snapshot(data_dir: Path, *, persist_snapshot: bool = True):
     database = Database(data_dir / "v2.sqlite3")
     database.migrate()
     identities = IdentityRepository(database)
@@ -165,7 +165,8 @@ def seed_snapshot(data_dir: Path):
     )
     snapshot_repository = SnapshotRepository(database)
     decision_ids = sorted(decision.selection_decision_id for decision in decisions)
-    snapshot_repository.add(snapshot, decision_ids)
+    if persist_snapshot:
+        snapshot_repository.add(snapshot, decision_ids)
     return database, snapshot, decisions, facts
 
 
@@ -276,4 +277,34 @@ def test_snapshot_rejects_selected_facts_from_another_issuer(tmp_path) -> None:
             share_basis_id="basis-a",
             selection_policy_version="selection-v1",
             period_policy_version="period-v1",
+        )
+
+
+def test_repository_recomputes_hash_from_persisted_replay_inputs(tmp_path) -> None:
+    database, _, decisions, facts = seed_snapshot(
+        tmp_path / "data", persist_snapshot=False
+    )
+    tampered_facts = [
+        fact.model_copy(update={"value": "2000000", "original_value": "2000000"})
+        if fact.fact_id == "revenue-a"
+        else fact
+        for fact in facts
+    ]
+    tampered_snapshot = build_snapshot(
+        instrument_id="instrument-a",
+        listing_id="listing-a",
+        quote_currency="USD",
+        as_of=AS_OF,
+        decisions=decisions,
+        facts=tampered_facts,
+        price_fact_id="price-a",
+        fx_fact_id=None,
+        share_basis_id="basis-a",
+        selection_policy_version="selection-v1",
+        period_policy_version="period-v1",
+    )
+    with pytest.raises(ValueError, match="hash does not match persisted"):
+        SnapshotRepository(database).add(
+            tampered_snapshot,
+            sorted(decision.selection_decision_id for decision in decisions),
         )

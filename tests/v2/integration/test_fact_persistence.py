@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from backend.v2.adapters.persistence import Database, FactRepository, IdentityRepository, RawStore
-from backend.v2.domain import Document, Fact, Instrument, Issuer, Listing
+from backend.v2.domain import Document, Fact, Instrument, Issuer, Listing, ShareBasis
 
 
 EXAMPLE = Path("docs/rework/contracts/fact.example.json")
@@ -179,6 +179,27 @@ def test_fact_identity_relationships_and_share_basis_are_enforced(tmp_path) -> N
             }
         )
     )
+    identities.add_share_basis(
+        ShareBasis.model_validate(
+            {
+                "shareBasisId": "basis-a",
+                "instrumentId": "instrument-a",
+                "asOf": "2026-09-12",
+                "kind": "as_reported",
+                "totalShares": "100",
+                "components": [
+                    {
+                        "componentId": "common-a",
+                        "kind": "common_outstanding",
+                        "shares": "100",
+                        "treatment": "included_in_denominator",
+                        "evidenceId": "basis-evidence",
+                    }
+                ],
+                "version": "basis-v1",
+            }
+        )
+    )
     repository = FactRepository(database)
 
     wrong_listing = fact_payload()
@@ -206,3 +227,29 @@ def test_fact_identity_relationships_and_share_basis_are_enforced(tmp_path) -> N
     missing_basis["evidence"][0].update(documentId=None, sha256=None)
     with pytest.raises(ValueError, match="share basis does not belong"):
         repository.add_fact(Fact.model_validate(missing_basis))
+
+    missing_transformation_basis = fact_payload()
+    missing_transformation_basis.update(
+        factId="missing-transformation-basis",
+        issuerId="issuer-a",
+        instrumentId="instrument-a",
+    )
+    missing_transformation_basis["context"].update(
+        shareBasis="split_adjusted", shareBasisId="basis-a"
+    )
+    missing_transformation_basis["transformation"] = {
+        "kind": "split",
+        "name": "split-adjustment",
+        "version": "v1",
+        "parameters": {
+            "factor": "2",
+            "targetDate": "2026-09-12",
+            "corporateActionId": "action-a",
+        },
+        "fxFactId": None,
+        "shareBasisId": "missing-transform-basis",
+        "adjustmentIds": [],
+    }
+    missing_transformation_basis["evidence"][0].update(documentId=None, sha256=None)
+    with pytest.raises(ValueError, match="share bases do not match"):
+        repository.add_fact(Fact.model_validate(missing_transformation_basis))

@@ -57,12 +57,15 @@ class SelectionPolicy(CanonicalModel):
         for key, cutoff in value.items():
             try:
                 identity, published_date = key.rsplit(":", 1)
-                date.fromisoformat(published_date)
+                publication = date.fromisoformat(published_date)
             except (ValueError, TypeError) as error:
                 raise ValueError("session cutoff keys must be '<identity>:YYYY-MM-DD'") from error
             if not identity:
                 raise ValueError("session cutoff identity cannot be empty")
-            normalized[key] = utc_datetime(cutoff)
+            normalized_cutoff = utc_datetime(cutoff)
+            if normalized_cutoff.date() <= publication:
+                raise ValueError("session cutoff must be after its publication date")
+            normalized[key] = normalized_cutoff
         return normalized
 
     @model_validator(mode="after")

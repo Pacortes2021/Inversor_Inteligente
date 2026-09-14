@@ -24,7 +24,7 @@ Base: `origin/codex/rework-core` en `bfd05b5`. Rama: `codex/rework-m1`. PR: [#13
 
 | Comando | Resultado |
 |---|---|
-| `.venv/bin/python -m pytest -q` | 153 aprobadas; dos advertencias deprecadas de TestClient aguas arriba. |
+| `.venv/bin/python -m pytest -q` | 154 aprobadas; dos advertencias deprecadas de TestClient aguas arriba. |
 | `.venv/bin/python scripts/export_v2_schemas.py` seguido de pruebas de contrato | OpenAPI regenerado y servido sin divergencia. |
 | Pruebas de integración R04–R08 | Identidad/FK, archivos y hechos, corte/conflictos, replay/API y jobs/caché aprobados sin proveedores reales. |
 
@@ -45,4 +45,4 @@ Base: `origin/codex/rework-core` en `bfd05b5`. Rama: `codex/rework-m1`. PR: [#13
 
 ## Solicitud concreta a Astra
 
-La primera revisión sobre `93cf12a` reprodujo diez huecos materiales o moderados. La corrección posterior añade relaciones coherentes emisor/instrumento/listing/base, vigencias no solapadas, hechos válidos para selección, normalización UTC previa al hash, membresía de emisor completa en snapshots, clave de caché completa, leases validados por propietario/intento/vigencia, `Retry-After` desde recepción y límite terminal de intentos. Astra debe repetir esas reproducciones sobre el commit correctivo, no sólo el total de pruebas. M1 sólo puede avanzar a revisión humana de la rama de integración; esta entrega no autoriza fusionar a `main`.
+La primera revisión sobre `93cf12a` reprodujo diez huecos materiales o moderados. La corrección posterior añade relaciones coherentes emisor/instrumento/listing/base, vigencias no solapadas, hechos válidos para selección, normalización UTC previa al hash, membresía de emisor completa en snapshots, clave de caché completa, leases validados por propietario/intento/vigencia, `Retry-After` desde recepción y límite terminal de intentos. La segunda pasada encontró tres bordes adicionales: base de transformación, verificación del hash al persistir y corte de sesión anterior a publicación; los tres cuentan con corrección y regresión. Astra debe repetir esas reproducciones sobre el último commit, no sólo el total de pruebas. M1 sólo puede avanzar a revisión humana de la rama de integración; esta entrega no autoriza fusionar a `main`.

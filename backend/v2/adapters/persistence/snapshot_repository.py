@@ -5,7 +5,7 @@ from __future__ import annotations
 from ...domain.common import canonical_json, jsonable
 from ...domain.facts import Fact
 from ...domain.policies import SelectionDecision
-from ...domain.snapshots import DatasetSnapshot
+from ...domain.snapshots import DatasetSnapshot, dataset_snapshot_content_hash
 from .connection import Database
 
 
@@ -79,6 +79,7 @@ class SnapshotRepository:
                 if fx is None or not fx.concept.startswith("fx."):
                     raise ValueError("snapshot FX reference is not an FX observation")
             selected_ids: set[str] = set()
+            decisions: list[SelectionDecision] = []
             for decision_id in decision_ids:
                 row = connection.execute(
                     "SELECT payload_json FROM selection_decisions WHERE selection_decision_id = ?",
@@ -87,6 +88,7 @@ class SnapshotRepository:
                 if row is None:
                     raise ValueError(f"unknown selection decision {decision_id}")
                 decision = SelectionDecision.model_validate_json(row["payload_json"])
+                decisions.append(decision)
                 if (
                     decision.selected_fact_id is None
                     or decision.policy_version != snapshot.selection_policy_version
@@ -110,6 +112,24 @@ class SnapshotRepository:
                 selected_ids.add(decision.selected_fact_id)
             if selected_ids != set(snapshot.fact_ids):
                 raise ValueError("selection decisions must resolve every snapshot fact exactly")
+            expected_hash = dataset_snapshot_content_hash(
+                instrument_id=snapshot.instrument_id,
+                listing_id=snapshot.listing_id,
+                quote_currency=snapshot.quote_currency,
+                as_of=snapshot.as_of,
+                facts=facts,
+                decisions=decisions,
+                price_fact_id=snapshot.price_fact_id,
+                fx_fact_id=snapshot.fx_fact_id,
+                share_basis_id=snapshot.share_basis_id,
+                selection_policy_version=snapshot.selection_policy_version,
+                period_policy_version=snapshot.period_policy_version,
+            )
+            if (
+                snapshot.content_hash != expected_hash
+                or snapshot.dataset_snapshot_id != f"snapshot-{expected_hash[:24]}"
+            ):
+                raise ValueError("snapshot hash does not match persisted facts and decisions")
             connection.execute(
                 """
                 INSERT INTO snapshots(

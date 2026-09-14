@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import hashlib
 from datetime import datetime
 
-from ..domain.common import canonical_json, jsonable, utc_datetime
+from ..domain.common import utc_datetime
 from ..domain.facts import Fact, Unit
 from ..domain.policies import SelectionDecision, SelectionStatus
-from ..domain.snapshots import DatasetSnapshot
+from ..domain.snapshots import DatasetSnapshot, dataset_snapshot_content_hash
 
 
 def build_snapshot(
@@ -72,32 +71,19 @@ def build_snapshot(
         if fx is None or not fx.concept.startswith("fx."):
             raise ValueError("FX fact must be a selected FX observation")
 
-    seed = {
-        "instrumentId": instrument_id,
-        "listingId": listing_id,
-        "quoteCurrency": quote_currency,
-        "asOf": as_of.isoformat(),
-        "factIds": selected_ids,
-        "facts": [
-            {
-                "id": fact_id,
-                "contentHash": hashlib.sha256(
-                    canonical_json(jsonable(by_id[fact_id])).encode("utf-8")
-                ).hexdigest(),
-            }
-            for fact_id in selected_ids
-        ],
-        "priceFactId": price_fact_id,
-        "fxFactId": fx_fact_id,
-        "shareBasisId": share_basis_id,
-        "selectionPolicyVersion": selection_policy_version,
-        "periodPolicyVersion": period_policy_version,
-        "selectionDecisions": [
-            {"id": item.selection_decision_id, "contentHash": item.content_hash}
-            for item in sorted(decisions, key=lambda item: item.selection_decision_id)
-        ],
-    }
-    content_hash = hashlib.sha256(canonical_json(seed).encode("utf-8")).hexdigest()
+    content_hash = dataset_snapshot_content_hash(
+        instrument_id=instrument_id,
+        listing_id=listing_id,
+        quote_currency=quote_currency,
+        as_of=as_of,
+        facts=facts,
+        decisions=decisions,
+        price_fact_id=price_fact_id,
+        fx_fact_id=fx_fact_id,
+        share_basis_id=share_basis_id,
+        selection_policy_version=selection_policy_version,
+        period_policy_version=period_policy_version,
+    )
     return DatasetSnapshot(
         datasetSnapshotId=f"snapshot-{content_hash[:24]}",
         instrumentId=instrument_id,

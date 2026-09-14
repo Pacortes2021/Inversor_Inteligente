@@ -81,10 +81,21 @@ class FactRepository:
                     or listing["instrument_id"] != fact.instrument_id
                 ):
                     raise ValueError("fact listing does not belong to instrument")
-            if fact.context.share_basis_id is not None:
+            basis_ids = {fact.context.share_basis_id}
+            transformation_basis_id = None
+            if fact.transformation is not None:
+                transformation_basis_id = getattr(fact.transformation, "share_basis_id", None)
+                basis_ids.add(transformation_basis_id)
+            if (
+                transformation_basis_id is not None
+                and fact.context.share_basis_id != transformation_basis_id
+            ):
+                raise ValueError("fact context and transformation share bases do not match")
+            basis_ids.discard(None)
+            for basis_id in basis_ids:
                 basis = connection.execute(
                     "SELECT instrument_id FROM share_bases WHERE share_basis_id = ?",
-                    (fact.context.share_basis_id,),
+                    (basis_id,),
                 ).fetchone()
                 if (
                     fact.instrument_id is None

@@ -2,11 +2,59 @@
 
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime
 
 from pydantic import Field, field_validator, model_validator
 
-from .common import CanonicalModel, CurrencyCode, Identifier, Sha256, utc_datetime
+from .common import CanonicalModel, CurrencyCode, Identifier, Sha256, canonical_json, jsonable, utc_datetime
+from .facts import Fact
+from .policies import SelectionDecision
+
+
+def dataset_snapshot_content_hash(
+    *,
+    instrument_id: str,
+    listing_id: str,
+    quote_currency: str,
+    as_of: datetime,
+    facts: list[Fact],
+    decisions: list[SelectionDecision],
+    price_fact_id: str,
+    fx_fact_id: str | None,
+    share_basis_id: str,
+    selection_policy_version: str,
+    period_policy_version: str,
+) -> str:
+    as_of = utc_datetime(as_of)
+    by_id = {fact.fact_id: fact for fact in facts}
+    fact_ids = sorted(by_id)
+    seed = {
+        "instrumentId": instrument_id,
+        "listingId": listing_id,
+        "quoteCurrency": quote_currency,
+        "asOf": as_of.isoformat(),
+        "factIds": fact_ids,
+        "facts": [
+            {
+                "id": fact_id,
+                "contentHash": hashlib.sha256(
+                    canonical_json(jsonable(by_id[fact_id])).encode("utf-8")
+                ).hexdigest(),
+            }
+            for fact_id in fact_ids
+        ],
+        "priceFactId": price_fact_id,
+        "fxFactId": fx_fact_id,
+        "shareBasisId": share_basis_id,
+        "selectionPolicyVersion": selection_policy_version,
+        "periodPolicyVersion": period_policy_version,
+        "selectionDecisions": [
+            {"id": item.selection_decision_id, "contentHash": item.content_hash}
+            for item in sorted(decisions, key=lambda item: item.selection_decision_id)
+        ],
+    }
+    return hashlib.sha256(canonical_json(seed).encode("utf-8")).hexdigest()
 
 
 class DatasetSnapshot(CanonicalModel):

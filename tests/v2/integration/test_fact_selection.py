@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from backend.v2.adapters.persistence import (
     Database,
     FactRepository,
@@ -122,12 +124,12 @@ def test_date_only_publication_requires_explicit_session_or_first_seen() -> None
     )
     policy_payload = POLICY.model_dump(mode="json", by_alias=True)
     policy_payload["dateOnlySessionCutoffs"] = {
-        "synthetic-issuer:2026-02-20": "2026-02-21T20:00:00Z"
+        "synthetic-issuer:2026-02-20": "2026-02-23T21:00:00Z"
     }
     session_policy = SelectionPolicy.model_validate(policy_payload)
     at_explicit_session = select_fact(
         [dated],
-        query_for(dated, as_of="2026-02-21T20:00:00Z"),
+        query_for(dated, as_of="2026-02-23T21:00:00Z"),
         session_policy,
     )
     first_seen = select_fact(
@@ -138,6 +140,13 @@ def test_date_only_publication_requires_explicit_session_or_first_seen() -> None
     assert without_calendar.status == "missing"
     assert at_explicit_session.selected_fact_id == "date-only"
     assert first_seen.selected_fact_id == "date-only"
+
+    invalid_policy = POLICY.model_dump(mode="json", by_alias=True)
+    invalid_policy["dateOnlySessionCutoffs"] = {
+        "synthetic-issuer:2026-02-20": "2020-01-01T00:00:00Z"
+    }
+    with pytest.raises(ValueError, match="after its publication date"):
+        SelectionPolicy.model_validate(invalid_policy)
 
 
 def test_a24_other_listing_or_class_is_not_a_candidate() -> None:
