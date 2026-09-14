@@ -1,0 +1,255 @@
+from __future__ import annotations
+
+import json
+import sqlite3
+from pathlib import Path
+
+import pytest
+
+from backend.v2.adapters.persistence import Database, FactRepository, IdentityRepository, RawStore
+from backend.v2.domain import Document, Fact, Instrument, Issuer, Listing, ShareBasis
+
+
+EXAMPLE = Path("docs/rework/contracts/fact.example.json")
+
+
+@pytest.fixture
+def stores(tmp_path):
+    database = Database(tmp_path / "data" / "v2.sqlite3")
+    database.migrate()
+    identities = IdentityRepository(database)
+    identities.put_issuer(
+        Issuer.model_validate(
+            {"issuerId": "synthetic-issuer", "legalName": "Synthetic Issuer", "domicileCountry": "US", "identifiers": []}
+        )
+    )
+    return database, FactRepository(database), RawStore(tmp_path / "data")
+
+
+def add_document(repository: FactRepository, raw_store: RawStore) -> Document:
+    content = b"synthetic filing fixture\n"
+    blob = raw_store.put(content)
+    return repository.add_document(
+        Document.model_validate(
+            {
+                "documentId": "synthetic-filing-2025",
+                "provider": "synthetic_fixture",
+                "sha256": blob.sha256,
+                "relativePath": blob.relative_path,
+                "sourceUrl": "https://example.org/synthetic-fixtures/annual-2025",
+                "mediaType": "text/plain",
+                "fetchedAt": "2026-09-13T10:00:00Z",
+                "sizeBytes": blob.size_bytes,
+            }
+        )
+    )
+
+
+def fact_payload() -> dict:
+    return json.loads(EXAMPLE.read_text(encoding="utf-8"))
+
+
+def fact_for_document(document: Document) -> Fact:
+    payload = fact_payload()
+    payload["evidence"][0]["sha256"] = document.sha256
+    return Fact.model_validate(payload)
+
+
+def test_document_and_fact_import_are_idempotent_and_recoverable(stores) -> None:
+    _, repository, raw_store = stores
+    document = add_document(repository, raw_store)
+    assert repository.add_document(document).document_id == document.document_id
+
+    fact = fact_for_document(document)
+    repository.add_fact(fact)
+    repository.add_fact(fact)
+    assert repository.fact_count() == 1
+    recovered = repository.get_fact(fact.fact_id)
+    assert recovered is not None and recovered.value == "1000000"
+    assert raw_store.read(document.sha256) == b"synthetic filing fixture\n"
+
+
+def test_original_documents_and_observations_are_database_immutable(stores) -> None:
+    database, repository, raw_store = stores
+    document = add_document(repository, raw_store)
+    repository.add_fact(fact_for_document(document))
+    with pytest.raises(sqlite3.IntegrityError, match="immutable"):
+        with database.transaction() as connection:
+            connection.execute("UPDATE documents SET media_type = 'x' WHERE document_id = 'synthetic-filing-2025'")
+    with pytest.raises(sqlite3.IntegrityError, match="immutable"):
+        with database.transaction() as connection:
+            connection.execute("UPDATE observations SET value_decimal = '0' WHERE fact_id = 'synthetic-revenue-fy2025'")
+
+
+def test_missing_debt_round_trips_as_null_not_zero(stores) -> None:
+    _, repository, raw_store = stores
+    document = add_document(repository, raw_store)
+    payload = fact_payload()
+    payload["evidence"][0]["sha256"] = document.sha256
+    payload.update(
+        factId="synthetic-debt-missing",
+        concept="debt.total",
+        value=None,
+        originalValue=None,
+        originalUnit=None,
+        originalScale=None,
+        availability="missing",
+        missingReason="not_reported",
+    )
+    fact = Fact.model_validate(payload)
+    repository.add_fact(fact)
+    recovered = repository.get_fact(fact.fact_id)
+    assert recovered.value is None
+    assert recovered.availability == "missing"
+
+
+def test_explicit_clp_scale_a04_is_preserved(stores) -> None:
+    _, repository, raw_store = stores
+    document = add_document(repository, raw_store)
+    payload = fact_payload()
+    payload["evidence"][0]["sha256"] = document.sha256
+    payload.update(
+        factId="a04-clp-thousands",
+        value="1234000",
+        currency="CLP",
+        originalValue="1234",
+        originalUnit="CLP_thousands",
+        originalScale=1000,
+    )
+    fact = Fact.model_validate(payload)
+    repository.add_fact(fact)
+    recovered = repository.get_fact(fact.fact_id)
+    assert recovered.value == "1234000"
+    assert recovered.original_value == "1234"
+    assert recovered.original_scale == 1000
+
+
+def test_raw_store_rejects_path_traversal(stores) -> None:
+    _, _, raw_store = stores
+    with pytest.raises(ValueError):
+        raw_store.read("../secret")
+
+
+def test_evidence_must_match_the_immutable_document(stores) -> None:
+    _, repository, raw_store = stores
+    add_document(repository, raw_store)
+    with pytest.raises(ValueError, match="hash does not match"):
+        repository.add_fact(Fact.model_validate(fact_payload()))
+
+
+def test_fact_identity_relationships_and_share_basis_are_enforced(tmp_path) -> None:
+    database = Database(tmp_path / "v2.sqlite3")
+    database.migrate()
+    identities = IdentityRepository(database)
+    for issuer_id in ("issuer-a", "issuer-b"):
+        identities.put_issuer(
+            Issuer.model_validate(
+                {
+                    "issuerId": issuer_id,
+                    "legalName": issuer_id,
+                    "domicileCountry": "US",
+                    "identifiers": [],
+                }
+            )
+        )
+        identities.add_instrument(
+            Instrument.model_validate(
+                {
+                    "instrumentId": f"instrument-{issuer_id[-1]}",
+                    "issuerId": issuer_id,
+                    "type": "common_stock",
+                    "shareClass": None,
+                    "rightsSummary": None,
+                    "isin": None,
+                }
+            )
+        )
+    identities.add_listing(
+        Listing.model_validate(
+            {
+                "listingId": "listing-b",
+                "instrumentId": "instrument-b",
+                "mic": "XNYS",
+                "symbol": "SYB",
+                "currency": "USD",
+                "timezone": "America/New_York",
+                "status": "active",
+                "validFrom": "2020-01-01",
+                "validTo": None,
+            }
+        )
+    )
+    identities.add_share_basis(
+        ShareBasis.model_validate(
+            {
+                "shareBasisId": "basis-a",
+                "instrumentId": "instrument-a",
+                "asOf": "2026-09-12",
+                "kind": "as_reported",
+                "totalShares": "100",
+                "components": [
+                    {
+                        "componentId": "common-a",
+                        "kind": "common_outstanding",
+                        "shares": "100",
+                        "treatment": "included_in_denominator",
+                        "evidenceId": "basis-evidence",
+                    }
+                ],
+                "version": "basis-v1",
+            }
+        )
+    )
+    repository = FactRepository(database)
+
+    wrong_listing = fact_payload()
+    wrong_listing.update(
+        factId="wrong-listing",
+        issuerId="issuer-a",
+        instrumentId="instrument-a",
+        listingId="listing-b",
+        concept="price.close",
+        unit="money_per_share",
+    )
+    wrong_listing["evidence"][0].update(documentId=None, sha256=None)
+    with pytest.raises(ValueError, match="listing does not belong"):
+        repository.add_fact(Fact.model_validate(wrong_listing))
+
+    missing_basis = fact_payload()
+    missing_basis.update(
+        factId="missing-basis",
+        issuerId="issuer-a",
+        instrumentId="instrument-a",
+    )
+    missing_basis["context"].update(
+        shareBasis="split_adjusted", shareBasisId="unknown-basis"
+    )
+    missing_basis["evidence"][0].update(documentId=None, sha256=None)
+    with pytest.raises(ValueError, match="share basis does not belong"):
+        repository.add_fact(Fact.model_validate(missing_basis))
+
+    missing_transformation_basis = fact_payload()
+    missing_transformation_basis.update(
+        factId="missing-transformation-basis",
+        issuerId="issuer-a",
+        instrumentId="instrument-a",
+    )
+    missing_transformation_basis["context"].update(
+        shareBasis="split_adjusted", shareBasisId="basis-a"
+    )
+    missing_transformation_basis["transformation"] = {
+        "kind": "split",
+        "name": "split-adjustment",
+        "version": "v1",
+        "parameters": {
+            "factor": "2",
+            "targetDate": "2026-09-12",
+            "corporateActionId": "action-a",
+        },
+        "fxFactId": None,
+        "shareBasisId": "missing-transform-basis",
+        "adjustmentIds": [],
+    }
+    missing_transformation_basis["evidence"][0].update(documentId=None, sha256=None)
+    with pytest.raises(ValueError, match="share bases do not match"):
+        repository.add_fact(Fact.model_validate(missing_transformation_basis))

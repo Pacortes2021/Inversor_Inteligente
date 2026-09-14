@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
+import json
 from typing import Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, StringConstraints
@@ -60,6 +61,12 @@ def utc_datetime(value: datetime) -> datetime:
 
 def jsonable(model: BaseModel) -> dict[str, Any]:
     return model.model_dump(mode="json", by_alias=True, exclude_none=False)
+
+
+def canonical_json(value: object) -> str:
+    """Serialize hash inputs without incidental whitespace or key ordering."""
+
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
 def next_anniversary(start: date) -> date:
