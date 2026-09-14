@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from backend.v2.adapters.persistence import Database, FactRepository, IdentityRepository, RawStore
-from backend.v2.domain import Document, Fact, Issuer
+from backend.v2.domain import Document, Fact, Instrument, Issuer, Listing
 
 
 EXAMPLE = Path("docs/rework/contracts/fact.example.json")
@@ -135,3 +135,74 @@ def test_evidence_must_match_the_immutable_document(stores) -> None:
     add_document(repository, raw_store)
     with pytest.raises(ValueError, match="hash does not match"):
         repository.add_fact(Fact.model_validate(fact_payload()))
+
+
+def test_fact_identity_relationships_and_share_basis_are_enforced(tmp_path) -> None:
+    database = Database(tmp_path / "v2.sqlite3")
+    database.migrate()
+    identities = IdentityRepository(database)
+    for issuer_id in ("issuer-a", "issuer-b"):
+        identities.put_issuer(
+            Issuer.model_validate(
+                {
+                    "issuerId": issuer_id,
+                    "legalName": issuer_id,
+                    "domicileCountry": "US",
+                    "identifiers": [],
+                }
+            )
+        )
+        identities.add_instrument(
+            Instrument.model_validate(
+                {
+                    "instrumentId": f"instrument-{issuer_id[-1]}",
+                    "issuerId": issuer_id,
+                    "type": "common_stock",
+                    "shareClass": None,
+                    "rightsSummary": None,
+                    "isin": None,
+                }
+            )
+        )
+    identities.add_listing(
+        Listing.model_validate(
+            {
+                "listingId": "listing-b",
+                "instrumentId": "instrument-b",
+                "mic": "XNYS",
+                "symbol": "SYB",
+                "currency": "USD",
+                "timezone": "America/New_York",
+                "status": "active",
+                "validFrom": "2020-01-01",
+                "validTo": None,
+            }
+        )
+    )
+    repository = FactRepository(database)
+
+    wrong_listing = fact_payload()
+    wrong_listing.update(
+        factId="wrong-listing",
+        issuerId="issuer-a",
+        instrumentId="instrument-a",
+        listingId="listing-b",
+        concept="price.close",
+        unit="money_per_share",
+    )
+    wrong_listing["evidence"][0].update(documentId=None, sha256=None)
+    with pytest.raises(ValueError, match="listing does not belong"):
+        repository.add_fact(Fact.model_validate(wrong_listing))
+
+    missing_basis = fact_payload()
+    missing_basis.update(
+        factId="missing-basis",
+        issuerId="issuer-a",
+        instrumentId="instrument-a",
+    )
+    missing_basis["context"].update(
+        shareBasis="split_adjusted", shareBasisId="unknown-basis"
+    )
+    missing_basis["evidence"][0].update(documentId=None, sha256=None)
+    with pytest.raises(ValueError, match="share basis does not belong"):
+        repository.add_fact(Fact.model_validate(missing_basis))

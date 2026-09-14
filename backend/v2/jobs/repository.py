@@ -60,6 +60,20 @@ class JobRepository:
             row = connection.execute("SELECT * FROM jobs WHERE job_id = ?", (job_id,)).fetchone()
         return None if row is None else self._job(row)
 
+    def lease_is_current(self, job: Job, *, at: datetime) -> bool:
+        with self.database.connect() as connection:
+            try:
+                self._owned_running(
+                    connection,
+                    job.job_id,
+                    job.lease_owner or "",
+                    at=utc_datetime(at),
+                    expected_attempt=job.attempt,
+                )
+            except ValueError:
+                return False
+        return True
+
     def claim(self, worker_id: str, *, now: datetime, lease_seconds: int = 60) -> Job | None:
         now = utc_datetime(now)
         timestamp = now.isoformat()
@@ -75,16 +89,28 @@ class JobRepository:
             )
             connection.execute(
                 """
+                UPDATE jobs SET status = 'failed', progress = 'lease_expired_attempts_exhausted',
+                    lease_owner = NULL, lease_expires_at = NULL,
+                    last_error = 'lease_expired', updated_at = ?
+                WHERE status = 'running' AND lease_expires_at <= ?
+                  AND cancel_requested = 0 AND attempt >= max_attempts
+                """,
+                (timestamp, timestamp),
+            )
+            connection.execute(
+                """
                 UPDATE jobs SET status = 'queued', progress = 'lease_recovered',
                     lease_owner = NULL, lease_expires_at = NULL, updated_at = ?
-                WHERE status = 'running' AND lease_expires_at <= ? AND cancel_requested = 0
+                WHERE status = 'running' AND lease_expires_at <= ?
+                  AND cancel_requested = 0 AND attempt < max_attempts
                 """,
                 (timestamp, timestamp),
             )
             row = connection.execute(
                 """
                 SELECT * FROM jobs
-                WHERE status = 'queued' AND cancel_requested = 0 AND next_attempt_at <= ?
+                WHERE status = 'queued' AND cancel_requested = 0
+                  AND attempt < max_attempts AND next_attempt_at <= ?
                 ORDER BY next_attempt_at, created_at, job_id LIMIT 1
                 """,
                 (timestamp,),
@@ -105,12 +131,20 @@ class JobRepository:
         return self._job(claimed)
 
     def complete(
-        self, job_id: str, worker_id: str, *, now: datetime, partial: bool = False
+        self,
+        job_id: str,
+        worker_id: str,
+        *,
+        now: datetime,
+        partial: bool = False,
+        expected_attempt: int | None = None,
     ) -> Job:
         now = utc_datetime(now)
         status = JobStatus.PARTIAL if partial else JobStatus.SUCCEEDED
         with self.database.transaction() as connection:
-            self._owned_running(connection, job_id, worker_id)
+            self._owned_running(
+                connection, job_id, worker_id, at=now, expected_attempt=expected_attempt
+            )
             connection.execute(
                 """
                 UPDATE jobs SET status = ?, progress = ?, lease_owner = NULL,
@@ -129,10 +163,13 @@ class JobRepository:
         now: datetime,
         error: str,
         retry_after_seconds: int | None = None,
+        expected_attempt: int | None = None,
     ) -> Job:
         now = utc_datetime(now)
         with self.database.transaction() as connection:
-            row = self._owned_running(connection, job_id, worker_id)
+            row = self._owned_running(
+                connection, job_id, worker_id, at=now, expected_attempt=expected_attempt
+            )
             terminal = row["attempt"] >= row["max_attempts"]
             status = JobStatus.FAILED if terminal else JobStatus.QUEUED
             delay = retry_delay_seconds(
@@ -169,6 +206,13 @@ class JobRepository:
         retry_after_seconds: int | None,
     ) -> None:
         with self.database.transaction() as connection:
+            self._owned_running(
+                connection,
+                job.job_id,
+                job.lease_owner or "",
+                at=utc_datetime(now),
+                expected_attempt=job.attempt,
+            )
             connection.execute(
                 """
                 INSERT INTO provider_attempts(
@@ -210,7 +254,7 @@ class JobRepository:
     def acknowledge_cancel(self, job_id: str, worker_id: str, *, now: datetime) -> Job:
         now = utc_datetime(now)
         with self.database.transaction() as connection:
-            row = self._owned_running(connection, job_id, worker_id)
+            row = self._owned_running(connection, job_id, worker_id, at=now)
             if not row["cancel_requested"]:
                 raise ValueError("job cancellation was not requested")
             connection.execute(
@@ -225,10 +269,23 @@ class JobRepository:
         return self._job(updated)
 
     @staticmethod
-    def _owned_running(connection, job_id: str, worker_id: str):
+    def _owned_running(
+        connection,
+        job_id: str,
+        worker_id: str,
+        *,
+        at: datetime | None = None,
+        expected_attempt: int | None = None,
+    ):
         row = connection.execute("SELECT * FROM jobs WHERE job_id = ?", (job_id,)).fetchone()
         if row is None or row["status"] != JobStatus.RUNNING or row["lease_owner"] != worker_id:
             raise ValueError("worker does not own a running job lease")
+        if at is not None and (
+            row["lease_expires_at"] is None or row["lease_expires_at"] <= at.isoformat()
+        ):
+            raise ValueError("worker job lease has expired")
+        if expected_attempt is not None and row["attempt"] != expected_attempt:
+            raise ValueError("worker job attempt is stale")
         return row
 
     @staticmethod
@@ -276,11 +333,33 @@ class CacheRepository:
         *,
         fetched_at: datetime,
         expires_at: datetime,
+        job_id: str | None = None,
+        worker_id: str | None = None,
+        job_attempt: int | None = None,
+        lease_at: datetime | None = None,
     ) -> None:
         key = self.key(request)
         fetched_at = utc_datetime(fetched_at)
         expires_at = utc_datetime(expires_at)
         with self.database.transaction() as connection:
+            lease_fields = (job_id, worker_id, job_attempt, lease_at)
+            if any(value is not None for value in lease_fields):
+                if any(value is None for value in lease_fields):
+                    raise ValueError("lease validation requires job, worker, attempt and timestamp")
+                lease_at = utc_datetime(lease_at)
+                job = connection.execute(
+                    "SELECT status, attempt, lease_owner, lease_expires_at FROM jobs WHERE job_id = ?",
+                    (job_id,),
+                ).fetchone()
+                if (
+                    job is None
+                    or job["status"] != JobStatus.RUNNING
+                    or job["lease_owner"] != worker_id
+                    or job["attempt"] != job_attempt
+                    or job["lease_expires_at"] is None
+                    or job["lease_expires_at"] <= lease_at.isoformat()
+                ):
+                    raise ValueError("cannot publish cache without a current job lease")
             connection.execute(
                 """
                 INSERT INTO cache_entries(

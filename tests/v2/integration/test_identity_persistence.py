@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import date
 
 import pytest
 
@@ -86,6 +87,46 @@ def test_provider_ticker_rename_preserves_history(repository: IdentityRepository
         )
     history = repository.provider_symbol_history("synthetic", "prices", "listing-a")
     assert [item.provider_symbol for item in history] == ["OLD", "NEW"]
+
+
+def test_overlapping_listing_symbol_ranges_are_rejected(repository: IdentityRepository) -> None:
+    repository.put_issuer(issuer())
+    repository.add_instrument(instrument("instrument-a", share_class="A"))
+    repository.add_instrument(instrument("instrument-b", share_class="B"))
+    repository.add_listing(listing("listing-a", "instrument-a", "XNAS", "SYN"))
+    overlapping = listing("listing-b", "instrument-b", "XNAS", "SYN").model_copy(
+        update={"valid_from": date(2024, 1, 1)}
+    )
+    with pytest.raises(sqlite3.IntegrityError, match="validity ranges overlap"):
+        repository.add_listing(overlapping)
+
+
+def test_overlapping_provider_symbol_ranges_are_rejected(repository: IdentityRepository) -> None:
+    repository.put_issuer(issuer())
+    repository.add_instrument(instrument("instrument-a"))
+    repository.add_listing(listing("listing-a", "instrument-a", "XNAS", "SYN"))
+    first = ProviderSymbol.model_validate(
+        {
+            "provider": "synthetic",
+            "capability": "prices",
+            "providerSymbol": "SYN",
+            "listingId": "listing-a",
+            "validFrom": "2020-01-01",
+            "validTo": None,
+            "resolutionEvidenceId": "evidence-1",
+        }
+    )
+    repository.add_provider_symbol(first)
+    with pytest.raises(sqlite3.IntegrityError, match="validity ranges overlap"):
+        repository.add_provider_symbol(
+            first.model_copy(
+                update={
+                    "provider_symbol": "SYN2",
+                    "valid_from": first.valid_from.replace(year=2024),
+                    "resolution_evidence_id": "evidence-2",
+                }
+            )
+        )
 
 
 def test_foreign_keys_reject_orphans(repository: IdentityRepository) -> None:

@@ -36,31 +36,46 @@ class Worker:
         provider = self.providers.get(job.request.provider)
         if provider is None:
             error = "not_covered"
-            self.cache.record_failure(job.request, now=now, error=error)
             self.jobs.record_attempt(
                 job, now=now, status="failure", error=error, retry_after_seconds=None
             )
-            self.jobs.fail(job.job_id, self.worker_id, now=now, error=error)
+            self.jobs.fail(
+                job.job_id,
+                self.worker_id,
+                now=now,
+                error=error,
+                expected_attempt=job.attempt,
+            )
+            self.cache.record_failure(job.request, now=now, error=error)
             return True
 
         try:
             result = provider.fetch(job.request)
         except Exception:
             error = "provider_unavailable"
-            self.cache.record_failure(job.request, now=now, error=error)
             self.jobs.record_attempt(
                 job, now=now, status="failure", error=error, retry_after_seconds=None
             )
-            self.jobs.fail(job.job_id, self.worker_id, now=now, error=error)
+            self.jobs.fail(
+                job.job_id,
+                self.worker_id,
+                now=now,
+                error=error,
+                expected_attempt=job.attempt,
+            )
+            self.cache.record_failure(job.request, now=now, error=error)
+            return True
+        finished_at = max(now, result.fetched_at)
+        if not self.jobs.lease_is_current(job, at=finished_at):
             return True
         current = self.jobs.get(job.job_id)
         if current is not None and current.cancel_requested:
-            self.jobs.acknowledge_cancel(job.job_id, self.worker_id, now=now)
+            self.jobs.acknowledge_cancel(job.job_id, self.worker_id, now=finished_at)
             return True
         error = None if result.error is None else str(result.error)
         self.jobs.record_attempt(
             job,
-            now=now,
+            now=finished_at,
             status=result.status,
             error=error,
             retry_after_seconds=result.retry_after_seconds,
@@ -71,12 +86,17 @@ class Worker:
                 result.data,
                 fetched_at=result.fetched_at,
                 expires_at=result.fetched_at + timedelta(seconds=self.cache_ttl_seconds),
+                job_id=job.job_id,
+                worker_id=self.worker_id,
+                job_attempt=job.attempt,
+                lease_at=finished_at,
             )
             self.jobs.complete(
                 job.job_id,
                 self.worker_id,
-                now=now,
+                now=finished_at,
                 partial=result.status == ProviderStatus.PARTIAL,
+                expected_attempt=job.attempt,
             )
         elif result.status == ProviderStatus.SUCCESS:
             self.cache.store_valid(
@@ -84,16 +104,26 @@ class Worker:
                 [],
                 fetched_at=result.fetched_at,
                 expires_at=result.fetched_at + timedelta(seconds=self.cache_ttl_seconds),
+                job_id=job.job_id,
+                worker_id=self.worker_id,
+                job_attempt=job.attempt,
+                lease_at=finished_at,
             )
-            self.jobs.complete(job.job_id, self.worker_id, now=now)
+            self.jobs.complete(
+                job.job_id,
+                self.worker_id,
+                now=finished_at,
+                expected_attempt=job.attempt,
+            )
         else:
             failure = error or "provider_unavailable"
-            self.cache.record_failure(job.request, now=now, error=failure)
             self.jobs.fail(
                 job.job_id,
                 self.worker_id,
-                now=now,
+                now=finished_at,
                 error=failure,
                 retry_after_seconds=result.retry_after_seconds,
+                expected_attempt=job.attempt,
             )
+            self.cache.record_failure(job.request, now=finished_at, error=failure)
         return True

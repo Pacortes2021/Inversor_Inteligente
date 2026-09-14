@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 from datetime import datetime
 
-from ..domain.common import canonical_json
+from ..domain.common import canonical_json, jsonable, utc_datetime
 from ..domain.facts import Fact, Unit
 from ..domain.policies import SelectionDecision, SelectionStatus
 from ..domain.snapshots import DatasetSnapshot
@@ -25,6 +25,7 @@ def build_snapshot(
     selection_policy_version: str,
     period_policy_version: str,
 ) -> DatasetSnapshot:
+    as_of = utc_datetime(as_of)
     if not decisions or any(decision.status != SelectionStatus.SELECTED for decision in decisions):
         raise ValueError("a snapshot requires resolved selection decisions")
     if any(decision.query.as_of != as_of for decision in decisions):
@@ -46,8 +47,30 @@ def build_snapshot(
         or not price.concept.startswith("price.")
     ):
         raise ValueError("price fact does not match snapshot instrument, listing and currency")
-    if fx_fact_id is not None and fx_fact_id not in by_id:
-        raise ValueError("FX fact must belong to the selected facts")
+    if any(
+        fact.fact_id != fx_fact_id and fact.issuer_id != price.issuer_id for fact in facts
+    ):
+        raise ValueError("all snapshot facts must belong to the price issuer")
+    if any(
+        decision.selected_fact_id != fx_fact_id
+        and (
+            decision.query.issuer_id != price.issuer_id
+            or (
+                decision.query.instrument_id is not None
+                and decision.query.instrument_id != instrument_id
+            )
+            or (
+                decision.query.listing_id is not None
+                and decision.query.listing_id != listing_id
+            )
+        )
+        for decision in decisions
+    ):
+        raise ValueError("selection decision identity does not match snapshot identity")
+    if fx_fact_id is not None:
+        fx = by_id.get(fx_fact_id)
+        if fx is None or not fx.concept.startswith("fx."):
+            raise ValueError("FX fact must be a selected FX observation")
 
     seed = {
         "instrumentId": instrument_id,
@@ -55,6 +78,15 @@ def build_snapshot(
         "quoteCurrency": quote_currency,
         "asOf": as_of.isoformat(),
         "factIds": selected_ids,
+        "facts": [
+            {
+                "id": fact_id,
+                "contentHash": hashlib.sha256(
+                    canonical_json(jsonable(by_id[fact_id])).encode("utf-8")
+                ).hexdigest(),
+            }
+            for fact_id in selected_ids
+        ],
         "priceFactId": price_fact_id,
         "fxFactId": fx_fact_id,
         "shareBasisId": share_basis_id,

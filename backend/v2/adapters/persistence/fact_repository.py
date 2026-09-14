@@ -63,6 +63,36 @@ class FactRepository:
                     raise ValueError("fact IDs are immutable")
                 return Fact.model_validate_json(existing["payload_json"])
 
+            if fact.instrument_id is not None:
+                instrument = connection.execute(
+                    "SELECT issuer_id FROM instruments WHERE instrument_id = ?",
+                    (fact.instrument_id,),
+                ).fetchone()
+                if instrument is None or instrument["issuer_id"] != fact.issuer_id:
+                    raise ValueError("fact instrument does not belong to issuer")
+            if fact.listing_id is not None:
+                listing = connection.execute(
+                    "SELECT instrument_id FROM listings WHERE listing_id = ?",
+                    (fact.listing_id,),
+                ).fetchone()
+                if (
+                    fact.instrument_id is None
+                    or listing is None
+                    or listing["instrument_id"] != fact.instrument_id
+                ):
+                    raise ValueError("fact listing does not belong to instrument")
+            if fact.context.share_basis_id is not None:
+                basis = connection.execute(
+                    "SELECT instrument_id FROM share_bases WHERE share_basis_id = ?",
+                    (fact.context.share_basis_id,),
+                ).fetchone()
+                if (
+                    fact.instrument_id is None
+                    or basis is None
+                    or basis["instrument_id"] != fact.instrument_id
+                ):
+                    raise ValueError("fact share basis does not belong to instrument")
+
             provider_key = fact.evidence[0].provider if fact.evidence else None
             connection.execute(
                 """

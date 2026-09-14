@@ -111,16 +111,33 @@ def test_a23_later_revision_never_appears_before_publication() -> None:
     assert current.candidate_fact_ids == ["original", "restatement"]
 
 
-def test_date_only_publication_is_conservatively_available_next_day() -> None:
+def test_date_only_publication_requires_explicit_session_or_first_seen() -> None:
     dated = Fact.model_validate(
         payload("date-only", published_at="2026-02-20", first_seen_at="2026-02-22T00:00:00Z")
     )
 
     same_day = select_fact([dated], query_for(dated, as_of="2026-02-20T23:59:59Z"), POLICY)
-    next_day = select_fact([dated], query_for(dated, as_of="2026-02-21T00:00:00Z"), POLICY)
+    without_calendar = select_fact(
+        [dated], query_for(dated, as_of="2026-02-21T20:00:00Z"), POLICY
+    )
+    policy_payload = POLICY.model_dump(mode="json", by_alias=True)
+    policy_payload["dateOnlySessionCutoffs"] = {
+        "synthetic-issuer:2026-02-20": "2026-02-21T20:00:00Z"
+    }
+    session_policy = SelectionPolicy.model_validate(policy_payload)
+    at_explicit_session = select_fact(
+        [dated],
+        query_for(dated, as_of="2026-02-21T20:00:00Z"),
+        session_policy,
+    )
+    first_seen = select_fact(
+        [dated], query_for(dated, as_of="2026-02-22T00:00:00Z"), POLICY
+    )
 
     assert same_day.status == "missing"
-    assert next_day.selected_fact_id == "date-only"
+    assert without_calendar.status == "missing"
+    assert at_explicit_session.selected_fact_id == "date-only"
+    assert first_seen.selected_fact_id == "date-only"
 
 
 def test_a24_other_listing_or_class_is_not_a_candidate() -> None:
@@ -141,6 +158,26 @@ def test_a24_other_listing_or_class_is_not_a_candidate() -> None:
 
     assert decision.selected_fact_id == "price-a"
     assert decision.candidate_fact_ids == ["price-a"]
+
+
+def test_invalid_or_declared_conflicting_facts_are_never_selected() -> None:
+    invalid_payload = payload("invalid-fact")
+    invalid_payload["quality"]["validation"] = "invalid"
+    invalid = Fact.model_validate(invalid_payload)
+    invalid_decision = select_fact(
+        [invalid], query_for(invalid, as_of="2026-03-01T00:00:00Z"), POLICY
+    )
+    assert invalid_decision.status == "blocked"
+    assert invalid_decision.selected_fact_id is None
+
+    conflict_payload = payload("declared-conflict")
+    conflict_payload["quality"]["reconciliation"] = "conflict"
+    conflict = Fact.model_validate(conflict_payload)
+    conflict_decision = select_fact(
+        [conflict], query_for(conflict, as_of="2026-03-01T00:00:00Z"), POLICY
+    )
+    assert conflict_decision.status == "conflict"
+    assert conflict_decision.selected_fact_id is None
 
 
 def test_selection_decision_is_deterministic_idempotent_and_durable(tmp_path) -> None:

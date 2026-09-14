@@ -69,6 +69,15 @@ class SnapshotRepository:
                 or not price.concept.startswith("price.")
             ):
                 raise ValueError("persisted price does not match snapshot identity")
+            if any(
+                fact.fact_id != snapshot.fx_fact_id and fact.issuer_id != price.issuer_id
+                for fact in facts
+            ):
+                raise ValueError("snapshot facts span multiple issuers")
+            if snapshot.fx_fact_id is not None:
+                fx = by_id.get(snapshot.fx_fact_id)
+                if fx is None or not fx.concept.startswith("fx."):
+                    raise ValueError("snapshot FX reference is not an FX observation")
             selected_ids: set[str] = set()
             for decision_id in decision_ids:
                 row = connection.execute(
@@ -82,6 +91,20 @@ class SnapshotRepository:
                     decision.selected_fact_id is None
                     or decision.policy_version != snapshot.selection_policy_version
                     or decision.query.as_of != snapshot.as_of
+                    or (
+                        decision.selected_fact_id != snapshot.fx_fact_id
+                        and (
+                            decision.query.issuer_id != price.issuer_id
+                            or (
+                                decision.query.instrument_id is not None
+                                and decision.query.instrument_id != snapshot.instrument_id
+                            )
+                            or (
+                                decision.query.listing_id is not None
+                                and decision.query.listing_id != snapshot.listing_id
+                            )
+                        )
+                    )
                 ):
                     raise ValueError("selection decision is incompatible with snapshot")
                 selected_ids.add(decision.selected_fact_id)

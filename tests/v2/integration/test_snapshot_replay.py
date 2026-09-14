@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import socket
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -195,6 +195,22 @@ def test_same_inputs_and_policies_produce_the_same_snapshot_hash(tmp_path) -> No
     assert repeated.dataset_snapshot_id == snapshot.dataset_snapshot_id
     assert repeated.content_hash == snapshot.content_hash
 
+    equivalent_offset = build_snapshot(
+        instrument_id="instrument-a",
+        listing_id="listing-a",
+        quote_currency="USD",
+        as_of=AS_OF.astimezone(timezone(-timedelta(hours=3))),
+        decisions=decisions,
+        facts=facts,
+        price_fact_id="price-a",
+        fx_fact_id=None,
+        share_basis_id="basis-a",
+        selection_policy_version="selection-v1",
+        period_policy_version="period-v1",
+    )
+    assert equivalent_offset.dataset_snapshot_id == snapshot.dataset_snapshot_id
+    assert equivalent_offset.content_hash == snapshot.content_hash
+
 
 def test_a16_snapshot_replays_offline_and_get_does_not_write(tmp_path, monkeypatch) -> None:
     data_dir = tmp_path / "data"
@@ -227,6 +243,34 @@ def test_snapshot_rejects_price_from_another_listing(tmp_path) -> None:
             as_of=AS_OF,
             decisions=decisions,
             facts=facts,
+            price_fact_id="price-a",
+            fx_fact_id=None,
+            share_basis_id="basis-a",
+            selection_policy_version="selection-v1",
+            period_policy_version="period-v1",
+        )
+
+
+def test_snapshot_rejects_selected_facts_from_another_issuer(tmp_path) -> None:
+    _, _, decisions, facts = seed_snapshot(tmp_path / "data")
+    price = next(fact for fact in facts if fact.fact_id == "price-a")
+    foreign_revenue = next(fact for fact in facts if fact.fact_id == "revenue-a").model_copy(
+        update={"issuer_id": "foreign-issuer", "fact_id": "foreign-revenue"}
+    )
+    foreign_decision = select_fact(
+        [foreign_revenue], selection_query(foreign_revenue), POLICY
+    )
+    price_decision = next(
+        decision for decision in decisions if decision.selected_fact_id == "price-a"
+    )
+    with pytest.raises(ValueError, match="price issuer"):
+        build_snapshot(
+            instrument_id="instrument-a",
+            listing_id="listing-a",
+            quote_currency="USD",
+            as_of=AS_OF,
+            decisions=[price_decision, foreign_decision],
+            facts=[price, foreign_revenue],
             price_fact_id="price-a",
             fx_fact_id=None,
             share_basis_id="basis-a",

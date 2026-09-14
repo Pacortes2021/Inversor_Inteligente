@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 
 from pydantic import Field, field_validator, model_validator
@@ -20,6 +20,7 @@ class SelectionStatus(str, Enum):
     SELECTED = "selected"
     CONFLICT = "conflict"
     MISSING = "missing"
+    BLOCKED = "blocked"
 
 
 class FactSelectionQuery(CanonicalModel):
@@ -45,6 +46,24 @@ class SelectionPolicy(CanonicalModel):
     provider_priority: list[Identifier] = Field(default_factory=list)
     relative_tolerance: DecimalString = "0.001"
     absolute_tolerance: DecimalString = "0"
+    date_only_session_cutoffs: dict[str, datetime] = Field(default_factory=dict)
+
+    @field_validator("date_only_session_cutoffs")
+    @classmethod
+    def session_cutoffs_are_explicit_and_aware(
+        cls, value: dict[str, datetime]
+    ) -> dict[str, datetime]:
+        normalized: dict[str, datetime] = {}
+        for key, cutoff in value.items():
+            try:
+                identity, published_date = key.rsplit(":", 1)
+                date.fromisoformat(published_date)
+            except (ValueError, TypeError) as error:
+                raise ValueError("session cutoff keys must be '<identity>:YYYY-MM-DD'") from error
+            if not identity:
+                raise ValueError("session cutoff identity cannot be empty")
+            normalized[key] = utc_datetime(cutoff)
+        return normalized
 
     @model_validator(mode="after")
     def tolerances_are_nonnegative(self) -> "SelectionPolicy":
