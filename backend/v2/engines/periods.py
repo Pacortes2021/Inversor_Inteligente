@@ -17,7 +17,9 @@ from ..domain.facts import (
     PeriodLabel,
     PeriodParameters,
     PeriodTransformation,
+    Reconciliation,
     TimestampPrecision,
+    ValidationState,
 )
 
 
@@ -30,22 +32,37 @@ class PeriodDerivation:
     duplicates: tuple[str, ...] = ()
 
 
+_ADDITIVE_TTM_CONCEPTS = {
+    "revenue",
+    "operating_income",
+    "net_income",
+    "cash_flow.operating",
+    "capex",
+}
+
+
 def derive_ttm_from_quarters(facts: Sequence[Fact]) -> PeriodDerivation:
     """Sum exactly four independent consecutive fiscal quarters."""
 
     if not facts:
         return PeriodDerivation("blocked", None, "no_quarters")
+    if facts[0].concept not in _ADDITIVE_TTM_CONCEPTS:
+        return PeriodDerivation("blocked", None, "nonadditive_ttm_concept")
     mismatch = _compatibility_error(facts)
     if mismatch:
         return PeriodDerivation("blocked", None, mismatch)
+    quality_error = _quality_error(facts)
+    if quality_error:
+        return PeriodDerivation("blocked", None, quality_error)
     invalid = [
         fact
         for fact in facts
-        if fact.availability != Availability.AVAILABLE
-        or fact.period.kind != PeriodKind.DURATION
+        if fact.period.kind != PeriodKind.DURATION
         or fact.period.label != PeriodLabel.FQ
         or fact.period.fiscal_year is None
         or fact.period.fiscal_quarter is None
+        or fact.period.start is None
+        or not 60 <= (fact.period.end - fact.period.start).days + 1 <= 120
     ]
     if invalid:
         return PeriodDerivation("blocked", None, "requires_available_fiscal_quarters")
@@ -66,6 +83,15 @@ def derive_ttm_from_quarters(facts: Sequence[Fact]) -> PeriodDerivation:
         return PeriodDerivation("blocked", None, reason, gaps, duplicates)
 
     ordered = [by_key[key][0] for key in expected]
+    if any(
+        current.period.start is None
+        or current.period.start.toordinal() != previous.period.end.toordinal() + 1
+        for previous, current in zip(ordered, ordered[1:])
+    ):
+        return PeriodDerivation("blocked", None, "noncontiguous_quarter_dates")
+    elapsed_days = (ordered[-1].period.end - ordered[0].period.start).days + 1
+    if not 330 <= elapsed_days <= 380:
+        return PeriodDerivation("blocked", None, "invalid_ttm_window")
     value = sum((Decimal(fact.value) for fact in ordered), Decimal(0))
     result = _derived_fact(
         ordered,
@@ -84,11 +110,14 @@ def derive_ttm_bridge(
     """Derive TTM = prior FY + current YTD - comparable prior YTD."""
 
     facts = [prior_fy, current_ytd, comparable_prior_ytd]
+    if prior_fy.concept not in _ADDITIVE_TTM_CONCEPTS:
+        return PeriodDerivation("blocked", None, "nonadditive_ttm_concept")
     mismatch = _compatibility_error(facts)
     if mismatch:
         return PeriodDerivation("blocked", None, mismatch)
-    if any(fact.availability != Availability.AVAILABLE for fact in facts):
-        return PeriodDerivation("blocked", None, "requires_available_inputs")
+    quality_error = _quality_error(facts)
+    if quality_error:
+        return PeriodDerivation("blocked", None, quality_error)
     if (
         prior_fy.period.label != PeriodLabel.FY
         or current_ytd.period.label != PeriodLabel.YTD
@@ -103,12 +132,9 @@ def derive_ttm_bridge(
     if prior_fy.period.start != comparable_prior_ytd.period.start:
         return PeriodDerivation("blocked", None, "incompatible_fiscal_periods")
     if (
-        abs((current_ytd.period.start - prior_fy.period.end).days - 1) > 7
-        or abs(
-            (current_ytd.period.start - comparable_prior_ytd.period.start).days - 365
-        )
-        > 7
-        or abs((current_ytd.period.end - comparable_prior_ytd.period.end).days - 365) > 7
+        (current_ytd.period.start - prior_fy.period.end).days != 1
+        or not _one_year_apart(comparable_prior_ytd.period.start, current_ytd.period.start)
+        or not _one_year_apart(comparable_prior_ytd.period.end, current_ytd.period.end)
     ):
         return PeriodDerivation("blocked", None, "incompatible_fiscal_periods")
     if abs(
@@ -153,8 +179,9 @@ def ordered_period_values(facts: Sequence[Fact]) -> tuple[str, ...]:
     mismatch = _compatibility_error(facts)
     if mismatch:
         raise ValueError(mismatch)
-    if any(fact.availability != Availability.AVAILABLE for fact in facts):
-        raise ValueError("requires_available_inputs")
+    quality_error = _quality_error(facts)
+    if quality_error:
+        raise ValueError(quality_error)
     values = [fact.value for fact in sorted(facts, key=lambda item: item.period.end)]
     if any(value is None for value in values):
         raise ValueError("requires_available_inputs")
@@ -167,6 +194,24 @@ def _compatibility_error(facts: Sequence[Fact]) -> str | None:
     if any(_signature(fact) != signature for fact in facts[1:]):
         return "incompatible_fact_contexts"
     return None
+
+
+def _quality_error(facts: Sequence[Fact]) -> str | None:
+    if any(fact.availability != Availability.AVAILABLE for fact in facts):
+        return "requires_available_inputs"
+    if any(fact.quality.validation != ValidationState.VALID for fact in facts):
+        return "requires_valid_inputs"
+    if any(fact.quality.reconciliation == Reconciliation.CONFLICT for fact in facts):
+        return "conflicting_inputs"
+    return None
+
+
+def _one_year_apart(earlier: date, later: date) -> bool:
+    if later.year != earlier.year + 1:
+        return False
+    if (earlier.month, earlier.day) == (later.month, later.day):
+        return True
+    return earlier.month == later.month == 2 and {earlier.day, later.day} == {28, 29}
 
 
 def _signature(fact: Fact) -> tuple[object, ...]:
@@ -203,8 +248,7 @@ def _derived_fact(
     digest = hashlib.sha256(
         ("|".join(input_ids) + f"|{method}|period-r10-v1").encode("utf-8")
     ).hexdigest()[:32]
-    publications = [fact.published_at for fact in inputs]
-    published_at = max(publications) if all(item is not None for item in publications) else None
+    published_at = _latest_publication(inputs)
     if isinstance(published_at, datetime):
         precision = TimestampPrecision.SECOND
     elif isinstance(published_at, date):
@@ -260,6 +304,21 @@ def _derived_fact(
         }
     )
     return Fact.model_validate(payload)
+
+
+def _latest_publication(inputs: Sequence[Fact]) -> datetime | date | None:
+    publications = [fact.published_at for fact in inputs]
+    if any(item is None for item in publications):
+        return None
+    if all(isinstance(item, datetime) for item in publications):
+        return max(item for item in publications if isinstance(item, datetime))
+    if all(isinstance(item, date) and not isinstance(item, datetime) for item in publications):
+        return max(item for item in publications if isinstance(item, date))
+    return max(
+        item.date() if isinstance(item, datetime) else item
+        for item in publications
+        if item is not None
+    )
 
 
 def _previous_quarter(latest: tuple[int, int], offset: int) -> tuple[int, int]:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -162,3 +163,91 @@ def test_share_basis_cannot_be_attached_without_an_instrument() -> None:
 
     assert result.status == "blocked"
     assert result.reason == "share_basis_requires_instrument"
+
+
+def test_calendar_frame_is_not_mislabeled_as_a_noncalendar_fiscal_quarter() -> None:
+    payload, document, source_facts = load_curated("msft-2025-curated.json")
+    source = source_facts[0].model_copy(
+        update={
+            "start": date(2024, 7, 1),
+            "end": date(2024, 9, 30),
+            "form": "10-Q",
+            "fiscal_year": 2025,
+            "fiscal_period": "Q1",
+            "frame": "CY2024Q3",
+        }
+    )
+
+    result = SecFactMapper().map(source, issuer_id=payload["issuerId"], document=document)
+
+    assert result.status == "blocked"
+    assert result.reason == "fiscal_calendar_required"
+
+
+def test_implausible_sec_duration_is_not_labeled_fy_or_fq() -> None:
+    payload, document, source_facts = load_curated("msft-2025-curated.json")
+    source = source_facts[0]
+    two_year_fy = source.model_copy(
+        update={"start": date(2023, 7, 1), "end": date(2025, 6, 30)}
+    )
+    one_day_quarter = source.model_copy(
+        update={
+            "start": date(2024, 1, 1),
+            "end": date(2024, 1, 1),
+            "form": "10-Q",
+            "fiscal_year": 2024,
+            "fiscal_period": "Q1",
+            "frame": "CY2024Q1",
+        }
+    )
+
+    long_result = SecFactMapper().map(
+        two_year_fy, issuer_id=payload["issuerId"], document=document
+    )
+    short_result = SecFactMapper().map(
+        one_day_quarter, issuer_id=payload["issuerId"], document=document
+    )
+
+    assert long_result.status == "blocked"
+    assert long_result.reason == "unsupported_period_context"
+    assert short_result.status == "blocked"
+    assert short_result.reason == "invalid_period_duration"
+
+
+def test_same_sec_observation_from_new_capture_has_new_immutable_identity(tmp_path) -> None:
+    payload, document, source_facts = load_curated("msft-2025-curated.json")
+    source = source_facts[0]
+    later_document = document.model_copy(
+        update={
+            "document_id": f"{document.document_id}-updated",
+            "sha256": "f" * 64,
+            "relative_path": f"raw/ff/{'f' * 64}",
+            "fetched_at": document.fetched_at + timedelta(days=1),
+        }
+    )
+    later_source = source.model_copy(update={"document_id": later_document.document_id})
+    mapper = SecFactMapper()
+    original = mapper.map(source, issuer_id=payload["issuerId"], document=document).fact
+    refreshed = mapper.map(
+        later_source, issuer_id=payload["issuerId"], document=later_document
+    ).fact
+
+    assert original.fact_id != refreshed.fact_id
+    assert original.evidence[0].document_id != refreshed.evidence[0].document_id
+
+    database = Database(tmp_path / "v2.sqlite3")
+    database.migrate()
+    IdentityRepository(database).put_issuer(
+        Issuer(
+            issuerId=payload["issuerId"],
+            legalName="Microsoft Corporation",
+            domicileCountry="US",
+            identifiers=[],
+        )
+    )
+    repository = FactRepository(database)
+    repository.add_document(document)
+    repository.add_document(later_document)
+    repository.add_fact(original)
+    repository.add_fact(refreshed)
+    assert repository.fact_count() == 2

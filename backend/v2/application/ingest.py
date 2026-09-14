@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import datetime
 
 from ..adapters.persistence import (
     FactRepository,
@@ -124,10 +124,12 @@ def ingest_us_snapshot(
         detail = f"; blocked: {', '.join(blocked_reasons)}" if blocked_reasons else ""
         raise ValueError(f"US snapshot lacks required concepts: {', '.join(missing)}{detail}")
 
-    raw_prices = [item for item in yahoo_capture.prices if item.basis == "raw"]
-    if not raw_prices:
-        raise ValueError("US snapshot requires a raw Yahoo close")
-    latest_price = max(raw_prices, key=lambda item: item.session_date)
+    split_adjusted_prices = [
+        item for item in yahoo_capture.prices if item.basis == "split_adjusted"
+    ]
+    if not split_adjusted_prices:
+        raise ValueError("US snapshot requires Yahoo Close with split-adjusted semantics")
+    latest_price = max(split_adjusted_prices, key=lambda item: item.session_date)
     if (
         latest_price.instrument_id != instrument_id
         or latest_price.listing_id != listing_id
@@ -139,16 +141,9 @@ def ingest_us_snapshot(
     for fact in candidates:
         facts.add_fact(fact)
 
-    date_cutoffs = _date_only_cutoffs(candidates)
-    cutoff_hash = hashlib.sha256(
-        canonical_json(
-            {key: value.isoformat() for key, value in sorted(date_cutoffs.items())}
-        ).encode("utf-8")
-    ).hexdigest()[:12]
     policy = SelectionPolicy(
-        version=f"{SELECTION_POLICY_VERSION}-{cutoff_hash}",
+        version=SELECTION_POLICY_VERSION,
         providerPriority=["sec", "yahoo"],
-        dateOnlySessionCutoffs=date_cutoffs,
     )
     decisions = []
     selected_by_id = {}
@@ -219,19 +214,6 @@ def _semantic_groups(facts: list[Fact]) -> list[list[Fact]]:
     return [grouped[key] for key in sorted(grouped)]
 
 
-def _date_only_cutoffs(facts: list[Fact]) -> dict[str, datetime]:
-    cutoffs = {}
-    for fact in facts:
-        if not isinstance(fact.published_at, date) or isinstance(fact.published_at, datetime):
-            continue
-        identity = fact.listing_id or fact.instrument_id or fact.issuer_id
-        cutoff = datetime.combine(
-            fact.published_at + timedelta(days=1), time.min, tzinfo=timezone.utc
-        )
-        cutoffs[f"{identity}:{fact.published_at.isoformat()}"] = cutoff
-    return cutoffs
-
-
 def _validate_identity(
     *,
     sec_capture: SecCapture,
@@ -262,10 +244,12 @@ def _validate_identity(
     basis = identities.get_share_basis(share_basis_id)
     if basis is None or basis.instrument_id != instrument_id:
         raise ValueError("share basis does not match persisted instrument")
-    raw_prices = [item for item in yahoo_capture.prices if item.basis == "raw"]
-    if not raw_prices:
-        raise ValueError("Yahoo capture has no raw price identity")
-    latest = max(raw_prices, key=lambda item: item.session_date)
+    split_adjusted_prices = [
+        item for item in yahoo_capture.prices if item.basis == "split_adjusted"
+    ]
+    if not split_adjusted_prices:
+        raise ValueError("Yahoo capture has no split-adjusted price identity")
+    latest = max(split_adjusted_prices, key=lambda item: item.session_date)
     symbol_history = identities.provider_symbol_history("yahoo", "prices", listing_id)
     valid_symbols = {
         item.provider_symbol
@@ -280,8 +264,8 @@ def _validate_identity(
 def market_price_fact(price: MarketPrice, capture: YahooCapture) -> Fact:
     if price.document_id != capture.document.document_id:
         raise ValueError("Yahoo price and capture document do not match")
-    if price.basis != "raw":
-        raise ValueError("the first US snapshot uses the explicit raw close")
+    if price.basis != "split_adjusted":
+        raise ValueError("the first US snapshot uses Yahoo Close as split-adjusted")
     digest = hashlib.sha256(
         (
             f"{price.listing_id}|{price.provider_symbol}|{price.session_date}|"

@@ -26,7 +26,7 @@ Fuentes primarias: [Microsoft 10-K FY2025](https://www.sec.gov/Archives/edgar/da
 
 ## Semántica Yahoo comprobada sin red
 
-Para una serie sintética con cierre 100 antes de un split 2:1, el contrato conserva `raw=100`, calcula `split_adjusted=50` y mantiene `Adj Close=48` como `total_return`; no intercambia estas bases. `NMS` queda como código devuelto por Yahoo y `XNAS` como MIC previamente resuelto. Al simular una caída posterior, el trabajo queda reintentable y la caché conserva la captura válida anterior (A15).
+Para una serie sintética donde Yahoo ya entrega `Close=50` después de incorporar un split 2:1, el contrato conserva `split_adjusted=50` sin dividirlo otra vez y mantiene `Adj Close=48` como `total_return`. No afirma disponer del cierre histórico bruto. `NMS` queda como código devuelto por Yahoo y `XNAS` como MIC previamente resuelto. Al simular una caída posterior, el trabajo queda reintentable y la caché conserva la captura válida anterior (A15).
 
 yfinance declara que no está afiliado ni validado por Yahoo y remite a los términos de uso de Yahoo; esta integración se mantiene como secundaria y personal. [Documentación de yfinance](https://ranaroussi.github.io/yfinance/) y [API Ticker](https://ranaroussi.github.io/yfinance/reference/api/yfinance.Ticker.html).
 

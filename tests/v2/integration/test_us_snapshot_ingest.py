@@ -235,7 +235,9 @@ def test_first_us_snapshot_ingests_and_replays_with_exact_sources_offline(
 
     assert repeated.snapshot.dataset_snapshot_id == first.snapshot.dataset_snapshot_id
     assert len(first.facts) == 11
-    assert next(item for item in first.facts if item.concept == "price.close").value == "505"
+    price = next(item for item in first.facts if item.concept == "price.close")
+    assert price.value == "505"
+    assert price.context.dimensions["priceBasis"] == "split_adjusted"
     assert next(item for item in first.facts if item.concept == "revenue").value == "281724000000"
 
     monkeypatch.setattr(

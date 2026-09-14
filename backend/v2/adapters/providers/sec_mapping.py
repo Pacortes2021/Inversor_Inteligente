@@ -31,7 +31,7 @@ from ...domain.sec import SecUnitFact
 
 POLICY_VERSION = "sec-us-gaap-r10-v1"
 _DURATION_FORMS = {"10-K", "10-K/A", "10-Q", "10-Q/A"}
-_QUARTER_FRAME = re.compile(r"^CY[0-9]{4}Q([1-4])$")
+_QUARTER_FRAME = re.compile(r"^CY([0-9]{4})Q([1-4])$")
 _MONEY_PER_SHARE = re.compile(r"^([A-Z]{3})/shares$")
 _CURRENCY = re.compile(r"^[A-Z]{3}$")
 
@@ -180,6 +180,8 @@ class SecFactMapper:
             (
                 f"{issuer_id}|{source.cik}|{source.accession_number}|{source.taxonomy}|"
                 f"{source.tag}|{source.unit}|{source.start}|{source.end}|{source.value}|"
+                f"{instrument_id}|{share_basis_id}|{share_basis_kind}|"
+                f"{document.document_id}|{document.sha256}|{document.fetched_at.isoformat()}|"
                 f"{self.policy_version}"
             ).encode("utf-8")
         ).hexdigest()[:32]
@@ -274,7 +276,7 @@ def _canonical_period(source: SecUnitFact) -> FactPeriod:
             start=None,
             end=source.end,
             label=PeriodLabel.INSTANT,
-            fiscalYear=source.fiscal_year,
+            fiscalYear=None,
             fiscalQuarter=None,
         )
     if source.form not in _DURATION_FORMS:
@@ -282,13 +284,37 @@ def _canonical_period(source: SecUnitFact) -> FactPeriod:
     match = _QUARTER_FRAME.fullmatch(source.frame or "")
     elapsed_days = (source.end - source.start).days + 1
     if match and elapsed_days <= 120:
+        calendar_year = int(match.group(1))
+        calendar_quarter = int(match.group(2))
+        if elapsed_days < 60:
+            raise ValueError("invalid_period_duration")
+        if (
+            source.fiscal_year != calendar_year
+            or source.fiscal_period != f"Q{calendar_quarter}"
+        ):
+            raise ValueError("fiscal_calendar_required")
         label = PeriodLabel.FQ
-        quarter = int(match.group(1))
-    elif source.fiscal_period == "FY" and source.form.startswith("10-K"):
+        fiscal_year = calendar_year
+        quarter = calendar_quarter
+    elif (
+        source.fiscal_period == "FY"
+        and source.form.startswith("10-K")
+        and 300 < elapsed_days <= 380
+    ):
+        if source.fiscal_year != source.end.year:
+            raise ValueError("fiscal_calendar_required")
         label = PeriodLabel.FY
+        fiscal_year = source.fiscal_year
         quarter = None
-    elif source.fiscal_period in {"Q1", "Q2", "Q3", "Q4"}:
+    elif source.fiscal_period in {"Q1", "Q2", "Q3", "Q4"} and elapsed_days <= 300:
+        if (
+            source.fiscal_year != source.end.year
+            or source.start.month != 1
+            or elapsed_days <= 120
+        ):
+            raise ValueError("fiscal_calendar_required")
         label = PeriodLabel.YTD
+        fiscal_year = source.fiscal_year
         quarter = None
     else:
         raise ValueError("unsupported_period_context")
@@ -297,7 +323,7 @@ def _canonical_period(source: SecUnitFact) -> FactPeriod:
         start=source.start,
         end=source.end,
         label=label,
-        fiscalYear=source.fiscal_year,
+        fiscalYear=fiscal_year,
         fiscalQuarter=quarter,
     )
 

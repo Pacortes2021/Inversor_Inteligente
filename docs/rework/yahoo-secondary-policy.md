@@ -10,11 +10,11 @@ Cada solicitud debe traer emisor, instrumento, listing, MIC, moneda, zona horari
 
 Las capacidades son independientes:
 
-- `prices`: cierre bruto, cierre ajustado sólo por splits calculado hasta una fecha explícita y `Adj Close` de Yahoo rotulado `total_return`;
+- `prices`: `Close` de Yahoo rotulado `split_adjusted` tal como lo entrega y `Adj Close` rotulado `total_return`;
 - `session`: apertura/cierre regular de la sesión actual cuando Yahoo los entrega;
 - `calendar`: fechas con observaciones dentro del rango, marcadas expresamente como cobertura observada y no como calendario bursátil oficial;
 - `actions`: dividendos y splits con semántica, ex-date, moneda o factor propios.
 
-El adaptador pide `auto_adjust=False`, no activa reparaciones heurísticas y no fusiona `Adj Close` con el cierre bruto. Un split histórico se aplica al cierre anterior una sola vez; un dividendo no entra en la serie `split_adjusted`. Si Yahoo falla, el worker registra el error y programa reintento sin sustituir la última captura válida de la caché (A15).
+El adaptador pide `auto_adjust=False`, no activa reparaciones heurísticas y no fusiona `Adj Close` con `Close`. yfinance ya entrega `Close` ajustado por splits: el adaptador lo conserva sin volver a aplicar los eventos y marca como horizonte de observación la fecha de captura. Esta fuente no proporciona aquí una serie histórica bruta/no ajustada. Si Yahoo falla, el worker registra el error y programa reintento sin sustituir la última captura válida de la caché (A15).
 
 Los tests normales usan un cliente congelado sin red. `tests/v2/smoke/test_yahoo_live.py` sólo se ejecuta al definir `RUN_YAHOO_SMOKE=1`; su resultado depende de la disponibilidad externa y nunca redefine los oráculos deterministas.

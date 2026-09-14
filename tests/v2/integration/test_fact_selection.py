@@ -149,6 +149,40 @@ def test_date_only_publication_requires_explicit_session_or_first_seen() -> None
         SelectionPolicy.model_validate(invalid_policy)
 
 
+def test_date_only_restatement_is_hidden_until_first_seen_then_wins_by_publication() -> None:
+    original = Fact.model_validate(
+        payload(
+            "original-date",
+            value="1000000",
+            published_at="2026-02-20",
+            first_seen_at="2026-02-20T20:00:00Z",
+        )
+    )
+    restatement = Fact.model_validate(
+        payload(
+            "restatement-date",
+            value="1050000",
+            published_at="2026-04-10",
+            first_seen_at="2026-09-01T00:00:00Z",
+        )
+    )
+
+    before_capture = select_fact(
+        [original, restatement],
+        query_for(original, as_of="2026-08-31T23:59:59Z", mode="latest_restated"),
+        POLICY,
+    )
+    after_capture = select_fact(
+        [original, restatement],
+        query_for(original, as_of="2026-09-01T00:00:00Z", mode="latest_restated"),
+        POLICY,
+    )
+
+    assert before_capture.selected_fact_id == "original-date"
+    assert before_capture.candidate_fact_ids == ["original-date"]
+    assert after_capture.selected_fact_id == "restatement-date"
+
+
 def test_a24_other_listing_or_class_is_not_a_candidate() -> None:
     listing_a_payload = payload("price-a", value="10")
     listing_a_payload.update(

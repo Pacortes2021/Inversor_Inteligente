@@ -270,7 +270,7 @@ def _capture(
         "document": document,
     }
     if capability == "prices":
-        return YahooCapture(**common, prices=_prices(identity, snapshot, document.document_id))
+        return YahooCapture(**common, prices=_prices(identity, snapshot, document))
     if capability == "session":
         return YahooCapture(**common, sessions=[_current_session(identity, snapshot, document.document_id)])
     if capability == "calendar":
@@ -297,10 +297,9 @@ def _capture(
 
 
 def _prices(
-    identity: _YahooIdentity, snapshot: YahooSnapshot, document_id: str
+    identity: _YahooIdentity, snapshot: YahooSnapshot, document: Document
 ) -> list[MarketPrice]:
     rows = sorted(snapshot.rows, key=lambda item: item.session_date)
-    adjustment_as_of = rows[-1].session_date
     output: list[MarketPrice] = []
     for row in rows:
         common = {
@@ -311,30 +310,15 @@ def _prices(
             "providerSymbol": identity.symbol,
             "sessionDate": row.session_date,
             "currency": identity.currency,
-            "documentId": document_id,
+            "documentId": document.document_id,
         }
         output.append(
             MarketPrice(
                 **common,
                 value=row.close,
-                basis="raw",
-                sourceField="Close",
-                splitAdjustmentAsOf=None,
-            )
-        )
-        later_split_factor = Decimal(1)
-        for action_row in rows:
-            if action_row.session_date > row.session_date:
-                factor = _positive_decimal(action_row.split_factor)
-                if factor is not None:
-                    later_split_factor *= factor
-        output.append(
-            MarketPrice(
-                **common,
-                value=format(Decimal(row.close) / later_split_factor, "f"),
                 basis="split_adjusted",
-                sourceField="Close+Stock Splits",
-                splitAdjustmentAsOf=adjustment_as_of,
+                sourceField="Close",
+                splitAdjustmentAsOf=document.fetched_at.date(),
             )
         )
         if row.adjusted_close is not None:

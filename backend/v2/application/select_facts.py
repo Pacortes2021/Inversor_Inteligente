@@ -54,14 +54,31 @@ def _latest_per_provider(facts: list[Fact], policy: SelectionPolicy) -> list[Fac
     for fact in facts:
         provider = _provider(fact)
         previous = latest.get(provider)
-        order = (available_at(fact, policy), fact.first_seen_at, fact.fact_id)
-        if previous is None or order > (
-            available_at(previous, policy),
-            previous.first_seen_at,
-            previous.fact_id,
-        ):
+        order = _revision_order(fact, policy)
+        if previous is None or order > _revision_order(previous, policy):
             latest[provider] = fact
     return list(latest.values())
+
+
+def _revision_order(fact: Fact, policy: SelectionPolicy) -> tuple[int, float, float, str]:
+    """Order eligible revisions without weakening their information cutoff."""
+
+    publication = fact.published_at
+    if isinstance(publication, datetime):
+        publication_day = publication.date().toordinal()
+        exact_publication = publication.timestamp()
+    elif isinstance(publication, date):
+        publication_day = publication.toordinal()
+        exact_publication = float("-inf")
+    else:
+        publication_day = 0
+        exact_publication = float("-inf")
+    return (
+        publication_day,
+        available_at(fact, policy).timestamp(),
+        exact_publication,
+        fact.fact_id,
+    )
 
 
 def _priority_key(fact: Fact, policy: SelectionPolicy) -> tuple[int, float, str]:

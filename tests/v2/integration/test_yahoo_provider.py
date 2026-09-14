@@ -35,7 +35,7 @@ class FailingClient:
 def snapshot() -> YahooSnapshot:
     return YahooSnapshot(
         rows=(
-            YahooHistoryRow(date(2025, 1, 2), "100", "48", "0", "0"),
+            YahooHistoryRow(date(2025, 1, 2), "50", "48", "0", "0"),
             YahooHistoryRow(date(2025, 1, 3), "52", "50", "1.25", "2"),
         ),
         metadata={
@@ -91,7 +91,7 @@ def provider(stores, client) -> YahooProvider:
     )
 
 
-def test_prices_keep_raw_split_adjusted_and_total_return_distinct(stores, snapshot) -> None:
+def test_prices_preserve_yahoo_close_without_double_applying_splits(stores, snapshot) -> None:
     client = FakeClient(snapshot)
     result = provider(stores, client).fetch(request("prices"))
 
@@ -100,12 +100,12 @@ def test_prices_keep_raw_split_adjusted_and_total_return_distinct(stores, snapsh
     assert capture.provider_label == "Yahoo Finance via yfinance"
     first_day = [item for item in capture.prices if item.session_date == date(2025, 1, 2)]
     assert {item.basis: item.value for item in first_day} == {
-        "raw": "100",
         "split_adjusted": "50",
         "total_return": "48",
     }
     split_adjusted = next(item for item in first_day if item.basis == "split_adjusted")
-    assert split_adjusted.split_adjustment_as_of == date(2025, 1, 3)
+    assert split_adjusted.source_field == "Close"
+    assert split_adjusted.split_adjustment_as_of == NOW.date()
     assert client.calls == [("MSFT", date(2025, 1, 2), date(2025, 1, 3), 30)]
     normalized = stores[2].read(capture.document.sha256)
     assert b'"format":"yahoo-normalized-v1"' in normalized

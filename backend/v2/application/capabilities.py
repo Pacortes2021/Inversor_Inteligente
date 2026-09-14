@@ -47,6 +47,7 @@ def provider_capability_report() -> CapabilityReport:
                 limitations=[
                     "MSFT FY2025 and NFLX FY2025 curated excerpts only.",
                     "Extensions and dimensions are not supported.",
+                    "Non-calendar fiscal periods require an identified fiscal calendar.",
                 ],
             ),
             CapabilityRecord(
@@ -57,6 +58,7 @@ def provider_capability_report() -> CapabilityReport:
                 liveSmokeStatus="not_run",
                 limitations=[
                     "Secondary source via yfinance; no exchange SLA.",
+                    "Yahoo Close is split-adjusted; no raw historical close is exposed.",
                     "Observed dates are not an official exchange calendar.",
                     "No live smoke result is claimed by the release.",
                 ],

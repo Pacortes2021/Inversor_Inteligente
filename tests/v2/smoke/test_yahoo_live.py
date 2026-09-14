@@ -50,4 +50,5 @@ def test_live_yahoo_price_capture_is_identified_and_dated(tmp_path) -> None:
 
     assert result.status == "success", result.model_dump(mode="json")
     assert result.data[0].provider_label == "Yahoo Finance via yfinance"
-    assert any(item.basis == "raw" for item in result.data[0].prices)
+    assert any(item.basis == "split_adjusted" for item in result.data[0].prices)
+    assert not any(item.basis == "raw" for item in result.data[0].prices)
