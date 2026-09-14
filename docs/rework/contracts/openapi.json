@@ -140,6 +140,135 @@
           }
         }
       }
+    },
+    "/api/v2/refreshes": {
+      "post": {
+        "summary": "Create Refresh",
+        "operationId": "create_refresh_api_v2_refreshes_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/jobs/{job_id}": {
+      "get": {
+        "summary": "Get Job",
+        "operationId": "get_job_api_v2_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/jobs/{job_id}/cancel": {
+      "post": {
+        "summary": "Cancel Job",
+        "operationId": "cancel_job_api_v2_jobs__job_id__cancel_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1085,6 +1214,133 @@
         ],
         "title": "HealthResponse"
       },
+      "Job": {
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Jobid"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Idempotencykey"
+          },
+          "kind": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Kind"
+          },
+          "request": {
+            "$ref": "#/components/schemas/RefreshRequest"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "attempt": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Attempt"
+          },
+          "maxAttempts": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Maxattempts"
+          },
+          "progress": {
+            "type": "string",
+            "title": "Progress"
+          },
+          "leaseOwner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leaseowner"
+          },
+          "leaseExpiresAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leaseexpiresat"
+          },
+          "nextAttemptAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Nextattemptat"
+          },
+          "cancelRequested": {
+            "type": "boolean",
+            "title": "Cancelrequested"
+          },
+          "lastError": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lasterror"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "jobId",
+          "idempotencyKey",
+          "kind",
+          "request",
+          "status",
+          "attempt",
+          "maxAttempts",
+          "progress",
+          "leaseOwner",
+          "leaseExpiresAt",
+          "nextAttemptAt",
+          "cancelRequested",
+          "lastError",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "Job"
+      },
+      "JobStatus": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "running",
+          "partial",
+          "succeeded",
+          "failed",
+          "cancelled"
+        ],
+        "title": "JobStatus"
+      },
       "NormalizationParameters": {
         "properties": {
           "method": {
@@ -1187,6 +1443,55 @@
           "not_checked"
         ],
         "title": "Reconciliation"
+      },
+      "RefreshRequest": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Provider"
+          },
+          "capability": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Capability"
+          },
+          "resourceKey": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Resourcekey"
+          },
+          "parserVersion": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Parserversion"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Parameters"
+          },
+          "maxAttempts": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Maxattempts",
+            "default": 3
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "provider",
+          "capability",
+          "resourceKey",
+          "parserVersion"
+        ],
+        "title": "RefreshRequest"
       },
       "ScaleParameters": {
         "properties": {

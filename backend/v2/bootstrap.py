@@ -12,8 +12,10 @@ from pydantic import BaseModel, ConfigDict
 from . import __version__
 from .api.openapi import install_canonical_openapi
 from .api.facts import install_fact_routes
+from .api.jobs import install_job_routes
 from .api.snapshots import install_snapshot_routes
 from .adapters.persistence import Database, FactRepository, SnapshotRepository
+from .jobs import JobRepository
 from .sqlite_runtime import has_wal_reset_fix
 
 
@@ -39,6 +41,7 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
         database.migrate()
     fact_repository = FactRepository(database) if database is not None else None
     snapshot_repository = SnapshotRepository(database) if database is not None else None
+    job_repository = JobRepository(database) if database is not None else None
 
     @app.get("/api/v2/health", response_model=HealthResponse)
     def health() -> HealthResponse:
@@ -53,6 +56,7 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
 
     install_fact_routes(app, fact_repository)
     install_snapshot_routes(app, snapshot_repository)
+    install_job_routes(app, job_repository)
     install_canonical_openapi(app)
     return app
 
