@@ -25,6 +25,7 @@ Base: `origin/codex/rework-core` en `bfd05b5`. Rama: `codex/rework-m1`. PR: [#13
 | Comando | Resultado |
 |---|---|
 | `.venv/bin/python -m pytest -q` | 154 aprobadas; dos advertencias deprecadas de TestClient aguas arriba. |
+| `.venv/bin/python -m pytest -q tests/v2` en revisión Astra | 70 aprobadas; mismas dos advertencias no bloqueantes. |
 | `.venv/bin/python scripts/export_v2_schemas.py` seguido de pruebas de contrato | OpenAPI regenerado y servido sin divergencia. |
 | Pruebas de integración R04–R08 | Identidad/FK, archivos y hechos, corte/conflictos, replay/API y jobs/caché aprobados sin proveedores reales. |
 
@@ -43,6 +44,8 @@ Base: `origin/codex/rework-core` en `bfd05b5`. Rama: `codex/rework-m1`. PR: [#13
 - La API de documentos expone metadatos y la API de hechos expone sus enlaces de evidencia; no sirve archivos crudos arbitrarios.
 - No se han probado exactitud ni cobertura de empresas reales. Toda la aceptación de M1 usa datos sintéticos y no constituye una recomendación de inversión.
 
-## Solicitud concreta a Astra
+## Resultado de revisión Astra
 
-La primera revisión sobre `93cf12a` reprodujo diez huecos materiales o moderados. La corrección posterior añade relaciones coherentes emisor/instrumento/listing/base, vigencias no solapadas, hechos válidos para selección, normalización UTC previa al hash, membresía de emisor completa en snapshots, clave de caché completa, leases validados por propietario/intento/vigencia, `Retry-After` desde recepción y límite terminal de intentos. La segunda pasada encontró tres bordes adicionales: base de transformación, verificación del hash al persistir y corte de sesión anterior a publicación; los tres cuentan con corrección y regresión. Astra debe repetir esas reproducciones sobre el último commit, no sólo el total de pruebas. M1 sólo puede avanzar a revisión humana de la rama de integración; esta entrega no autoriza fusionar a `main`.
+La primera revisión sobre `93cf12a` reprodujo diez huecos materiales o moderados. La corrección posterior añadió relaciones coherentes emisor/instrumento/listing/base, vigencias no solapadas, hechos válidos para selección, normalización UTC previa al hash, membresía de emisor completa en snapshots, clave de caché completa, leases validados por propietario/intento/vigencia, `Retry-After` desde recepción y límite terminal de intentos. La segunda pasada encontró tres bordes adicionales: base de transformación, verificación del hash al persistir y corte de sesión anterior a publicación; los tres recibieron corrección y regresión.
+
+La pasada final sobre `f70e2c7` reprodujo los trece hallazgos acumulados, confirmó las 70 pruebas v2 y aprobó M1 para revisión humana de `codex/rework-core` sin hallazgos materiales pendientes. Esta aprobación no autoriza fusionar a `main`.
