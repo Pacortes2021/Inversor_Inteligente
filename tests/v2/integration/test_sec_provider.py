@@ -8,6 +8,7 @@ import pytest
 from backend.v2.adapters.persistence import Database, FactRepository, RawStore
 from backend.v2.adapters.providers.sec import SecHttpResponse, SecProvider, SecRateLimiter
 from backend.v2.jobs import CacheRepository, JobRepository, RefreshRequest, Worker
+from backend.v2.domain import SecCapture
 
 
 FIXTURES = Path("tests/v2/fixtures/sec")
@@ -210,3 +211,22 @@ def test_sec_provider_requires_identified_contact(provider_parts) -> None:
     _, documents, raw_store, _ = provider_parts
     with pytest.raises(ValueError, match="identified email"):
         SecProvider(contact="anonymous", raw_store=raw_store, documents=documents)
+
+
+def test_sec_capture_rejects_child_from_another_cik_or_document(provider_parts) -> None:
+    url = "https://data.sec.gov/api/xbrl/companyfacts/CIK0000000123.json"
+    capture = make_provider(
+        provider_parts,
+        FakeTransport({url: response("CIK0000000123.companyfacts.json")}),
+    ).fetch(request("companyfacts", "123")).data[0]
+    wrong_cik = capture.facts[0].model_copy(update={"cik": "0000000456"})
+    wrong_document = capture.facts[0].model_copy(update={"document_id": "other-document"})
+
+    with pytest.raises(ValueError, match="capture CIK"):
+        SecCapture.model_validate(
+            capture.model_copy(update={"facts": [wrong_cik]}).model_dump(mode="json")
+        )
+    with pytest.raises(ValueError, match="capture document"):
+        SecCapture.model_validate(
+            capture.model_copy(update={"facts": [wrong_document]}).model_dump(mode="json")
+        )

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Inversor Inteligente API v2",
-    "description": "Verifiable local data core. No financial engine is active.",
+    "description": "Verifiable local data core. No valuation engine is active.",
     "version": "0.1.0"
   },
   "paths": {
@@ -17,6 +17,24 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/capabilities": {
+      "get": {
+        "summary": "Get Capabilities",
+        "operationId": "get_capabilities_api_v2_capabilities_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilityReport"
                 }
               }
             }
@@ -323,6 +341,87 @@
           "material"
         ],
         "title": "CandidateDifference"
+      },
+      "CapabilityRecord": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Provider"
+          },
+          "capability": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Capability"
+          },
+          "evidenceLevel": {
+            "type": "string",
+            "enum": [
+              "documented",
+              "deterministic_replay",
+              "sample_reconciled",
+              "unsupported",
+              "unknown"
+            ],
+            "title": "Evidencelevel"
+          },
+          "deterministicTest": {
+            "type": "boolean",
+            "title": "Deterministictest"
+          },
+          "liveSmokeStatus": {
+            "type": "string",
+            "enum": [
+              "not_run",
+              "passed",
+              "failed",
+              "not_applicable"
+            ],
+            "title": "Livesmokestatus"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "provider",
+          "capability",
+          "evidenceLevel",
+          "deterministicTest",
+          "liveSmokeStatus"
+        ],
+        "title": "CapabilityRecord"
+      },
+      "CapabilityReport": {
+        "properties": {
+          "evaluatedOn": {
+            "type": "string",
+            "format": "date",
+            "title": "Evaluatedon"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/CapabilityRecord"
+            },
+            "type": "array",
+            "title": "Records"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "evaluatedOn",
+          "records"
+        ],
+        "title": "CapabilityReport"
       },
       "DatasetSnapshot": {
         "properties": {

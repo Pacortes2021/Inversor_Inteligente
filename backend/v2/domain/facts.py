@@ -288,9 +288,6 @@ Transformation = Annotated[
 ]
 
 
-PRICE_CONCEPTS = {"price.close", "price.open", "price.high", "price.low"}
-
-
 class Fact(CanonicalModel):
     fact_id: Identifier
     issuer_id: Identifier
@@ -402,7 +399,7 @@ class Fact(CanonicalModel):
                 "reported facts cannot describe a future completed period",
                 "/period/end",
             )
-        if self.concept in PRICE_CONCEPTS and available:
+        if self.concept.startswith("price.") and available:
             if self.instrument_id is None or self.listing_id is None or self.unit != Unit.MONEY_PER_SHARE:
                 raise ContractViolation(
                     ErrorCode.LISTING_REQUIRED,

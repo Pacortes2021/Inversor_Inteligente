@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict
 
 from . import __version__
 from .api.openapi import install_canonical_openapi
+from .api.capabilities import install_capability_routes
 from .api.facts import install_fact_routes
 from .api.jobs import install_job_routes
 from .api.snapshots import install_snapshot_routes
@@ -34,7 +35,7 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
     app = FastAPI(
         title="Inversor Inteligente API v2",
         version=__version__,
-        description="Verifiable local data core. No financial engine is active.",
+        description="Verifiable local data core. No valuation engine is active.",
     )
     database = Database(data_dir / "v2.sqlite3") if data_dir is not None else None
     if database is not None:
@@ -48,12 +49,13 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
         return HealthResponse(
             status="ready",
             build=__version__,
-            schema_version="m1-v1",
+            schema_version="m2-v1",
             sqlite_version=sqlite3.sqlite_version,
             sqlite_wal_reset_fix=has_wal_reset_fix(),
             data_directory_configured=data_dir is not None,
         )
 
+    install_capability_routes(app)
     install_fact_routes(app, fact_repository)
     install_snapshot_routes(app, snapshot_repository)
     install_job_routes(app, job_repository)

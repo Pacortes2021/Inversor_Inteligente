@@ -84,6 +84,14 @@ class SecCapture(CanonicalModel):
             raise ValueError("submissions capture can contain only filings")
         if self.capability == "companyfacts" and (self.identities or self.filings):
             raise ValueError("companyfacts capture can contain only facts")
+        children = [*self.identities, *self.filings, *self.facts]
+        if any(item.document_id != self.document.document_id for item in children):
+            raise ValueError("SEC capture children must reference the capture document")
+        if self.cik is not None and any(
+            getattr(item, "cik", self.cik) != self.cik
+            for item in [*self.filings, *self.facts]
+        ):
+            raise ValueError("SEC capture children must match the capture CIK")
         return self
 
 

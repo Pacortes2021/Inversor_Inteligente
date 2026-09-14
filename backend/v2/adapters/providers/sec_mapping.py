@@ -117,6 +117,7 @@ class SecFactMapper:
         dimensions: Mapping[str, str] | None = None,
         instrument_id: str | None = None,
         share_basis_id: str | None = None,
+        share_basis_kind: Literal["as_reported", "split_adjusted"] | None = None,
     ) -> SecMappingResult:
         if source.document_id != document.document_id:
             raise ValueError("SEC fact and source document do not match")
@@ -159,8 +160,15 @@ class SecFactMapper:
                     "share_basis_requires_instrument",
                     candidate_tags=rule.tags,
                 )
+            elif share_basis_kind is None:
+                return self._result(
+                    source,
+                    "blocked",
+                    "share_basis_kind_required",
+                    candidate_tags=rule.tags,
+                )
             else:
-                share_basis = FactShareBasis.SPLIT_ADJUSTED
+                share_basis = FactShareBasis(share_basis_kind)
                 canonical_basis_id = share_basis_id
 
         locator = (
