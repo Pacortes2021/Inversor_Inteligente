@@ -12,9 +12,17 @@ from .identity import (
     ProviderSymbol,
     ShareBasis,
 )
+from .market_data import (
+    CorporateAction,
+    MarketCalendarCoverage,
+    MarketPrice,
+    MarketSession,
+    YahooCapture,
+)
 from .providers import ProviderResult
 from .policies import FactSelectionQuery, SelectionDecision, SelectionMode, SelectionPolicy, SelectionStatus
 from .scenarios import ScenarioSetRevision
+from .sec import SecCapture, SecFiling, SecIdentity, SecUnitFact
 from .snapshots import DatasetSnapshot
 from .valuation_requests import FcffSimulationRequest
 
@@ -23,6 +31,7 @@ __all__ = [
     "Assessment",
     "AssessmentResult",
     "ContractViolation",
+    "CorporateAction",
     "Coverage",
     "DatasetSnapshot",
     "DepositaryRelation",
@@ -35,6 +44,9 @@ __all__ = [
     "Instrument",
     "Issuer",
     "Listing",
+    "MarketCalendarCoverage",
+    "MarketPrice",
+    "MarketSession",
     "ProviderResult",
     "ProviderSymbol",
     "SelectionDecision",
@@ -42,6 +54,11 @@ __all__ = [
     "SelectionPolicy",
     "SelectionStatus",
     "ScenarioSetRevision",
+    "SecCapture",
+    "SecFiling",
+    "SecIdentity",
+    "SecUnitFact",
     "ShareBasis",
+    "YahooCapture",
     "validate_lineage",
 ]

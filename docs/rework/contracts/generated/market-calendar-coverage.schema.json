@@ -1,0 +1,84 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "listingId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Listingid",
+      "type": "string"
+    },
+    "mic": {
+      "pattern": "^[A-Z0-9]{4}$",
+      "title": "Mic",
+      "type": "string"
+    },
+    "providerSymbol": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Providersymbol",
+      "type": "string"
+    },
+    "timezone": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Timezone",
+      "type": "string"
+    },
+    "coverageStart": {
+      "format": "date",
+      "title": "Coveragestart",
+      "type": "string"
+    },
+    "coverageEnd": {
+      "format": "date",
+      "title": "Coverageend",
+      "type": "string"
+    },
+    "observedSessionDates": {
+      "items": {
+        "format": "date",
+        "type": "string"
+      },
+      "title": "Observedsessiondates",
+      "type": "array"
+    },
+    "officialSchedule": {
+      "const": false,
+      "default": false,
+      "title": "Officialschedule",
+      "type": "boolean"
+    },
+    "sourceExchangeCode": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Sourceexchangecode"
+    },
+    "documentId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Documentid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "listingId",
+    "mic",
+    "providerSymbol",
+    "timezone",
+    "coverageStart",
+    "coverageEnd",
+    "observedSessionDates",
+    "sourceExchangeCode",
+    "documentId"
+  ],
+  "title": "MarketCalendarCoverage",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inversor:market-calendar-coverage:v2"
+}

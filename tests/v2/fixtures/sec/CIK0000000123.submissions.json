@@ -1,0 +1,27 @@
+{
+  "cik": "0000000123",
+  "entityType": "operating",
+  "sic": "0000",
+  "name": "Synthetic Filing Corporation",
+  "tickers": ["SYNX"],
+  "exchanges": ["Nasdaq"],
+  "filings": {
+    "recent": {
+      "accessionNumber": ["0000000123-26-000001", "0000000123-25-000004"],
+      "filingDate": ["2026-02-20", "2025-11-01"],
+      "reportDate": ["2025-12-31", "2025-09-30"],
+      "acceptanceDateTime": ["2026-02-20T12:34:56.000Z", "2025-11-01T13:00:00.000Z"],
+      "act": ["34", "34"],
+      "form": ["10-K", "10-Q"],
+      "fileNumber": ["001-00000", "001-00000"],
+      "filmNumber": ["26000001", "25000004"],
+      "items": ["", ""],
+      "size": [1000, 800],
+      "isXBRL": [1, 1],
+      "isInlineXBRL": [1, 1],
+      "primaryDocument": ["synx-20251231.htm", "synx-20250930.htm"],
+      "primaryDocDescription": ["10-K", "10-Q"]
+    },
+    "files": []
+  }
+}

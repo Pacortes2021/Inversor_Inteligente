@@ -1,0 +1,104 @@
+{
+  "$defs": {
+    "CorporateActionKind": {
+      "enum": [
+        "dividend",
+        "split"
+      ],
+      "title": "CorporateActionKind",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "actionId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Actionid",
+      "type": "string"
+    },
+    "listingId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Listingid",
+      "type": "string"
+    },
+    "mic": {
+      "pattern": "^[A-Z0-9]{4}$",
+      "title": "Mic",
+      "type": "string"
+    },
+    "providerSymbol": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Providersymbol",
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/CorporateActionKind"
+    },
+    "exDate": {
+      "format": "date",
+      "title": "Exdate",
+      "type": "string"
+    },
+    "amount": {
+      "anyOf": [
+        {
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Amount"
+    },
+    "currency": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Z]{3}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Currency"
+    },
+    "splitFactor": {
+      "anyOf": [
+        {
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Splitfactor"
+    },
+    "documentId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Documentid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "actionId",
+    "listingId",
+    "mic",
+    "providerSymbol",
+    "kind",
+    "exDate",
+    "documentId"
+  ],
+  "title": "CorporateAction",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inversor:corporate-action:v2"
+}

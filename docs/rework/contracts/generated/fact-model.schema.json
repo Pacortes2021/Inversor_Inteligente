@@ -444,6 +444,76 @@
       "title": "PeriodLabel",
       "type": "string"
     },
+    "PeriodParameters": {
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "enum": [
+            "sum_consecutive_quarters",
+            "fy_ytd_bridge"
+          ],
+          "title": "Method",
+          "type": "string"
+        }
+      },
+      "required": [
+        "method"
+      ],
+      "title": "PeriodParameters",
+      "type": "object"
+    },
+    "PeriodTransformation": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "period",
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/$defs/PeriodParameters"
+        },
+        "fxFactId": {
+          "default": null,
+          "title": "Fxfactid",
+          "type": "null"
+        },
+        "shareBasisId": {
+          "default": null,
+          "title": "Sharebasisid",
+          "type": "null"
+        },
+        "adjustmentIds": {
+          "items": {
+            "maxLength": 160,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Adjustmentids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "version",
+        "parameters"
+      ],
+      "title": "PeriodTransformation",
+      "type": "object"
+    },
     "Reconciliation": {
       "enum": [
         "single_source",
@@ -835,6 +905,7 @@
             "mapping": {
               "fx": "#/$defs/FxTransformation",
               "normalization": "#/$defs/NormalizationTransformation",
+              "period": "#/$defs/PeriodTransformation",
               "scale": "#/$defs/ScaleTransformation",
               "split": "#/$defs/SplitTransformation"
             },
@@ -852,6 +923,9 @@
             },
             {
               "$ref": "#/$defs/NormalizationTransformation"
+            },
+            {
+              "$ref": "#/$defs/PeriodTransformation"
             }
           ]
         },

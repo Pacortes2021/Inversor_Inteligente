@@ -1,0 +1,105 @@
+{
+  "$defs": {
+    "PriceBasis": {
+      "enum": [
+        "raw",
+        "split_adjusted",
+        "total_return"
+      ],
+      "title": "PriceBasis",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "issuerId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Issuerid",
+      "type": "string"
+    },
+    "instrumentId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Instrumentid",
+      "type": "string"
+    },
+    "listingId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Listingid",
+      "type": "string"
+    },
+    "mic": {
+      "pattern": "^[A-Z0-9]{4}$",
+      "title": "Mic",
+      "type": "string"
+    },
+    "providerSymbol": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Providersymbol",
+      "type": "string"
+    },
+    "sessionDate": {
+      "format": "date",
+      "title": "Sessiondate",
+      "type": "string"
+    },
+    "value": {
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+      "title": "Value",
+      "type": "string"
+    },
+    "currency": {
+      "pattern": "^[A-Z]{3}$",
+      "title": "Currency",
+      "type": "string"
+    },
+    "basis": {
+      "$ref": "#/$defs/PriceBasis"
+    },
+    "sourceField": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Sourcefield",
+      "type": "string"
+    },
+    "splitAdjustmentAsOf": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Splitadjustmentasof"
+    },
+    "documentId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Documentid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "issuerId",
+    "instrumentId",
+    "listingId",
+    "mic",
+    "providerSymbol",
+    "sessionDate",
+    "value",
+    "currency",
+    "basis",
+    "sourceField",
+    "documentId"
+  ],
+  "title": "MarketPrice",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inversor:market-price:v2"
+}

@@ -29,7 +29,7 @@ Reglas de trabajo: implementar una tarea o un conjunto pequeño de dependencias 
 |---|---|---|---|---|
 | R09 | R04, R05, R08 | `adapters/providers/sec.py`, `tests/v2/fixtures/sec/` | Resolver CIK y descargar submissions/companyfacts con identificación, rate limit y crudo conservado. | Recupera accession, publicación, taxonomía, unidad y períodos; USD no es única unidad admitida. No peticiones SEC desde navegador. |
 | R10 | R06, R09 | `adapters/providers/sec_mapping.py`, `engines/periods.py` | Mapear conceptos iniciales y derivar trimestres/YTD/TTM con contexto. Fallar explícitamente con extensiones/dimensiones no soportadas. | MSFT y NFLX conciliados en ingresos, EBIT, utilidad, CFO, capex, caja, deuda y acciones. A02/A03/A06/A10. |
-| R11 | R08 | `adapters/providers/yahoo.py`, `domain/market_data.py` | Obtener precio, sesión, calendario y acciones corporativas como capacidades separadas; rotular Yahoo. | Distinguir precio bruto, split-adjusted y total-return; no llamar Nasdaq equivalente por defecto; caída conserva cierre anterior. |
+| R11 | R08 | `adapters/providers/yahoo.py`, `domain/market_data.py` | Obtener precio, sesión, calendario y acciones corporativas como capacidades separadas; rotular Yahoo. | Distinguir las bases disponibles y declarar el precio bruto como no cubierto por Yahoo/yfinance; no llamar Nasdaq equivalente por defecto; caída conserva cierre anterior. |
 | R12 | R10, R11, R07 | `application/ingest.py`, `application/capabilities.py`, `docs/rework/provider-pilot.md` | Publicar primer snapshot EE.UU.; informe de capacidad documentada vs probada. | Lectura de hechos desde API con fuente exacta; ninguna etiqueta global «100% auditado»; prueba sin red y smoke test fechado separados. |
 
 ## M3 · Chile y monedas

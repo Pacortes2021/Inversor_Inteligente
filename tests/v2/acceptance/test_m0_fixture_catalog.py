@@ -17,12 +17,25 @@ def test_a01_to_a14_have_independent_reasoned_oracles() -> None:
     catalog = cases()
     assert list(catalog) == [f"A{number:02d}" for number in range(1, 15)]
     assert all(case["rationale"] for case in catalog.values())
-    assert all(case["status"] in {"accepted_by_contract", "oracle_frozen_pending_engine"} for case in catalog.values())
+    assert all(
+        case["status"]
+        in {
+            "accepted_by_contract",
+            "accepted_by_period_engine",
+            "oracle_frozen_pending_engine",
+        }
+        for case in catalog.values()
+    )
     assert catalog["A04"]["status"] == "accepted_by_contract"
+    assert all(
+        case["status"] == "accepted_by_period_engine"
+        for identifier, case in catalog.items()
+        if identifier in {"A02", "A03", "A06", "A10"}
+    )
     assert all(
         case["status"] == "oracle_frozen_pending_engine"
         for identifier, case in catalog.items()
-        if identifier != "A04"
+        if identifier not in {"A02", "A03", "A04", "A06", "A10"}
     )
 
 

@@ -1,0 +1,98 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "listingId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Listingid",
+      "type": "string"
+    },
+    "mic": {
+      "pattern": "^[A-Z0-9]{4}$",
+      "title": "Mic",
+      "type": "string"
+    },
+    "providerSymbol": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Providersymbol",
+      "type": "string"
+    },
+    "sessionDate": {
+      "format": "date",
+      "title": "Sessiondate",
+      "type": "string"
+    },
+    "timezone": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Timezone",
+      "type": "string"
+    },
+    "opensAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Opensat"
+    },
+    "closesAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Closesat"
+    },
+    "sourceExchangeCode": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Sourceexchangecode"
+    },
+    "scheduleSource": {
+      "enum": [
+        "yahoo_current_metadata",
+        "yahoo_observed_price_date"
+      ],
+      "title": "Schedulesource",
+      "type": "string"
+    },
+    "documentId": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Documentid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "listingId",
+    "mic",
+    "providerSymbol",
+    "sessionDate",
+    "timezone",
+    "opensAt",
+    "closesAt",
+    "sourceExchangeCode",
+    "scheduleSource",
+    "documentId"
+  ],
+  "title": "MarketSession",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inversor:market-session:v2"
+}

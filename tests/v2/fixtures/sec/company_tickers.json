@@ -1,0 +1,14 @@
+{
+  "0": {
+    "cik_str": 123,
+    "ticker": "SYNX",
+    "title": "Synthetic Filing Corporation",
+    "exchange": "Nasdaq"
+  },
+  "1": {
+    "cik_str": 456,
+    "ticker": "OTHER",
+    "title": "Other Synthetic Corporation",
+    "exchange": "NYSE"
+  }
+}

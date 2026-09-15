@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import sqlite3
 
 from ...domain.identity import (
@@ -153,6 +154,39 @@ class IdentityRepository:
                 "SELECT * FROM listings WHERE listing_id = ?", (listing_id,)
             ).fetchone()
         return None if row is None else Listing.model_validate(dict(row))
+
+    def get_issuer(self, issuer_id: str) -> Issuer | None:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                "SELECT issuer_id, legal_name, domicile_country, identifiers_json FROM issuers WHERE issuer_id = ?",
+                (issuer_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return Issuer.model_validate(
+            {
+                "issuerId": row["issuer_id"],
+                "legalName": row["legal_name"],
+                "domicileCountry": row["domicile_country"],
+                "identifiers": json.loads(row["identifiers_json"]),
+            }
+        )
+
+    def get_instrument(self, instrument_id: str) -> Instrument | None:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                "SELECT instrument_id, issuer_id, type, share_class, rights_summary, isin FROM instruments WHERE instrument_id = ?",
+                (instrument_id,),
+            ).fetchone()
+        return None if row is None else Instrument.model_validate(dict(row))
+
+    def get_share_basis(self, share_basis_id: str) -> ShareBasis | None:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                "SELECT payload_json FROM share_bases WHERE share_basis_id = ?",
+                (share_basis_id,),
+            ).fetchone()
+        return None if row is None else ShareBasis.model_validate_json(row["payload_json"])
 
     def provider_symbol_history(self, provider: str, capability: str, listing_id: str) -> list[ProviderSymbol]:
         with self.database.connect() as connection:

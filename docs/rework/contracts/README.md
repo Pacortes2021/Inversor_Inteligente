@@ -10,7 +10,7 @@ Los esquemas curados describen la frontera documental original y los modelos de 
 | `fcff-request.example.json` | Empresa sintética, sin vínculo con cotizaciones reales |
 | `fcff-expected.example.json` | Cálculo independiente para comprobar el futuro motor |
 | `invalid-cases.json` | Parches sobre los ejemplos y capa que debe rechazarlos |
-| `generated/*.schema.json` | Esquemas regenerables de Fact, identidad, Snapshot, Assessment, Scenario, ProviderResult, ShareBasis y errores |
+| `generated/*.schema.json` | Esquemas regenerables de Fact, identidad, Snapshot, Assessment, Scenario, ProviderResult, captura SEC, ShareBasis y errores |
 | `openapi.json` | OpenAPI 3.1 del esqueleto, con todos los contratos canónicos en componentes |
 
 Regeneración: `uv run python scripts/export_v2_schemas.py`. La CI exige que el resultado no cambie y ejecuta validación Draft 2020-12 con comprobación de formatos.
